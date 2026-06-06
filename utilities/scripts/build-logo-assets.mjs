@@ -3,7 +3,7 @@ import sharp from 'sharp'
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-const root = resolve(import.meta.dirname, '..')
+const root = resolve(import.meta.dirname, '../..')
 const svg = resolve(root, 'electron/assets/logo.svg')
 const outDir = resolve(root, 'electron/assets')
 mkdirSync(outDir, { recursive: true })
