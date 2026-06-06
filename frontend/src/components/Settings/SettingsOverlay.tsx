@@ -108,31 +108,77 @@ function SelectField({ value, onChange, options }: {
 
 function OllamaModelPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [models, setModels] = useState<string[]>([])
+  const [ollamaRunning, setOllamaRunning] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(false)
+
   const load = () => {
     setLoading(true)
-    api.getCodingModels().then(r => setModels(r.models ?? [])).catch(() => setModels([])).finally(() => setLoading(false))
+    const base = window.electronAPI?.apiBase ?? ''
+    fetch(`${base}/api/coding/status`)
+      .then(r => r.json())
+      .then(data => {
+        setOllamaRunning(data.ollama_running ?? false)
+        setModels(data.available_models ?? [])
+      })
+      .catch(() => { setOllamaRunning(null); setModels([]) })
+      .finally(() => setLoading(false))
   }
   useEffect(() => { load() }, [])
-  if (models.length === 0) {
-    return <input className="w-full bg-luna-card border border-luna-border rounded-lg px-3 py-2 text-sm text-luna-text focus:outline-none focus:border-luna-primary/60"
-      value={value} onChange={e => onChange(e.target.value)} placeholder="e.g. qwen2.5:7b" />
-  }
-  return (
-    <div className="flex gap-2">
-      <div className="flex-1 relative">
-        <select value={value} onChange={e => onChange(e.target.value)}
-          className="w-full appearance-none bg-luna-card border border-luna-border rounded-lg px-3 py-2 text-sm text-luna-text pr-8 focus:outline-none focus:border-luna-primary/60">
-          {!models.includes(value) && <option value={value}>{value}</option>}
-          {models.map(m => <option key={m} value={m}>{m}</option>)}
-        </select>
-        <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-luna-dim pointer-events-none" />
+
+  const refreshBtn = (
+    <button onClick={load} disabled={loading}
+      className="p-2 rounded-lg border border-luna-border bg-luna-card hover:bg-luna-surface text-luna-dim transition-colors shrink-0">
+      <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+    </button>
+  )
+
+  if (!loading && ollamaRunning === false) {
+    return (
+      <div className="space-y-2">
+        <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs">
+          <AlertCircle size={13} className="shrink-0 mt-0.5" />
+          <span>Ollama isn't running. Start it, then click refresh.</span>
+          {refreshBtn}
+        </div>
+        <input className="w-full bg-luna-card border border-luna-border rounded-lg px-3 py-2 text-sm text-luna-text focus:outline-none focus:border-luna-primary/60"
+          value={value} onChange={e => onChange(e.target.value)} placeholder="e.g. qwen2.5:7b" />
       </div>
-      <button onClick={load} disabled={loading}
-        className="p-2 rounded-lg border border-luna-border bg-luna-card hover:bg-luna-surface text-luna-dim transition-colors">
-        <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-      </button>
-    </div>
+    )
+  }
+
+  if (!loading && ollamaRunning === true && models.length === 0) {
+    return (
+      <div className="space-y-2">
+        <div className="flex items-start gap-2 p-3 rounded-lg bg-luna-primary/10 border border-luna-primary/30 text-luna-accent text-xs">
+          <AlertCircle size={13} className="shrink-0 mt-0.5" />
+          <span>No models installed. Run in a terminal: <code className="font-mono bg-luna-surface px-1 rounded">ollama pull qwen2.5:7b</code>, then refresh.</span>
+          {refreshBtn}
+        </div>
+        <input className="w-full bg-luna-card border border-luna-border rounded-lg px-3 py-2 text-sm text-luna-text focus:outline-none focus:border-luna-primary/60"
+          value={value} onChange={e => onChange(e.target.value)} placeholder="e.g. qwen2.5:7b" />
+      </div>
+    )
+  }
+
+  if (models.length > 0) {
+    return (
+      <div className="flex gap-2">
+        <div className="flex-1 relative">
+          <select value={value} onChange={e => onChange(e.target.value)}
+            className="w-full appearance-none bg-luna-card border border-luna-border rounded-lg px-3 py-2 text-sm text-luna-text pr-8 focus:outline-none focus:border-luna-primary/60">
+            {!models.includes(value) && <option value={value}>{value}</option>}
+            {models.map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
+          <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-luna-dim pointer-events-none" />
+        </div>
+        {refreshBtn}
+      </div>
+    )
+  }
+
+  return (
+    <input className="w-full bg-luna-card border border-luna-border rounded-lg px-3 py-2 text-sm text-luna-text focus:outline-none focus:border-luna-primary/60"
+      value={value} onChange={e => onChange(e.target.value)} placeholder="e.g. qwen2.5:7b" />
   )
 }
 

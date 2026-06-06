@@ -46,9 +46,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload release asset
+      - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
-          files: dist-electron/Luna-Setup-*.zip
+          files: |
+            dist-electron/Luna-Setup-*.exe
+            dist-electron/Luna-Setup-*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -130,10 +130,13 @@ export function useChat() {
         const convs = await api.listConversations()
         setConversations(convs)
       } catch (err) {
+        const isNetwork = err instanceof TypeError
         const errMsg: Message = {
           id: Date.now() + 2,
           role: 'assistant',
-          content: "I'm having trouble connecting right now. Make sure Ollama is running.",
+          content: isNetwork
+            ? "Luna's backend isn't responding. Try restarting the app. If chat still fails, check Settings › Models to make sure a model is configured."
+            : `Something went wrong: ${(err as any)?.message ?? 'unknown error'}`,
           created_at: new Date().toISOString(),
         }
         addMessage(errMsg)

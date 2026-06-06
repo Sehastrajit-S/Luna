@@ -208,6 +208,10 @@ function spawnBackend() {
     _backendRestarts++
     if (_backendRestarts > MAX_RESTARTS) {
       logLine(`[Luna] Backend crashed ${_backendRestarts} times - giving up`)
+      loadBackendErrorWindow(
+        `Luna's backend crashed ${MAX_RESTARTS} times and could not recover automatically. ` +
+        `This is sometimes caused by a missing AI model or a hardware compatibility issue.`
+      )
       return
     }
     logLine(`[Luna] Backend exited (code=${code} signal=${signal}) - restarting in ${delay}ms (attempt ${_backendRestarts}/${MAX_RESTARTS})`)
@@ -258,9 +262,9 @@ function loadBackendErrorWindow(reason = 'Backend did not start') {
   </style></head><body><div class="wrap"><div class="panel">
     <h1>Luna could not start the local backend</h1>
     <p>${reason}</p>
-    <p>Check the backend log here:</p>
+    <p>Check the backend log for more details:</p>
     <code>${logPath}</code>
-    <p>For this installer build, Python and Luna's backend Python dependencies must be installed on this PC.</p>
+    <p style="margin-top:12px;font-size:13px">Try restarting the app. If the problem keeps happening, reinstall Luna from <strong>lunai.app</strong> or report it on GitHub.</p>
   </div></div></body></html>`
   mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
   if (!startHidden) mainWindow.show()

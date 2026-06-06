@@ -86,7 +86,8 @@
       "runAfterFinish": true,
       "uninstallDisplayName": "L.U.N.A.",
       "installerIcon": "assets/icon.ico",
-      "uninstallerIcon": "assets/icon.ico"
+      "uninstallerIcon": "assets/icon.ico",
+      "include": "assets/installer.nsh"
     }
   },
   "dependencies": {
