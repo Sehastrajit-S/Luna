@@ -1,6 +1,7 @@
 'use strict'
 
 const fs = require('fs')
+const http = require('http')
 const path = require('path')
 const crypto = require('crypto')
 
@@ -478,6 +479,9 @@ function openSettingsWindow({ BrowserWindow, ipcMain, app, root, isDev, parent =
   ipcMain.handle('setup:save', (_event, config) => {
     try {
       writeEnv(file, config || {})
+      const reloadReq = http.request('http://127.0.0.1:8899/api/system/config/reload', { method: 'POST' }, res => res.resume())
+      reloadReq.on('error', () => {})
+      reloadReq.end()
       return { ok: true }
     } catch (error) {
       return { ok: false, error: String(error?.message || error) }

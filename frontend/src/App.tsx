@@ -59,10 +59,14 @@ function StartupSplash({ show }: { show: boolean }) {
 }
 
 export default function App() {
-  const { activeView, setOllamaOnline, setPersonality, addMessage, viewMode } = useStore()
+  const { activeView, setOllamaOnline, setPersonality, addMessage, viewMode, theme } = useStore()
   useCamera()
   useProactiveStream()
   const [showSplash, setShowSplash] = useState(true)
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+  }, [theme])
 
   useEffect(() => {
     const t = setTimeout(() => setShowSplash(false), 1700)

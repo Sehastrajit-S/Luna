@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, LayoutDashboard, Puzzle, CheckCircle, AlertCircle, RefreshCw, Save, ChevronDown, Eye, Download, Volume2, Keyboard, Mic, Camera } from 'lucide-react'
+import { X, LayoutDashboard, Puzzle, CheckCircle, AlertCircle, RefreshCw, Save, ChevronDown, Eye, Download, Volume2, Keyboard, Mic, Camera, Sun, Moon } from 'lucide-react'
 import { siAnthropic, siMistralai, siNvidia, siOllama } from 'simple-icons'
 import { useStore } from '../../store'
-import { api, streamMoondreamInstall } from '../../api/client'
+import { api, streamMoondreamInstall, streamVoskInstall } from '../../api/client'
 import { IntegrationStore, INTEGRATIONS } from './IntegrationStore'
 import { getSelectedCameraDeviceId, setCameraDevice } from '../../services/cameraStream'
 
@@ -148,9 +148,20 @@ function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
 // ── Tab contents ──────────────────────────────────────────────────────────────
 
 function GeneralTab() {
-  const { layoutModeEnabled, setLayoutModeEnabled, devModeEnabled, setDevModeEnabled } = useStore()
+  const { layoutModeEnabled, setLayoutModeEnabled, devModeEnabled, setDevModeEnabled, theme, setTheme } = useStore()
   return (
     <div className="max-w-xl space-y-3">
+      <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-luna-card border border-luna-border">
+        <div className="flex items-center gap-3">
+          {theme === 'light' ? <Sun size={14} className="text-luna-dim" /> : <Moon size={14} className="text-luna-dim" />}
+          <div>
+            <p className="text-sm text-luna-text">Light mode</p>
+            <p className="text-[11px] text-luna-dim">Switch to a lighter colour scheme</p>
+          </div>
+        </div>
+        <Toggle on={theme === 'light'} onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} />
+      </div>
+
       <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-luna-card border border-luna-border">
         <div>
           <p className="text-sm text-luna-text">Layout mode</p>
@@ -630,6 +641,78 @@ function ProvidersTab() {
   )
 }
 
+// ── Vosk install section ──────────────────────────────────────────────────────
+
+function VoskSection() {
+  const [status, setStatus]       = useState<{ vosk_ready: boolean; vosk_package: boolean } | null>(null)
+  const [installing, setInstalling] = useState(false)
+  const [lines, setLines]         = useState<string[]>([])
+  const [done, setDone]           = useState(false)
+  const [installErr, setInstallErr] = useState('')
+  const logRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => { api.getVoskStatus().then(setStatus).catch(() => {}) }, [done])
+  useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight }, [lines])
+
+  const install = async () => {
+    setInstalling(true); setLines([]); setDone(false); setInstallErr('')
+    try {
+      for await (const chunk of streamVoskInstall()) {
+        if (chunk.error) { setInstallErr(chunk.error); break }
+        if (chunk.line)  setLines(prev => [...prev.slice(-60), chunk.line!])
+        if (chunk.done)  { setDone(true); break }
+      }
+    } catch (e: any) {
+      setInstallErr(String(e?.message ?? e))
+    } finally {
+      setInstalling(false)
+    }
+  }
+
+  const voskReady = status?.vosk_ready
+
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Mic size={14} className="text-luna-dim" />
+        <h3 className="text-luna-text font-semibold text-sm">Wake Word Model (Vosk)</h3>
+      </div>
+      <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-luna-card border border-luna-border">
+        <div className="flex items-center gap-3">
+          <span className={`w-2 h-2 rounded-full shrink-0 ${voskReady ? 'bg-green-400' : 'bg-luna-dim'}`} />
+          <div>
+            <p className="text-sm text-luna-text">Vosk offline model</p>
+            <p className="text-[11px] text-luna-dim">
+              {voskReady ? 'Ready — say "Luna" to activate voice' : 'Not installed — voice activation unavailable (~40 MB)'}
+            </p>
+          </div>
+        </div>
+        {!voskReady && (
+          <button
+            onClick={install}
+            disabled={installing}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-luna-primary/20 border border-luna-primary/40 text-luna-accent text-xs font-medium hover:bg-luna-primary/30 transition-colors disabled:opacity-50 shrink-0"
+          >
+            <Download size={11} />
+            {installing ? 'Installing…' : 'Install'}
+          </button>
+        )}
+      </div>
+      {(installing || lines.length > 0) && (
+        <div
+          ref={logRef}
+          className="rounded-lg bg-black/40 border border-luna-border p-3 h-28 overflow-y-auto font-mono text-[10px] text-luna-dim space-y-0.5"
+        >
+          {lines.map((l, i) => <p key={i}>{l}</p>)}
+          {installing && <p className="text-luna-primary animate-pulse">▌</p>}
+        </div>
+      )}
+      {done && !installErr && <p className="text-green-400 text-xs flex items-center gap-1.5"><CheckCircle size={12} />Vosk installed — restart Luna to activate voice</p>}
+      {installErr && <p className="text-red-400 text-xs flex items-center gap-1.5"><AlertCircle size={12} />{installErr}</p>}
+    </section>
+  )
+}
+
 // ── Controls tab ─────────────────────────────────────────────────────────────
 
 function DeviceSelect({ value, onChange, options, disabled }: {
@@ -727,6 +810,8 @@ function ControlsTab() {
         <DeviceSelect value={inCurrent} onChange={switchInput} options={inDevices} disabled={inBusy} />
       </section>
 
+      <VoskSection />
+
       <section className="space-y-3">
         <div className="flex items-center gap-2">
           <Camera size={14} className="text-luna-dim" />
@@ -786,7 +871,7 @@ export function SettingsOverlay() {
           {/* Header bar */}
           <div className="h-12 flex items-center justify-between px-6 border-b border-luna-border shrink-0 bg-luna-surface">
             <div className="flex items-center gap-3">
-              <img src="/images/logo.svg" alt="" className="w-5 h-5 opacity-70" />
+              <img src={`${import.meta.env.BASE_URL}images/logo.svg`} alt="" className="w-5 h-5 opacity-70" />
               <span className="text-sm font-semibold text-luna-text tracking-wide">Settings</span>
             </div>
             <button

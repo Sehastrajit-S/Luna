@@ -52,7 +52,7 @@ export function Sidebar() {
       <div className="px-5 py-5 border-b border-luna-border">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-luna-card border border-luna-border flex items-center justify-center shadow-glow">
-            <img src="/images/logo.svg" alt="" className="w-7 h-7" draggable={false} />
+            <img src={`${import.meta.env.BASE_URL}images/logo.svg`} alt="" className="w-7 h-7" draggable={false} />
           </div>
           <div>
             <h1 className="text-luna-text font-semibold text-sm">Luna</h1>

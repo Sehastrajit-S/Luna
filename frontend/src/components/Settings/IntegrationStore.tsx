@@ -71,7 +71,7 @@ const SamsungHealthLogo = () => <SiIcon icon={siSamsung} />
 const AppleHealthLogo  = () => <SiIcon icon={siApple} bg="#f0f0f0" iconColor="#000000" />
 
 // PNG for Google Fit (no simple-icons equivalent)
-const GoogleFitLogo = () => <img src="/images/google-fit.png" alt="Google Fit" className="w-7 h-7 object-contain" />
+const GoogleFitLogo = () => <img src={`${import.meta.env.BASE_URL}images/google-fit.png`} alt="Google Fit" className="w-7 h-7 object-contain" />
 
 // Custom SVGs for remaining brands
 const VSCodeLogo = () => (

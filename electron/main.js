@@ -437,8 +437,14 @@ function registerIPC() {
     catch (e) { return { ok: false, error: String(e) } }
   })
   ipcMain.handle('env:save', (_, config) => {
-    try { writeEnv(ENV_FILE, config || {}); return { ok: true } }
-    catch (e) { return { ok: false, error: String(e) } }
+    try {
+      writeEnv(ENV_FILE, config || {})
+      // Tell the running backend to reload its settings from the updated .env
+      const reloadReq = http.request('http://127.0.0.1:8899/api/system/config/reload', { method: 'POST' }, res => res.resume())
+      reloadReq.on('error', () => {})
+      reloadReq.end()
+      return { ok: true }
+    } catch (e) { return { ok: false, error: String(e) } }
   })
   ipcMain.handle('update:check', () => checkForUpdates())
   ipcMain.handle('update:install', () => installDownloadedUpdate())

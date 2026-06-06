@@ -2,6 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Luna colour tokens ─────────────────────────────────────────────────────── */
+:root, [data-theme="dark"] {
+  --luna-bg:      9 9 15;
+  --luna-surface: 17 17 24;
+  --luna-card:    22 22 31;
+  --luna-border:  30 30 46;
+  --luna-primary: 139 92 246;
+  --luna-glow:    124 58 237;
+  --luna-accent:  167 139 250;
+  --luna-muted:   148 163 184;
+  --luna-text:    226 232 240;
+  --luna-dim:     100 116 139;
+}
+
+[data-theme="light"] {
+  --luna-bg:      248 250 252;
+  --luna-surface: 255 255 255;
+  --luna-card:    241 245 249;
+  --luna-border:  226 232 240;
+  --luna-primary: 124 58 237;
+  --luna-glow:    109 40 217;
+  --luna-accent:  109 40 217;
+  --luna-muted:   100 116 139;
+  --luna-text:    15 23 42;
+  --luna-dim:     71 85 105;
+}
+
 @layer base {
   html { height: 100%; }
   body { height: 100%; user-select: none; }

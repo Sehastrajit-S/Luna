@@ -38,6 +38,10 @@ def _pick_original(items: list[dict]) -> dict:
     return max(items, key=score)
 
 
+_DEFAULT_CLIENT_ID     = "43e39c11e46449359f5090ca9fc1e7ee"
+_DEFAULT_CLIENT_SECRET = "884d7cfd25bb461ebeae3a26f0a475c7"
+
+
 def _load_creds() -> dict[str, str]:
     from backend.config import settings
     creds: dict[str, str] = {}
@@ -46,13 +50,18 @@ def _load_creds() -> dict[str, str]:
         creds["spotify_client_id"] = settings.spotify_client_id
     if settings.spotify_client_secret:
         creds["spotify_client_secret"] = settings.spotify_client_secret
-    # Fallback: data/integrations/.env (legacy path)
+    # Secondary: data/integrations/.env (legacy path)
     if not creds.get("spotify_client_id") and CREDS_FILE.exists():
         for line in CREDS_FILE.read_text(encoding="utf-8").splitlines():
             line = line.strip()
             if "=" in line and not line.startswith("#"):
                 k, _, v = line.partition("=")
                 creds[k.strip()] = v.strip()
+    # Fallback: built-in credentials (users just click Connect)
+    if not creds.get("spotify_client_id"):
+        creds["spotify_client_id"] = _DEFAULT_CLIENT_ID
+    if not creds.get("spotify_client_secret"):
+        creds["spotify_client_secret"] = _DEFAULT_CLIENT_SECRET
     return creds
 
 

@@ -55,6 +55,10 @@ interface AppState {
   setLayoutModeEnabled: (v: boolean) => void
   setDevModeEnabled: (v: boolean) => void
 
+  // Theme (persisted)
+  theme: 'dark' | 'light'
+  setTheme: (t: 'dark' | 'light') => void
+
   // Settings overlay
   settingsOpen: boolean
   openSettings: () => void
@@ -159,6 +163,13 @@ export const useStore = create<AppState>((set) => ({
   devModeEnabled:    (() => { try { return localStorage.getItem('luna_dev_mode')    === 'true' } catch { return false } })(),
   setLayoutModeEnabled: (v) => { try { localStorage.setItem('luna_layout_mode', String(v)) } catch {}; set({ layoutModeEnabled: v }) },
   setDevModeEnabled:    (v) => { try { localStorage.setItem('luna_dev_mode',    String(v)) } catch {}; set({ devModeEnabled: v }) },
+
+  theme: (() => { try { return (localStorage.getItem('luna_theme') as 'dark' | 'light') || 'dark' } catch { return 'dark' } })(),
+  setTheme: (t) => {
+    try { localStorage.setItem('luna_theme', t) } catch {}
+    document.documentElement.setAttribute('data-theme', t)
+    set({ theme: t })
+  },
 
   settingsOpen: false,
   openSettings: () => set({ settingsOpen: true }),

@@ -91,6 +91,86 @@ async def mobile_voice(audio: UploadFile = File(...)):
             pass
 
 
+@router.get("/vosk-status")
+def vosk_status():
+    from pathlib import Path as _P
+    vosk_dir = _P("data/vosk-model")
+    vosk_ready = vosk_dir.exists() and any(vosk_dir.iterdir())
+    try:
+        import vosk  # noqa: F401
+        vosk_package = True
+    except ImportError:
+        vosk_package = False
+    return {"vosk_ready": vosk_ready, "vosk_package": vosk_package}
+
+
+@router.post("/install-vosk")
+async def install_vosk():
+    from backend.services.voice import voice_service as _vs
+
+    async def _stream():
+        import asyncio, json as _json
+        from pathlib import Path as _P
+
+        vosk_dir = _P("data/vosk-model")
+        if vosk_dir.exists() and any(vosk_dir.iterdir()):
+            yield f"data: {_json.dumps({'line': 'Already installed.', 'done': True})}\n\n"
+            return
+
+        yield f"data: {_json.dumps({'line': 'Downloading Vosk small-en model (~40 MB)…'})}\n\n"
+        try:
+            loop = asyncio.get_event_loop()
+            progress: list[str] = []
+
+            def _download_with_progress():
+                import urllib.request, zipfile as _zf
+                _P("data").mkdir(exist_ok=True)
+                zip_path = _P("data/vosk-model.zip")
+                total_chunks = [0]
+
+                def _hook(count, block, total):
+                    pct = min(100, int(count * block / total * 100)) if total else 0
+                    if pct % 20 == 0:
+                        msg = f"Downloading… {pct}%"
+                        if not progress or progress[-1] != msg:
+                            progress.append(msg)
+                            loop.call_soon_threadsafe(lambda: None)
+                    total_chunks[0] += 1
+
+                urllib.request.urlretrieve(_vs.VOSK_URL, zip_path, _hook)
+                progress.append("__download_done__")
+                with _zf.ZipFile(zip_path, "r") as z:
+                    top = z.namelist()[0].split("/")[0]
+                    z.extractall("data/")
+                extracted = _P(f"data/{top}")
+                if extracted.exists():
+                    extracted.rename(vosk_dir)
+                zip_path.unlink(missing_ok=True)
+                progress.append("__extract_done__")
+
+            import threading
+            t = threading.Thread(target=_download_with_progress, daemon=True)
+            t.start()
+
+            sent = 0
+            while t.is_alive() or sent < len(progress):
+                await asyncio.sleep(0.5)
+                while sent < len(progress):
+                    msg = progress[sent]; sent += 1
+                    if msg == "__download_done__":
+                        yield f"data: {_json.dumps({'line': 'Extracting model files…'})}\n\n"
+                    elif msg == "__extract_done__":
+                        yield f"data: {_json.dumps({'line': 'Vosk installed! Restart Luna to activate voice.', 'done': True})}\n\n"
+                        return
+                    else:
+                        yield f"data: {_json.dumps({'line': msg})}\n\n"
+
+        except Exception as e:
+            yield f"data: {_json.dumps({'error': str(e)})}\n\n"
+
+    return StreamingResponse(_stream(), media_type="text/event-stream")
+
+
 @router.get("/events")
 async def voice_events():
     """SSE stream — emits {state} on every voice state change, pings every 25 s."""

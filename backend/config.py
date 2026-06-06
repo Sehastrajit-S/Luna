@@ -263,6 +263,16 @@ class Settings(BaseSettings):
 settings = Settings()
 
 
+def reload_settings() -> None:
+    """Re-read the env file(s) and update the global settings object in-place."""
+    fresh = Settings()
+    for field in Settings.model_fields:
+        try:
+            setattr(settings, field, getattr(fresh, field))
+        except Exception:
+            pass
+
+
 def write_env_value(key: str, value: str) -> None:
     """Update or append KEY=value in the primary .env file (BASE_DIR/.env)."""
     env_path = BASE_DIR / ".env"

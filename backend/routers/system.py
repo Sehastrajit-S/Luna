@@ -6,8 +6,16 @@ from backend.services.app_launcher import launch_app, list_app_profiles, list_kn
 from backend.services.media_context import get_watching_context
 from backend.services.scheduler import proactive_queue
 from backend.services import system_controls as sc
+from backend.config import reload_settings
 
 router = APIRouter(prefix="/api/system", tags=["system"])
+
+
+@router.post("/config/reload")
+def config_reload():
+    """Re-read the .env file and apply new values without restarting the backend."""
+    reload_settings()
+    return {"ok": True}
 
 
 @router.post("/launch", response_model=StatusResponse)

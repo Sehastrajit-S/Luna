@@ -101,12 +101,35 @@ export const api = {
   // Vision
   getVisionStatus: () => request<{ moondream_installed: boolean; ollama_available: boolean }>('/api/vision/status'),
 
+  // Voice / Vosk
+  getVoskStatus: () => request<{ vosk_ready: boolean; vosk_package: boolean }>('/api/voice/vosk-status'),
+
   // Coding agent settings
   getCodingSettings: () => request<any>('/api/coding/settings'),
   updateCodingSettings: (data: Record<string, unknown>) =>
     request<any>('/api/coding/settings', { method: 'POST', body: JSON.stringify(data) }),
   getCodingModels: () => request<{ models: string[]; current: string }>('/api/coding/models'),
   getCodingStatus: () => request<any>('/api/coding/status'),
+}
+
+export async function* streamVoskInstall(): AsyncGenerator<{ line?: string; done?: boolean; error?: string }> {
+  const res = await fetch(`${BASE}/api/voice/install-vosk`, { method: 'POST' })
+  if (!res.ok || !res.body) throw new Error('Install failed')
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+    const lines = buffer.split('\n')
+    buffer = lines.pop() ?? ''
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        try { yield JSON.parse(line.slice(6)) } catch {}
+      }
+    }
+  }
 }
 
 export async function* streamMoondreamInstall(): AsyncGenerator<{ line?: string; done?: boolean; ok?: boolean; error?: string }> {
