@@ -9,6 +9,7 @@ function getNonce(): string {
 }
 
 type Mode = 'chat' | 'code';
+type LunaMessage = { role: string; content: string };
 
 export class LunaChatViewProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'luna.chatView';
@@ -37,6 +38,7 @@ export class LunaChatViewProvider implements vscode.WebviewViewProvider {
 
         // Send workspace file list for @mention autocomplete
         this._sendWorkspaceFiles();
+        this._loadSharedContext();
 
         webviewView.webview.onDidReceiveMessage(async (msg) => {
             switch (msg.type) {
@@ -64,6 +66,7 @@ export class LunaChatViewProvider implements vscode.WebviewViewProvider {
                 case 'new_chat':
                     this._conversationId = undefined;
                     this._codeHistory = [];
+                    await this._setSharedConversation(null);
                     break;
                 case 'open_url':
                     vscode.env.openExternal(vscode.Uri.parse(msg.url));
@@ -94,8 +97,7 @@ export class LunaChatViewProvider implements vscode.WebviewViewProvider {
     // ── Chat streaming (Luna's /api/chat/stream) ────────────────────────────────
 
     private async _streamChat(userText: string): Promise<void> {
-        const config = vscode.workspace.getConfiguration('luna');
-        const baseUrl = config.get<string>('backendUrl', 'http://localhost:8765');
+        const baseUrl = this._baseUrl();
 
         const body = JSON.stringify({
             message: userText,
@@ -124,8 +126,7 @@ export class LunaChatViewProvider implements vscode.WebviewViewProvider {
     // ── Code Agent streaming (Luna's /api/coding/stream) ───────────────────────
 
     private async _streamCode(userText: string): Promise<void> {
-        const config = vscode.workspace.getConfiguration('luna');
-        const baseUrl = config.get<string>('backendUrl', 'http://localhost:8765');
+        const baseUrl = this._baseUrl();
 
         const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '';
         const editor = vscode.window.activeTextEditor;
@@ -234,6 +235,78 @@ export class LunaChatViewProvider implements vscode.WebviewViewProvider {
             req.write(body);
             req.end();
         });
+    }
+
+    private _baseUrl(): string {
+        const config = vscode.workspace.getConfiguration('luna');
+        return config.get<string>('backendUrl', 'http://localhost:8899').replace(/\/$/, '');
+    }
+
+    private _getJson<T>(pathName: string): Promise<T | null> {
+        const url = new URL(`${this._baseUrl()}${pathName}`);
+        const mod = url.protocol === 'https:' ? https : http;
+
+        return new Promise((resolve) => {
+            const req = mod.request({
+                hostname: url.hostname,
+                port: Number(url.port) || (url.protocol === 'https:' ? 443 : 80),
+                path: `${url.pathname}${url.search}`,
+                method: 'GET',
+            }, (res) => {
+                let buf = '';
+                res.on('data', (chunk: Buffer) => { buf += chunk.toString(); });
+                res.on('end', () => {
+                    try { resolve(JSON.parse(buf) as T); }
+                    catch { resolve(null); }
+                });
+            });
+            req.on('error', () => resolve(null));
+            req.setTimeout(5000, () => { req.destroy(); resolve(null); });
+            req.end();
+        });
+    }
+
+    private _postJson<T>(pathName: string, payload: Record<string, unknown>): Promise<T | null> {
+        const body = JSON.stringify(payload);
+        const url = new URL(`${this._baseUrl()}${pathName}`);
+        const mod = url.protocol === 'https:' ? https : http;
+
+        return new Promise((resolve) => {
+            const req = mod.request({
+                hostname: url.hostname,
+                port: Number(url.port) || (url.protocol === 'https:' ? 443 : 80),
+                path: `${url.pathname}${url.search}`,
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(body),
+                },
+            }, (res) => {
+                let buf = '';
+                res.on('data', (chunk: Buffer) => { buf += chunk.toString(); });
+                res.on('end', () => {
+                    try { resolve(JSON.parse(buf) as T); }
+                    catch { resolve(null); }
+                });
+            });
+            req.on('error', () => resolve(null));
+            req.setTimeout(5000, () => { req.destroy(); resolve(null); });
+            req.write(body);
+            req.end();
+        });
+    }
+
+    private async _loadSharedContext(): Promise<void> {
+        const ctx = await this._getJson<{ active_conversation_id: number | null }>('/api/chat/context');
+        if (!ctx?.active_conversation_id) return;
+
+        const conv = await this._getJson<{ messages?: LunaMessage[] }>(`/api/chat/conversations/${ctx.active_conversation_id}`);
+        this._conversationId = ctx.active_conversation_id;
+        this._post({ type: 'history', messages: conv?.messages ?? [] });
+    }
+
+    private async _setSharedConversation(conversationId: number | null): Promise<void> {
+        await this._postJson('/api/chat/context', { active_conversation_id: conversationId });
     }
 
     // ── Editor integration ──────────────────────────────────────────────────────

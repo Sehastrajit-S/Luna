@@ -200,7 +200,7 @@ function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
 // ── Tab contents ──────────────────────────────────────────────────────────────
 
 function GeneralTab() {
-  const { layoutModeEnabled, setLayoutModeEnabled, devModeEnabled, setDevModeEnabled, theme, setTheme } = useStore()
+  const { theme, setTheme } = useStore()
   return (
     <div className="max-w-xl space-y-3">
       <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-luna-card border border-luna-border">
@@ -212,22 +212,6 @@ function GeneralTab() {
           </div>
         </div>
         <Toggle on={theme === 'light'} onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} />
-      </div>
-
-      <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-luna-card border border-luna-border">
-        <div>
-          <p className="text-sm text-luna-text">Layout mode</p>
-          <p className="text-[11px] text-luna-dim">Shows a mode switcher in the title bar (Jarvis → Classic → Luna)</p>
-        </div>
-        <Toggle on={layoutModeEnabled} onClick={() => setLayoutModeEnabled(!layoutModeEnabled)} />
-      </div>
-
-      <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-luna-card border border-luna-border">
-        <div>
-          <p className="text-sm text-luna-text">Dev mode</p>
-          <p className="text-[11px] text-luna-dim">Enables the orb button in the title bar to switch modes</p>
-        </div>
-        <Toggle on={devModeEnabled} onClick={() => setDevModeEnabled(!devModeEnabled)} />
       </div>
     </div>
   )

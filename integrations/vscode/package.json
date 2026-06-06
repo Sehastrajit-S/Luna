@@ -99,7 +99,7 @@
       "properties": {
         "luna.backendUrl": {
           "type": "string",
-          "default": "http://localhost:8765",
+          "default": "http://localhost:8899",
           "description": "Luna backend URL (must be running locally)"
         },
         "luna.streamingEnabled": {

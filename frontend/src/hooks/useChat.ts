@@ -2,6 +2,8 @@ import { useCallback } from 'react'
 import { useStore } from '../store'
 import { streamChat, api } from '../api/client'
 import { Message } from '../types'
+import { isStandaloneMode, streamDirect } from '../api/directChat'
+import { isMobile } from '../platform'
 
 export function useChat() {
   const {
@@ -41,6 +43,42 @@ export function useChat() {
       let finalContent = ''
       let receivedMessageParts = false
 
+      // ── Standalone mobile: stream directly to the AI provider ─────────────
+      if (isMobile && isStandaloneMode()) {
+        try {
+          const history = messages
+            .filter(m => m.role === 'user' || m.role === 'assistant')
+            .slice(-20)
+            .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
+
+          for await (const token of streamDirect(history, content)) {
+            finalContent += token
+            appendStreamToken(token)
+          }
+
+          if (finalContent.trim()) {
+            addMessage({
+              id: Date.now() + 1,
+              role: 'assistant',
+              content: finalContent,
+              created_at: new Date().toISOString(),
+            })
+          }
+        } catch (err: any) {
+          addMessage({
+            id: Date.now() + 2,
+            role: 'assistant',
+            content: `Something went wrong: ${err?.message ?? 'unknown error'}`,
+            created_at: new Date().toISOString(),
+          })
+        } finally {
+          setStreaming(false)
+          clearStreamBuffer()
+        }
+        return
+      }
+
+      // ── Backend mode ──────────────────────────────────────────────────────
       try {
         for await (const event of streamChat(content, convId ?? undefined)) {
           if (event.type === 'meta') {
@@ -152,11 +190,13 @@ export function useChat() {
     const conv = await api.getConversation(id)
     useStore.getState().setMessages(conv.messages ?? [])
     setActiveConversation(id)
+    await api.setChatContext(id).catch(() => {})
   }, [setActiveConversation])
 
-  const newConversation = useCallback(() => {
+  const newConversation = useCallback(async () => {
     useStore.getState().setMessages([])
     setActiveConversation(null)
+    await api.setChatContext(null).catch(() => {})
   }, [setActiveConversation])
 
   return { sendMessage, loadConversation, newConversation, messages, isStreaming, streamingContent }

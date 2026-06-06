@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { X } from 'lucide-react'
 import { useStore } from '../../store'
 import { P } from './palette'
 import { LiveClock } from './shared/LiveClock'
 import { DefaultLayout } from './layout/DefaultLayout'
 import { DEFAULT_LAYOUT, saveLayout } from './layout/gridConfig'
+import { ModeCycleButton } from '../Layout/TitleBar'
 
 export function LunaDashboardView() {
   const exitLunaDashboard = useStore(s => s.exitLunaDashboard)
@@ -32,26 +32,15 @@ export function LunaDashboardView() {
 
       {/* Top bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', borderBottom: `1px solid ${P.border}`, background: P.surface, backdropFilter: 'blur(8px)', flexShrink: 0, zIndex: 60, WebkitAppRegion: 'drag' } as React.CSSProperties}>
-        <button
-          onClick={exitLunaDashboard}
-          title="Exit (Esc)"
-          style={{ background: 'none', border: `1px solid ${P.border}`, cursor: 'pointer', color: P.textDim, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, transition: 'all 0.15s', WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-          onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.color = P.text; el.style.borderColor = `${P.glow}0.5)` }}
-          onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = P.textDim; el.style.borderColor = P.border }}
-        >
-          <X size={12} strokeWidth={1.5} />
-        </button>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-          <span style={{ fontFamily: 'monospace', fontSize: 10, letterSpacing: '0.45em', textTransform: 'uppercase', color: P.textDim }}>Luna</span>
-        </div>
+        <span style={{ fontFamily: 'monospace', fontSize: 10, letterSpacing: '0.45em', textTransform: 'uppercase', color: P.textDim }}>Luna</span>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+          <ModeCycleButton />
           <button
             onClick={resetLayout}
             title="Reset widget positions to default"
             style={{ background: 'none', border: `1px solid ${P.border}`, cursor: 'pointer', color: P.textDim, fontFamily: 'monospace', fontSize: 8, letterSpacing: '0.18em', padding: '3px 8px', transition: 'all 0.15s' }}
-            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.color = P.text; el.style.borderColor = `${P.glow}0.5)` }}
+            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.color = P.text; el.style.borderColor = `rgba(139,92,246,0.5)` }}
             onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = P.textDim; el.style.borderColor = P.border }}
           >
             RESET LAYOUT

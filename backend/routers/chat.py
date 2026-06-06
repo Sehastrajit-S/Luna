@@ -48,6 +48,7 @@ from backend.services.command_parser import (
     execute_commands,
 )
 from backend.services.chat_background import post_conversation_processing, track_activity_bg
+from backend.services.shared_context import get_active_conversation_id, set_active_conversation_id
 
 _extract_direct_research_query = extract_direct_research_query
 
@@ -101,8 +102,10 @@ async def chat_stream(
     _speech_speed  = float(request.headers.get("X-Speech-Speed", "0") or 0)
     _speech_dur    = float(request.headers.get("X-Speech-Duration", "0") or 0)
 
-    if req.conversation_id:
-        conv = db.query(Conversation).filter_by(id=req.conversation_id).first()
+    conversation_id = req.conversation_id or get_active_conversation_id()
+
+    if conversation_id:
+        conv = db.query(Conversation).filter_by(id=conversation_id).first()
         if not conv:
             conv = Conversation(started_at=datetime.utcnow(), message_count=0)
             db.add(conv)
@@ -113,6 +116,8 @@ async def chat_stream(
         db.add(conv)
         db.commit()
         db.refresh(conv)
+
+    set_active_conversation_id(conv.id)
 
     sentiment = assess_user_sentiment(req.message)
     user_msg = Message(
@@ -575,6 +580,30 @@ def list_conversations(limit: int = 20, db: Session = Depends(get_db)):
     )
 
 
+@router.get("/context")
+def get_shared_context(db: Session = Depends(get_db)):
+    conversation_id = get_active_conversation_id()
+    conv = (
+        db.query(Conversation).filter_by(id=conversation_id).first()
+        if conversation_id
+        else None
+    )
+    if conversation_id and not conv:
+        set_active_conversation_id(None)
+        conversation_id = None
+    return {"active_conversation_id": conversation_id}
+
+
+@router.post("/context")
+async def set_shared_context(request: Request, db: Session = Depends(get_db)):
+    body = await request.json()
+    raw_id = body.get("active_conversation_id")
+    conversation_id = raw_id if isinstance(raw_id, int) and raw_id > 0 else None
+    if conversation_id and not db.query(Conversation).filter_by(id=conversation_id).first():
+        conversation_id = None
+    return set_active_conversation_id(conversation_id)
+
+
 @router.get("/conversations/{conversation_id}", response_model=ConversationDetail)
 def get_conversation(conversation_id: int, db: Session = Depends(get_db)):
     return db.query(Conversation).filter_by(id=conversation_id).first()
@@ -586,4 +615,6 @@ def delete_conversation(conversation_id: int, db: Session = Depends(get_db)):
     if conv:
         db.delete(conv)
         db.commit()
+        if get_active_conversation_id() == conversation_id:
+            set_active_conversation_id(None)
     return StatusResponse(status="ok")

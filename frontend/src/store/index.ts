@@ -44,6 +44,7 @@ interface AppState {
   toggleViewMode: () => void
   enterLunaDashboard: () => void
   exitLunaDashboard: () => void
+  setViewMode: (m: 'user' | 'dev') => void
 
   // Startup mode (persisted)
   startupMode: 'user' | 'dev'
@@ -152,6 +153,7 @@ export const useStore = create<AppState>((set) => ({
     viewMode: 'luna',
   })),
   exitLunaDashboard: () => set((s) => ({ viewMode: s._priorViewMode })),
+  setViewMode: (m) => set({ viewMode: m }),
 
   startupMode: readStartupMode(),
   setStartupMode: (m) => {

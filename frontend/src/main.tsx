@@ -2,15 +2,19 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import './index.css'
-import { isMobile, getServerUrl } from './platform'
-import { initApiBase } from './api/client'
+import { isMobile, getDirectApiKey, getDirectProvider, getDirectModel } from './platform'
+import { initDirectChat } from './api/directChat'
+import type { DirectProvider } from './api/directChat'
 
 async function boot() {
-  // On mobile, read the persisted server URL before mounting so every
-  // fetch() in the app already has the right BASE from the first render.
   if (isMobile) {
-    const url = await getServerUrl()
-    if (url) initApiBase(url)
+    const apiKey = await getDirectApiKey()
+    if (apiKey) {
+      const provider = (await getDirectProvider()) as DirectProvider
+      const model    = await getDirectModel()
+      initDirectChat({ provider, apiKey, model })
+    }
+    // No API key → isStandaloneMode() = false → App shows MobileSetup
   }
 
   ReactDOM.createRoot(document.getElementById('root')!).render(

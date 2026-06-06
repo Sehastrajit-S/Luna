@@ -157,6 +157,16 @@
     scrollBottom();
   }
 
+  function addAssistant(/** @type {string} */ text) {
+    removeEmptyState();
+    const div = document.createElement('div');
+    div.className = 'msg assistant';
+    div.innerHTML = `<span class="role">Luna</span><div class="bubble md">${md(text)}</div>`;
+    messages.appendChild(div);
+    attachCodeActions(div);
+    scrollBottom();
+  }
+
   function startAssistant() {
     removeEmptyState();
     const div = document.createElement('div');
@@ -595,6 +605,15 @@
 
       case 'workspace_files':
         workspaceFiles = msg.files || [];
+        break;
+
+      case 'history':
+        messages.innerHTML = '';
+        (msg.messages || []).forEach((m) => {
+          if (m.role === 'user') addUser(m.content || '');
+          else if (m.role === 'assistant') addAssistant(m.content || '');
+        });
+        if (!messages.children.length) messages.innerHTML = _emptyState();
         break;
 
       case 'prefill':

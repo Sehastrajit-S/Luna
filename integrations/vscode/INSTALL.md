@@ -4,8 +4,8 @@ Chat with Luna, explain and fix code, and run web searches directly from VS Code
 
 ## Requirements
 
-Luna backend must be running (port 8765 by default).  
-Start it with the Luna desktop app or: `python -m uvicorn backend.server:app --port 8765`
+Luna backend must be running (port 8899 by default).  
+Start it with the Luna desktop app or: `python backend/server.py`
 
 ## Install (Manual)
 
@@ -42,4 +42,4 @@ Then **Restart VS Code**.
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `luna.backendUrl` | `http://localhost:8765` | URL of the Luna backend |
+| `luna.backendUrl` | `http://localhost:8899` | URL of the Luna backend |

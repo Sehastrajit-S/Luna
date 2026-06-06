@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Brain, Search, Plus, Trash2, Zap, Sparkles, Loader2 } from 'lucide-react'
+import { Brain, Search, Trash2, Zap, Sparkles, Loader2, Network, List } from 'lucide-react'
 import { useStore } from '../../store'
 import { api } from '../../api/client'
 import { Fact } from '../../types'
+import { BrainMemoryCanvas } from './BrainMemoryCanvas'
 
 const CATEGORY_COLORS: Record<string, string> = {
   personal:     'bg-violet-500/20 text-violet-300 border-violet-500/30',
@@ -80,6 +81,7 @@ function PersonalityCard() {
 
 export function MemoryPanel() {
   const { facts, setFacts, personality, setPersonality } = useStore()
+  const [view, setView] = useState<'list' | 'graph'>('list')
   const [search, setSearch] = useState('')
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [searchResults, setSearchResults] = useState<string[]>([])
@@ -129,8 +131,9 @@ export function MemoryPanel() {
   }
 
   return (
-    <div className="h-full overflow-y-auto px-6 py-6">
-      <div className="flex items-center gap-3 mb-6">
+    <div className="h-full flex flex-col">
+      {/* Header */}
+      <div className="flex items-center gap-3 px-6 pt-6 pb-4 flex-shrink-0">
         <Brain size={20} className="text-luna-primary" />
         <h2 className="text-lg font-semibold text-luna-text">Luna's Memory</h2>
         <span className="text-xs text-luna-dim">{facts.length} facts stored</span>
@@ -139,18 +142,42 @@ export function MemoryPanel() {
             {compactResult > 0 ? `−${compactResult} merged` : 'already compact'}
           </span>
         )}
-        <button
-          onClick={handleCompact}
-          disabled={compacting}
-          title="Merge duplicate facts"
-          className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs bg-luna-card border border-luna-border text-luna-muted hover:text-luna-text hover:border-luna-primary/40 transition-all disabled:opacity-50"
-        >
-          {compacting
-            ? <Loader2 size={12} className="animate-spin" />
-            : <Sparkles size={12} />}
-          Compact
-        </button>
+        <div className="ml-auto flex items-center gap-2">
+          {view === 'list' && (
+            <button
+              onClick={handleCompact}
+              disabled={compacting}
+              title="Merge duplicate facts"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs bg-luna-card border border-luna-border text-luna-muted hover:text-luna-text hover:border-luna-primary/40 transition-all disabled:opacity-50"
+            >
+              {compacting ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+              Compact
+            </button>
+          )}
+          <button
+            onClick={() => setView(v => v === 'list' ? 'graph' : 'list')}
+            title={view === 'list' ? 'Show brain graph' : 'Show list'}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs border transition-all ${
+              view === 'graph'
+                ? 'bg-luna-primary/20 border-luna-primary/40 text-luna-accent'
+                : 'bg-luna-card border-luna-border text-luna-muted hover:text-luna-text hover:border-luna-primary/40'
+            }`}
+          >
+            {view === 'list' ? <Network size={12} /> : <List size={12} />}
+            {view === 'list' ? 'Graph' : 'List'}
+          </button>
+        </div>
       </div>
+
+      {/* Brain graph view */}
+      {view === 'graph' && (
+        <div className="flex-1 min-h-0 px-6 pb-6">
+          <BrainMemoryCanvas />
+        </div>
+      )}
+
+      {/* List view */}
+      {view === 'list' && <div className="flex-1 overflow-y-auto px-6 pb-6">
 
       <PersonalityCard />
 
@@ -260,6 +287,7 @@ export function MemoryPanel() {
           ))
         )}
       </div>
+    </div>}
     </div>
   )
 }

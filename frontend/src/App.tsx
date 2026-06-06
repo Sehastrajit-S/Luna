@@ -23,7 +23,8 @@ import { AgentView } from './components/Agent/AgentView'
 import { SettingsOverlay } from './components/Settings/SettingsOverlay'
 import { useProactiveStream } from './hooks/useProactiveStream'
 import { isMobile } from './platform'
-import { ServerSetup } from './components/Mobile/ServerSetup'
+import { MobileSetup } from './components/Mobile/MobileSetup'
+import { isStandaloneMode } from './api/directChat'
 
 function StartupSplash({ show }: { show: boolean }) {
   return (
@@ -65,8 +66,8 @@ export default function App() {
   useCamera()
   useProactiveStream()
   const [showSplash, setShowSplash] = useState(true)
-  // Mobile: show server setup until a URL is configured
-  const [needsSetup, setNeedsSetup] = useState(() => isMobile && !getApiBase())
+  // Mobile: show setup until an API key is configured
+  const [needsSetup, setNeedsSetup] = useState(() => isMobile && !isStandaloneMode())
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -86,6 +87,16 @@ export default function App() {
 
     // Load personality state
     api.getPersonality().then(setPersonality).catch(() => {})
+
+    // Resume the active conversation shared by CLI, VS Code, and Electron.
+    api.getChatContext()
+      .then(async ({ active_conversation_id }) => {
+        if (!active_conversation_id) return
+        const conv = await api.getConversation(active_conversation_id)
+        useStore.getState().setActiveConversation(active_conversation_id)
+        useStore.getState().setMessages(conv.messages ?? [])
+      })
+      .catch(() => {})
 
     // Periodic health check
     const t = setInterval(() => {
@@ -113,9 +124,14 @@ export default function App() {
     }
   }, [setOllamaOnline, setPersonality, addMessage])
 
-  // ── Mobile: first-run server setup ──────────────────────────────────────────
+  // ── Mobile: first-run API setup ───────────────────────────────────────────
   if (needsSetup) {
-    return <ServerSetup onDone={() => setNeedsSetup(false)} />
+    return <MobileSetup onDone={() => setNeedsSetup(false)} />
+  }
+
+  // ── Mobile: simple full-screen chat, no sidebar or titlebar ───────────────
+  if (isMobile) {
+    return <ChatWindow />
   }
 
   // ── Luna dashboard: full-screen HUD ─────────────────────────────────────────

@@ -33,6 +33,7 @@ const navGroups = [
     label: 'Overview',
     items: [
       { href: '/getting-started', label: 'Getting Started' },
+      { href: '/downloads',       label: 'Downloads' },
       { href: '/architecture',    label: 'Architecture' },
       { href: '/workflow',        label: 'Workflow' },
     ],
@@ -164,6 +165,7 @@ export default function DocsLayout({ title, description, toc, children }) {
               <a href="https://github.com/Sehastrajit/Luna" target="_blank" rel="noopener noreferrer" className="docs-topbar-link">
                 <GitHubIcon /> GitHub
               </a>
+              <Link href="/downloads" className="docs-topbar-cta">Downloads</Link>
               <Link href="/" className="docs-topbar-cta">← Home</Link>
             </div>
           </div>

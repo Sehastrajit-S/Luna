@@ -479,6 +479,31 @@ ${c.reset}  Large Unified Nexus Mind AI
     process.on('SIGTERM', () => { cleanup(); process.exit(0) })
   }
 
+  conversationId = await getSharedConversation()
+  if (conversationId) info(`Resuming shared conversation #${conversationId}`)
+
+  async function getSharedConversation() {
+    try {
+      const r = await fetch(`${baseUrl}/api/chat/context`, { signal: AbortSignal.timeout(2000) })
+      if (!r.ok) return null
+      const body = await r.json()
+      return Number.isInteger(body.active_conversation_id) ? body.active_conversation_id : null
+    } catch {
+      return null
+    }
+  }
+
+  async function setSharedConversation(id) {
+    try {
+      await fetch(`${baseUrl}/api/chat/context`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active_conversation_id: id ?? null }),
+        signal: AbortSignal.timeout(2000),
+      })
+    } catch {}
+  }
+
   async function confirmTool(data, rl = null) {
     if (approveAll) return true
     if (denyAll) return false
@@ -654,6 +679,7 @@ ${c.reset}  Large Unified Nexus Mind AI
       if (message === '/exit' || message === '/quit') break
       if (message === '/new') {
         conversationId = null
+        await setSharedConversation(null)
         ok('Started a new conversation')
         continue
       }

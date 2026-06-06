@@ -36,6 +36,12 @@ export const api = {
   // Chat
   listConversations: () => request<any[]>('/api/chat/conversations'),
   getConversation: (id: number) => request<any>(`/api/chat/conversations/${id}`),
+  getChatContext: () => request<{ active_conversation_id: number | null }>('/api/chat/context'),
+  setChatContext: (active_conversation_id: number | null) =>
+    request<{ active_conversation_id: number | null }>('/api/chat/context', {
+      method: 'POST',
+      body: JSON.stringify({ active_conversation_id }),
+    }),
   deleteConversation: (id: number) =>
     request<any>(`/api/chat/conversations/${id}`, { method: 'DELETE' }),
 

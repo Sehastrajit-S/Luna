@@ -57,6 +57,7 @@ class LunaChatViewProvider {
         webviewView.webview.html = this._buildHtml(webviewView.webview);
         // Send workspace file list for @mention autocomplete
         this._sendWorkspaceFiles();
+        this._loadSharedContext();
         webviewView.webview.onDidReceiveMessage(async (msg) => {
             switch (msg.type) {
                 case 'send':
@@ -84,6 +85,7 @@ class LunaChatViewProvider {
                 case 'new_chat':
                     this._conversationId = undefined;
                     this._codeHistory = [];
+                    await this._setSharedConversation(null);
                     break;
                 case 'open_url':
                     vscode.env.openExternal(vscode.Uri.parse(msg.url));
@@ -110,8 +112,7 @@ class LunaChatViewProvider {
     }
     // ── Chat streaming (Luna's /api/chat/stream) ────────────────────────────────
     async _streamChat(userText) {
-        const config = vscode.workspace.getConfiguration('luna');
-        const baseUrl = config.get('backendUrl', 'http://localhost:8765');
+        const baseUrl = this._baseUrl();
         const body = JSON.stringify({
             message: userText,
             ...(this._conversationId ? { conversation_id: this._conversationId } : {}),
@@ -140,8 +141,7 @@ class LunaChatViewProvider {
     }
     // ── Code Agent streaming (Luna's /api/coding/stream) ───────────────────────
     async _streamCode(userText) {
-        const config = vscode.workspace.getConfiguration('luna');
-        const baseUrl = config.get('backendUrl', 'http://localhost:8765');
+        const baseUrl = this._baseUrl();
         const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '';
         const editor = vscode.window.activeTextEditor;
         const currentFile = editor ? path.relative(workspaceRoot, editor.document.fileName) : '';
@@ -243,6 +243,79 @@ class LunaChatViewProvider {
             req.write(body);
             req.end();
         });
+    }
+    _baseUrl() {
+        const config = vscode.workspace.getConfiguration('luna');
+        return config.get('backendUrl', 'http://localhost:8899').replace(/\/$/, '');
+    }
+    _getJson(pathName) {
+        const url = new URL(`${this._baseUrl()}${pathName}`);
+        const mod = url.protocol === 'https:' ? https : http;
+        return new Promise((resolve) => {
+            const req = mod.request({
+                hostname: url.hostname,
+                port: Number(url.port) || (url.protocol === 'https:' ? 443 : 80),
+                path: `${url.pathname}${url.search}`,
+                method: 'GET',
+            }, (res) => {
+                let buf = '';
+                res.on('data', (chunk) => { buf += chunk.toString(); });
+                res.on('end', () => {
+                    try {
+                        resolve(JSON.parse(buf));
+                    }
+                    catch {
+                        resolve(null);
+                    }
+                });
+            });
+            req.on('error', () => resolve(null));
+            req.setTimeout(5000, () => { req.destroy(); resolve(null); });
+            req.end();
+        });
+    }
+    _postJson(pathName, payload) {
+        const body = JSON.stringify(payload);
+        const url = new URL(`${this._baseUrl()}${pathName}`);
+        const mod = url.protocol === 'https:' ? https : http;
+        return new Promise((resolve) => {
+            const req = mod.request({
+                hostname: url.hostname,
+                port: Number(url.port) || (url.protocol === 'https:' ? 443 : 80),
+                path: `${url.pathname}${url.search}`,
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(body),
+                },
+            }, (res) => {
+                let buf = '';
+                res.on('data', (chunk) => { buf += chunk.toString(); });
+                res.on('end', () => {
+                    try {
+                        resolve(JSON.parse(buf));
+                    }
+                    catch {
+                        resolve(null);
+                    }
+                });
+            });
+            req.on('error', () => resolve(null));
+            req.setTimeout(5000, () => { req.destroy(); resolve(null); });
+            req.write(body);
+            req.end();
+        });
+    }
+    async _loadSharedContext() {
+        const ctx = await this._getJson('/api/chat/context');
+        if (!ctx?.active_conversation_id)
+            return;
+        const conv = await this._getJson(`/api/chat/conversations/${ctx.active_conversation_id}`);
+        this._conversationId = ctx.active_conversation_id;
+        this._post({ type: 'history', messages: conv?.messages ?? [] });
+    }
+    async _setSharedConversation(conversationId) {
+        await this._postJson('/api/chat/context', { active_conversation_id: conversationId });
     }
     // ── Editor integration ──────────────────────────────────────────────────────
     _insertIntoEditor(code) {

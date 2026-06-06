@@ -3,23 +3,19 @@ import { useStore } from '../../store'
 import { VoiceOrb } from '../Voice/VoiceOrb'
 import { Minus, Square, X, Maximize2, Minimize2, Settings, Mic, LayoutDashboard, Orbit } from 'lucide-react'
 
-const MODE_CYCLE: Array<'user' | 'dev' | 'luna'> = ['user', 'dev', 'luna']
 const MODE_META = {
   user:  { label: 'Voice',   Icon: Mic },
   dev:   { label: 'Classic', Icon: LayoutDashboard },
   luna:  { label: 'Luna',    Icon: Orbit },
 }
 
-function ModeCycleButton() {
-  const { viewMode, layoutModeEnabled, enterLunaDashboard, exitLunaDashboard, toggleViewMode } = useStore()
-  if (!layoutModeEnabled) return null
+export function ModeCycleButton() {
+  const { viewMode, enterLunaDashboard, setViewMode } = useStore()
 
   const cycle = () => {
-    const idx  = MODE_CYCLE.indexOf(viewMode as any)
-    const next = MODE_CYCLE[(idx + 1) % MODE_CYCLE.length]
-    if (next === 'luna') enterLunaDashboard()
-    else if (viewMode === 'luna') { exitLunaDashboard() }
-    else toggleViewMode()
+    if (viewMode === 'user') setViewMode('dev')       // voice → classic
+    else if (viewMode === 'dev') enterLunaDashboard() // classic → luna
+    else setViewMode('user')                          // luna → voice (completes the circle)
   }
 
   const { label, Icon } = MODE_META[viewMode as keyof typeof MODE_META] ?? MODE_META.user
@@ -83,7 +79,7 @@ function TrafficLights({ maximized, fullscreen }: { maximized: boolean; fullscre
 export function TitleBar() {
   const [maximized, setMaximized]   = useState(false)
   const [fullscreen, setFullscreen] = useState(false)
-  const { viewMode, toggleViewMode, devModeEnabled, openSettings } = useStore()
+  const { viewMode, openSettings } = useStore()
 
   useEffect(() => {
     window.electronAPI?.isMaximized().then(setMaximized)
@@ -94,8 +90,6 @@ export function TitleBar() {
     window.addEventListener('keydown', onKey)
     return () => { cleanMax?.(); cleanFull?.(); window.removeEventListener('keydown', onKey) }
   }, [])
-
-  const orbToggle = devModeEnabled ? toggleViewMode : undefined
 
   // ── User mode: bare strip — orb on left, traffic lights on right ──────────
   if (viewMode === 'user') {
@@ -108,7 +102,7 @@ export function TitleBar() {
           className="flex items-center gap-3 px-4 h-full"
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         >
-          <VoiceOrb size={28} onToggle={orbToggle} />
+          <VoiceOrb size={28} onToggle={undefined} />
           <span className="text-[10px] font-mono tracking-[0.3em] text-luna-dim uppercase">
             Luna
           </span>
@@ -146,7 +140,7 @@ export function TitleBar() {
       >
         <ModeCycleButton />
         <div className="w-px h-4 bg-luna-border" />
-        <VoiceOrb size={36} onToggle={orbToggle} />
+        <VoiceOrb size={36} onToggle={undefined} />
         <div className="w-px h-4 bg-luna-border" />
         <button
           onMouseDown={(event) => event.stopPropagation()}
