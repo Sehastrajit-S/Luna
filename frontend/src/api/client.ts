@@ -1,5 +1,16 @@
-// Electron: uses absolute base from preload. Browser: same-origin (FastAPI serves frontend).
-const BASE = window.electronAPI?.apiBase ?? ''
+// BASE is a mutable variable so it can be updated at boot time on mobile.
+// Electron: set from preload bridge (apiBase).
+// Mobile (Capacitor): set from Preferences at app startup via initApiBase().
+// Web/dev: empty string → same-origin (FastAPI serves the frontend).
+let BASE: string = (window as any).electronAPI?.apiBase ?? ''
+
+export function initApiBase(url: string) {
+  BASE = url.replace(/\/$/, '')
+}
+
+export function getApiBase(): string {
+  return BASE
+}
 
 export function authHeaders(): Record<string, string> {
   return {}

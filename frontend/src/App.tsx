@@ -9,7 +9,7 @@ import { ChatWindow } from './components/Chat/ChatWindow'
 import { MemoryPanel } from './components/Memory/MemoryPanel'
 import { CalendarView } from './components/Calendar/CalendarView'
 import { ActivitiesView } from './components/Activities/ActivitiesView'
-import { api } from './api/client'
+import { api, getApiBase } from './api/client'
 import { AnimatePresence, motion } from 'framer-motion'
 import { SpotifyPlayer } from './components/Spotify/SpotifyPlayer'
 import { HologramMapOverlay } from './components/Map/HologramMapOverlay'
@@ -22,6 +22,8 @@ import { DynamicWidgetOverlay } from './components/Dynamic/DynamicWidgetOverlay'
 import { AgentView } from './components/Agent/AgentView'
 import { SettingsOverlay } from './components/Settings/SettingsOverlay'
 import { useProactiveStream } from './hooks/useProactiveStream'
+import { isMobile } from './platform'
+import { ServerSetup } from './components/Mobile/ServerSetup'
 
 function StartupSplash({ show }: { show: boolean }) {
   return (
@@ -63,6 +65,8 @@ export default function App() {
   useCamera()
   useProactiveStream()
   const [showSplash, setShowSplash] = useState(true)
+  // Mobile: show server setup until a URL is configured
+  const [needsSetup, setNeedsSetup] = useState(() => isMobile && !getApiBase())
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -108,6 +112,11 @@ export default function App() {
       clearInterval(proactive)
     }
   }, [setOllamaOnline, setPersonality, addMessage])
+
+  // ── Mobile: first-run server setup ──────────────────────────────────────────
+  if (needsSetup) {
+    return <ServerSetup onDone={() => setNeedsSetup(false)} />
+  }
 
   // ── Luna dashboard: full-screen HUD ─────────────────────────────────────────
   if (viewMode === 'luna') {

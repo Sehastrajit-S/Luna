@@ -1,0 +1,130 @@
+name: Build Mobile
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  # ── Android APK ──────────────────────────────────────────────────────────────
+  build-android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Install frontend dependencies
+        run: npm install --workspace=frontend
+
+      - name: Build frontend
+        run: npm run build --workspace=frontend
+
+      - name: Sync Capacitor → Android
+        run: cd frontend && npx cap sync android
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x frontend/android/gradlew
+
+      - name: Build Android APK (debug)
+        run: cd frontend/android && ./gradlew assembleDebug --no-daemon
+
+      - name: Rename APK
+        run: |
+          VERSION=$(node -p "require('./frontend/package.json').version")
+          cp frontend/android/app/build/outputs/apk/debug/app-debug.apk \
+             "Luna-${VERSION}-android-debug.apk"
+
+      - name: Upload APK to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Luna-*-android-debug.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload APK as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: Luna-*-android-debug.apk
+          retention-days: 14
+
+  # ── iOS Xcode project ────────────────────────────────────────────────────────
+  # Builds a simulator-compatible archive (no code signing required).
+  # For a real device / App Store build, add signing certs via GitHub secrets.
+  build-ios:
+    name: iOS (Xcode project)
+    runs-on: macos-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install frontend dependencies
+        run: npm install --workspace=frontend
+
+      - name: Build frontend
+        run: npm run build --workspace=frontend
+
+      - name: Sync Capacitor → iOS
+        run: cd frontend && npx cap sync ios
+
+      - name: Resolve Swift packages
+        run: |
+          cd frontend/ios/App
+          xcodebuild -resolvePackageDependencies \
+            -scheme App \
+            -project App.xcodeproj \
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tail -5
+
+      - name: Build iOS (simulator, no signing)
+        run: |
+          cd frontend/ios/App
+          xcodebuild build \
+            -scheme App \
+            -project App.xcodeproj \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            ONLY_ACTIVE_ARCH=NO \
+            -derivedDataPath build 2>&1 | tail -20
+
+      - name: Package .app as zip
+        run: |
+          VERSION=$(node -p "require('./frontend/package.json').version")
+          APP=$(find frontend/ios/App/build -name "*.app" | head -1)
+          zip -r "Luna-${VERSION}-ios-simulator.zip" "$APP"
+
+      - name: Upload iOS build to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Luna-*-ios-simulator.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload iOS build as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator-app
+          path: Luna-*-ios-simulator.zip
+          retention-days: 14

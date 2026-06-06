@@ -1,27 +1,29 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, LayoutDashboard, Puzzle, CheckCircle, AlertCircle, RefreshCw, Save, ChevronDown, Eye, Download, Volume2, Keyboard, Mic, Camera, Sun, Moon } from 'lucide-react'
+import { X, LayoutDashboard, Puzzle, CheckCircle, AlertCircle, RefreshCw, Save, ChevronDown, Eye, Download, Volume2, Keyboard, Mic, Camera, Sun, Moon, Server } from 'lucide-react'
 import { siAnthropic, siMistralai, siNvidia, siOllama } from 'simple-icons'
 import { useStore } from '../../store'
-import { api, streamMoondreamInstall, streamVoskInstall } from '../../api/client'
+import { api, streamMoondreamInstall, streamVoskInstall, getApiBase, initApiBase } from '../../api/client'
 import { IntegrationStore, INTEGRATIONS } from './IntegrationStore'
 import { getSelectedCameraDeviceId, setCameraDevice } from '../../services/cameraStream'
+import { isMobile, setServerUrl, getServerUrl } from '../../platform'
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 
-type Tab = 'general' | 'controls' | 'integrations' | 'models' | 'providers'
+type Tab = 'general' | 'controls' | 'integrations' | 'models' | 'providers' | 'server'
 
-const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
+const TABS: { id: Tab; label: string; icon: React.ReactNode; mobileOnly?: boolean; desktopOnly?: boolean }[] = [
   { id: 'general',      label: 'General',      icon: <LayoutDashboard size={14} /> },
-  { id: 'controls',     label: 'Controls',     icon: <Keyboard size={14} /> },
+  { id: 'controls',     label: 'Controls',     icon: <Keyboard size={14} />,  desktopOnly: true },
   { id: 'integrations', label: 'Integrations', icon: <Puzzle size={14} /> },
   { id: 'models',       label: 'Models',       icon: <span className="text-[13px]">⚡</span> },
   { id: 'providers',    label: 'Providers',    icon: <CheckCircle size={14} /> },
+  { id: 'server',       label: 'Server',       icon: <Server size={14} />, mobileOnly: true },
 ]
 
 // ── Model settings types ──────────────────────────────────────────────────────
 
-const PROVIDERS_LIST = [
+const ALL_PROVIDERS = [
   { value: 'ollama',            label: 'Ollama (local)' },
   { value: 'anthropic',         label: 'Anthropic Claude' },
   { value: 'groq',              label: 'Groq' },
@@ -31,6 +33,10 @@ const PROVIDERS_LIST = [
   { value: 'cohere',            label: 'Cohere' },
   { value: 'nvidia-nim',        label: 'NVIDIA NIM' },
 ]
+// Ollama requires a local machine — not available on mobile
+const PROVIDERS_LIST = isMobile
+  ? ALL_PROVIDERS.filter(p => p.value !== 'ollama')
+  : ALL_PROVIDERS
 const CODING_PROVIDERS = [{ value: '', label: 'Same as chat' }, ...PROVIDERS_LIST]
 
 interface ProviderInfo { label: string; configured: boolean }
@@ -363,7 +369,7 @@ function ModelsTab() {
 
   return (
     <div className="max-w-xl space-y-6">
-      <MoondreamSection />
+      {!isMobile && <MoondreamSection />}
 
       <section className="space-y-4">
         <h3 className="text-luna-text font-semibold text-sm">Chat Model</h3>
@@ -373,7 +379,7 @@ function ModelsTab() {
         </div>
         <div className="space-y-1.5">
           <label className="text-xs text-luna-dim font-medium uppercase tracking-wide">Model</label>
-          {chatProv === 'ollama'
+          {chatProv === 'ollama' && !isMobile
             ? <OllamaModelPicker value={(form as any)[chatMK] ?? ''} onChange={v => set(chatMK, v)} />
             : <input className="w-full bg-luna-card border border-luna-border rounded-lg px-3 py-2 text-sm text-luna-text focus:outline-none focus:border-luna-primary/60"
                 value={(form as any)[chatMK] ?? ''} onChange={e => set(chatMK, e.target.value)} />
@@ -388,7 +394,7 @@ function ModelsTab() {
           <SelectField value={codingRaw} onChange={v => set('coding_provider', v)} options={CODING_PROVIDERS} />
           {!codingRaw && <p className="text-[11px] text-luna-dim">Using chat provider: <span className="text-luna-text">{chatProv}</span></p>}
         </div>
-        {effectiveCod === 'ollama' && (
+        {effectiveCod === 'ollama' && !isMobile && (
           <div className="space-y-1.5">
             <label className="text-xs text-luna-dim font-medium uppercase tracking-wide">Model (Ollama)</label>
             <OllamaModelPicker value={(form.coding_model ?? data.coding_model) as string} onChange={v => set('coding_model', v)} />
@@ -426,6 +432,92 @@ function ModelsTab() {
         </button>
         {saved && <span className="flex items-center gap-1.5 text-green-400 text-xs"><CheckCircle size={13} />Saved</span>}
         {err && <span className="flex items-center gap-1.5 text-red-400 text-xs"><AlertCircle size={13} />{err}</span>}
+      </div>
+    </div>
+  )
+}
+
+// ── Server tab (mobile only) ──────────────────────────────────────────────────
+
+function ServerTab() {
+  const [url, setUrl]         = useState(getApiBase())
+  const [saving, setSaving]   = useState(false)
+  const [saved, setSaved]     = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [testOk, setTestOk]   = useState<boolean | null>(null)
+  const [err, setErr]         = useState('')
+
+  const normalise = (raw: string) => {
+    let u = raw.trim().replace(/\/$/, '')
+    if (u && !/^https?:\/\//i.test(u)) u = `http://${u}`
+    return u
+  }
+
+  const test = async () => {
+    setErr(''); setTestOk(null)
+    const base = normalise(url)
+    if (!base) { setErr('Enter a URL first.'); return }
+    setTesting(true)
+    try {
+      const res = await fetch(`${base}/api/system/health`, { signal: AbortSignal.timeout(6000) })
+      if (!res.ok) throw new Error(`${res.status}`)
+      setTestOk(true)
+    } catch (e: any) {
+      setTestOk(false)
+      setErr(`Cannot reach server: ${e?.message ?? e}`)
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  const save = async () => {
+    setSaving(true); setErr('')
+    const base = normalise(url)
+    try {
+      await setServerUrl(base)
+      initApiBase(base)
+      setSaved(true); setTimeout(() => setSaved(false), 2500)
+    } catch (e: any) {
+      setErr(e?.message ?? 'Failed to save')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="max-w-xl space-y-6">
+      <p className="text-luna-dim text-xs">
+        Luna mobile connects to a hosted Luna backend. Change the server URL here if it changes.
+      </p>
+      <div className="space-y-2">
+        <label className="text-xs text-luna-dim font-medium uppercase tracking-wide">Server URL</label>
+        <input
+          type="url"
+          value={url}
+          onChange={e => { setUrl(e.target.value); setTestOk(null); setErr('') }}
+          placeholder="http://192.168.1.x:8899"
+          autoCapitalize="none"
+          autoCorrect="off"
+          className="w-full bg-luna-card border border-luna-border rounded-xl px-4 py-2.5 text-sm text-luna-text focus:outline-none focus:border-luna-primary/60"
+        />
+      </div>
+      {testOk === true && (
+        <p className="flex items-center gap-1.5 text-green-400 text-xs"><CheckCircle size={12} />Server reachable.</p>
+      )}
+      {err && (
+        <p className="flex items-center gap-1.5 text-red-400 text-xs"><AlertCircle size={12} />{err}</p>
+      )}
+      <div className="flex items-center gap-3">
+        <button onClick={test} disabled={testing}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-luna-card border border-luna-border text-luna-dim text-xs hover:text-luna-text transition-colors disabled:opacity-50">
+          <RefreshCw size={11} className={testing ? 'animate-spin' : ''} />
+          {testing ? 'Testing…' : 'Test'}
+        </button>
+        <button onClick={save} disabled={saving}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-luna-primary/20 border border-luna-primary/40 text-luna-accent text-sm font-medium hover:bg-luna-primary/30 transition-colors disabled:opacity-50">
+          <Save size={13} /> {saving ? 'Saving…' : 'Save'}
+        </button>
+        {saved && <span className="flex items-center gap-1.5 text-green-400 text-xs"><CheckCircle size={13} />Saved</span>}
       </div>
     </div>
   )
@@ -856,7 +948,7 @@ function ControlsTab() {
         <DeviceSelect value={inCurrent} onChange={switchInput} options={inDevices} disabled={inBusy} />
       </section>
 
-      <VoskSection />
+      {!isMobile && <VoskSection />}
 
       <section className="space-y-3">
         <div className="flex items-center gap-2">
@@ -933,7 +1025,7 @@ export function SettingsOverlay() {
           <div className="flex flex-1 overflow-hidden">
             {/* Left nav */}
             <div className="w-52 border-r border-luna-border bg-luna-surface shrink-0 p-3 space-y-0.5">
-              {TABS.map(t => (
+              {TABS.filter(t => !t.mobileOnly || isMobile).filter(t => !t.desktopOnly || !isMobile).map(t => (
                 <button
                   key={t.id}
                   onClick={() => setTab(t.id)}
@@ -961,10 +1053,11 @@ export function SettingsOverlay() {
                   className="p-8"
                 >
                   {tab === 'general'      && <GeneralTab />}
-                  {tab === 'controls'     && <ControlsTab />}
+                  {tab === 'controls'     && !isMobile && <ControlsTab />}
                   {tab === 'integrations' && <IntegrationsTab />}
                   {tab === 'models'       && <ModelsTab />}
                   {tab === 'providers'    && <ProvidersTab />}
+                  {tab === 'server'       && isMobile && <ServerTab />}
                 </motion.div>
               </AnimatePresence>
             </div>
