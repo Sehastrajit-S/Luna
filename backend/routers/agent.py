@@ -1,7 +1,15 @@
 from fastapi import APIRouter, Body
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
+
+import json
 
 from backend.services.agent_tasks import create_agent_task, list_agent_tasks, update_agent_task
+from backend.services.agents import (
+    AgentRole,
+    ROLE_DEFINITIONS,
+    is_crew_request,
+    run_crew,
+)
 from backend.services.audit_log import list_audit, record_audit
 from backend.services.browser_automation import browser_open, browser_read, playwright_status
 from backend.services.permission_manager import permission_manager
@@ -120,3 +128,64 @@ def patch_task(task_id: str, payload: dict = Body(default={})):
     if not task:
         return JSONResponse({"detail": "task not found"}, status_code=404)
     return task
+
+
+# ── Crew Mode (multi-agent orchestration) ────────────────────────────────────
+
+
+@router.get("/crew/roles")
+def crew_roles():
+    """Return the catalog of available agent roles."""
+    return {"roles": [d.to_dict() for d in ROLE_DEFINITIONS.values()]}
+
+
+@router.post("/crew/preview")
+def crew_preview(payload: dict = Body(default={})):
+    """Tell the user whether a request would trigger Crew Mode."""
+    message = str(payload.get("message", "")).strip()
+    if not message:
+        return JSONResponse({"detail": "message is required"}, status_code=400)
+    return {
+        "message": message,
+        "would_run_crew": is_crew_request(message),
+    }
+
+
+@router.post("/crew/run")
+async def crew_run(payload: dict = Body(default={})):
+    """
+    Run a multi-agent crew against a task and stream the events as SSE.
+
+    Body:
+        task            (str, required)  — the user's high-level goal
+        enable_critic   (bool, optional) — default True
+        max_revisions   (int, optional)  — default 1
+    """
+    task = str(payload.get("task", "")).strip()
+    if not task:
+        return JSONResponse({"detail": "task is required"}, status_code=400)
+    enable_critic = bool(payload.get("enable_critic", True))
+    max_revisions = int(payload.get("max_revisions", 1))
+
+    record_audit("crew_run", args={"task": task[:200]}, status="started")
+
+    async def stream():
+        try:
+            async for event in run_crew(
+                task,
+                enable_critic=enable_critic,
+                max_revisions=max_revisions,
+            ):
+                yield f"data: {json.dumps(event.to_dict())}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+    return StreamingResponse(
+        stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )

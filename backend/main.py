@@ -15,6 +15,7 @@ from backend.routers.proactive import router as proactive_router
 from backend.routers.coding import router as coding_router
 from backend.routers.observe import router as observe_router
 from backend.routers.health_integrations import router as health_router
+from backend.routers.skills import router as skills_router
 from backend.middleware.rate_limit import RateLimitMiddleware
 from backend.middleware.logging_middleware import RequestIDMiddleware, configure_logging
 from backend.processes.registry import start_lifecycle_processes, stop_lifecycle_processes
@@ -102,6 +103,7 @@ app.include_router(observe_router)
 app.include_router(health_router)
 app.include_router(coding_router)
 app.include_router(proactive_router)
+app.include_router(skills_router)
 
 # Serve Office Add-in static files at /addin/office/
 office_addin_dir = Path(__file__).parent.parent / "office-addin"
