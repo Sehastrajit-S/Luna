@@ -163,6 +163,50 @@ const COMMANDS = {
     run: () => chatCli(rest),
   },
 
+  // ── Skills marketplace ──
+  'skill:list': {
+    group: 'Skills',
+    summary: 'List installed skills (built-in + user-installed)',
+    run: () => skillList(),
+  },
+  'skill:search': {
+    group: 'Skills',
+    summary: 'Search the community skills registry (luna skill:search <query>)',
+    run: () => skillSearch(rest),
+  },
+  'skill:install': {
+    group: 'Skills',
+    summary: 'Install a skill from a git URL or local path (luna skill:install <source>)',
+    run: () => skillInstall(rest),
+  },
+  'skill:remove': {
+    group: 'Skills',
+    summary: 'Remove an installed skill (luna skill:remove <id>)',
+    run: () => skillRemove(rest),
+  },
+  'skill:refresh': {
+    group: 'Skills',
+    summary: 'Refresh the community registry cache',
+    run: () => skillRefresh(),
+  },
+  'skill:validate': {
+    group: 'Skills',
+    summary: 'Validate a local skill folder for publish-readiness (luna skill:validate <path>)',
+    run: () => skillValidate(rest),
+  },
+
+  // ── Multi-agent crew ──
+  crew: {
+    group: 'Agents',
+    summary: 'Run a multi-agent crew against a task (luna crew "<task>")',
+    run: () => crewRun(rest),
+  },
+  'crew:roles': {
+    group: 'Agents',
+    summary: 'List available agent roles',
+    run: () => crewRoles(),
+  },
+
   docs: {
     group: 'Docs',
     summary: 'Start the docs site (Next.js dev server)',
@@ -719,6 +763,252 @@ function doctor() {
     next()
   }
   next()
+}
+
+// ── Skills marketplace ────────────────────────────────────────────────────────
+async function skillApiBase() {
+  const env = readEnvFile()
+  const port = env.port || '8899'
+  return process.env.LUNA_URL || env.luna_url || `http://localhost:${port}`
+}
+
+async function skillFetch(path, opts = {}) {
+  const base = await skillApiBase()
+  try {
+    const r = await fetch(`${base}${path}`, {
+      ...opts,
+      headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+      signal: AbortSignal.timeout(60000),
+    })
+    const text = await r.text()
+    let body = null
+    try { body = text ? JSON.parse(text) : null } catch { body = { raw: text } }
+    if (!r.ok) {
+      const detail = (body && body.detail) || `HTTP ${r.status}`
+      throw new Error(detail)
+    }
+    return body
+  } catch (e) {
+    if (e.name === 'AbortError') throw new Error('Backend did not respond within 60s')
+    throw new Error(`Backend unreachable at ${base} — is it running? (${e.message})`)
+  }
+}
+
+async function skillList() {
+  head('Installed skills')
+  try {
+    const data = await skillFetch('/api/skills/installed')
+    const skills = data.skills || []
+    if (skills.length === 0) { warn('No skills installed.'); return }
+    const builtins = skills.filter(s => s.origin === 'builtin')
+    const userInstalled = skills.filter(s => s.origin === 'user')
+    if (builtins.length) {
+      console.log(`\n  ${c.bold}Built-in${c.reset}`)
+      for (const s of builtins) {
+        console.log(`    ${c.cyan}${s.id.padEnd(28)}${c.reset}${c.dim}${s.description}${c.reset}`)
+      }
+    }
+    if (userInstalled.length) {
+      console.log(`\n  ${c.bold}Installed${c.reset}`)
+      for (const s of userInstalled) {
+        const perms = (s.permissions || []).join(', ') || 'none'
+        console.log(`    ${c.green}${s.id.padEnd(28)}${c.reset}v${s.version}  ${c.dim}[${perms}]${c.reset}`)
+        console.log(`    ${' '.repeat(28)}${c.dim}${s.description}${c.reset}`)
+      }
+    }
+    console.log()
+  } catch (e) { err(e.message); process.exit(1) }
+}
+
+async function skillSearch(args) {
+  const query = args.join(' ').trim()
+  head(query ? `Searching registry for "${query}"` : 'Browsing registry')
+  try {
+    const path = query
+      ? `/api/skills/registry/search?q=${encodeURIComponent(query)}`
+      : '/api/skills/registry'
+    const data = await skillFetch(path)
+    const skills = data.skills || []
+    if (skills.length === 0) { warn('No matching skills.'); return }
+    console.log()
+    for (const s of skills) {
+      const verified = s.verified ? `${c.green} ✓ verified${c.reset}` : ''
+      const stars = s.stars ? ` ${c.yellow}★${s.stars}${c.reset}` : ''
+      console.log(`  ${c.bold}${s.id}${c.reset} v${s.version}${verified}${stars}`)
+      console.log(`    ${c.dim}${s.description}${c.reset}`)
+      console.log(`    ${c.dim}source: ${s.source}${c.reset}`)
+      if ((s.permissions || []).length) {
+        console.log(`    ${c.dim}permissions: ${s.permissions.join(', ')}${c.reset}`)
+      }
+      console.log()
+    }
+    info('Install with:  luna skill:install <source>')
+  } catch (e) { err(e.message); process.exit(1) }
+}
+
+async function skillInstall(args) {
+  const source = (args.find(a => !a.startsWith('--')) || '').trim()
+  if (!source) { err('Usage: luna skill:install <git-url | github:user/repo | path>'); process.exit(1) }
+  const overwrite = args.includes('--overwrite')
+  const yes = args.includes('--yes') || args.includes('-y')
+  head(`Installing ${source}`)
+
+  const attempt = async (confirmDangerous) => skillFetch('/api/skills/install', {
+    method: 'POST',
+    body: JSON.stringify({ source, overwrite, confirm_dangerous: confirmDangerous }),
+  })
+
+  try {
+    let result
+    try {
+      result = await attempt(false)
+    } catch (e) {
+      if (/dangerous permissions/i.test(e.message)) {
+        if (!yes) {
+          warn(e.message)
+          const rl = createInterface({ input, output })
+          const ans = (await rl.question('Continue with these permissions? [y/N] ')).trim().toLowerCase()
+          rl.close()
+          if (ans !== 'y' && ans !== 'yes') { warn('Install cancelled.'); return }
+        }
+        result = await attempt(true)
+      } else { throw e }
+    }
+    const s = result.skill
+    ok(`Installed ${c.bold}${s.skill_id}${c.reset} v${s.version} → ${c.dim}${s.path}${c.reset}`)
+    if ((s.dangerous_permissions || []).length) {
+      warn(`Granted dangerous permissions: ${s.dangerous_permissions.join(', ')}`)
+    }
+  } catch (e) { err(e.message); process.exit(1) }
+}
+
+async function skillRemove(args) {
+  const id = (args[0] || '').trim()
+  if (!id) { err('Usage: luna skill:remove <skill-id>'); process.exit(1) }
+  head(`Removing ${id}`)
+  try {
+    await skillFetch(`/api/skills/${encodeURIComponent(id)}`, { method: 'DELETE' })
+    ok(`Removed ${id}`)
+  } catch (e) { err(e.message); process.exit(1) }
+}
+
+async function skillRefresh() {
+  head('Refreshing community registry')
+  try {
+    const data = await skillFetch('/api/skills/registry/refresh', { method: 'POST' })
+    ok(`Registry refreshed (${data.count} skills)`)
+  } catch (e) { err(e.message); process.exit(1) }
+}
+
+async function skillValidate(args) {
+  const target = (args[0] || '').trim()
+  if (!target) { err('Usage: luna skill:validate <path>'); process.exit(1) }
+  head(`Validating ${target}`)
+  try {
+    const report = await skillFetch('/api/skills/validate', {
+      method: 'POST',
+      body: JSON.stringify({ path: resolve(target) }),
+    })
+    if (report.ok) ok(`${report.skill_id} v${report.version} — ready to publish`)
+    else err(`${report.skill_id || '(unknown)'} — validation failed`)
+    for (const e of report.errors || [])   console.log(`  ${c.red}error  ${c.reset}${e}`)
+    for (const w of report.warnings || []) console.log(`  ${c.yellow}warn   ${c.reset}${w}`)
+    for (const i of report.info || [])     console.log(`  ${c.dim}info   ${i}${c.reset}`)
+    process.exit(report.ok ? 0 : 1)
+  } catch (e) { err(e.message); process.exit(1) }
+}
+
+// ── Multi-agent crew ─────────────────────────────────────────────────────────
+async function crewRoles() {
+  head('Available agent roles')
+  try {
+    const data = await skillFetch('/api/agent/crew/roles')
+    for (const r of data.roles || []) {
+      console.log(`  ${c.bold}${r.role.padEnd(12)}${c.reset}${c.dim}${r.description}${c.reset}`)
+      const tools = (r.allowed_tools || []).join(', ') || 'none'
+      console.log(`              ${c.dim}tools: ${tools}  temp: ${r.temperature}${c.reset}`)
+    }
+    console.log()
+  } catch (e) { err(e.message); process.exit(1) }
+}
+
+async function crewRun(args) {
+  const task = args.join(' ').trim()
+  if (!task) { err('Usage: luna crew "<task description>"'); process.exit(1) }
+  head(`Crew running: ${task}`)
+  const base = await skillApiBase()
+  try {
+    const r = await fetch(`${base}/api/agent/crew/run`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ task }),
+      signal: AbortSignal.timeout(300000),
+    })
+    if (!r.ok || !r.body) {
+      const errText = await r.text().catch(() => '')
+      throw new Error(`HTTP ${r.status} ${errText}`)
+    }
+    const reader = r.body.getReader()
+    const decoder = new TextDecoder()
+    let buf = ''
+    let lastRole = ''
+    while (true) {
+      const { value, done } = await reader.read()
+      if (done) break
+      buf += decoder.decode(value, { stream: true })
+      const parts = buf.split('\n\n')
+      buf = parts.pop() || ''
+      for (const part of parts) {
+        const line = part.replace(/^data:\s*/, '').trim()
+        if (!line) continue
+        let ev
+        try { ev = JSON.parse(line) } catch { continue }
+        renderCrewEvent(ev, (newRole) => { lastRole = newRole })
+      }
+    }
+    console.log()
+    ok('Crew complete')
+  } catch (e) { err(e.message); process.exit(1) }
+}
+
+function renderCrewEvent(ev, setRole) {
+  switch (ev.type) {
+    case 'crew_start':
+      info(`Task accepted: ${ev.task}`)
+      break
+    case 'plan_ready':
+      console.log(`\n  ${c.bold}Plan${c.reset}`)
+      for (const s of ev.subtasks || []) {
+        console.log(`    ${c.cyan}[${s.index}] ${s.role.padEnd(11)}${c.reset}${c.dim}${s.task}${c.reset}`)
+      }
+      console.log()
+      break
+    case 'agent_start':
+      console.log(`\n  ${c.bold}${c.purple}▸ ${ev.role}${c.reset}  ${c.dim}${ev.task}${c.reset}`)
+      setRole(ev.role)
+      break
+    case 'agent_token':
+      process.stdout.write(ev.content || '')
+      break
+    case 'agent_result':
+      console.log()
+      break
+    case 'critic_review':
+      const verdict = ev.verdict === 'approved' ? c.green : c.yellow
+      console.log(`\n  ${verdict}critic: ${ev.verdict}${c.reset} ${c.dim}${ev.reason || ''}${c.reset}`)
+      break
+    case 'revision_request':
+      warn(`Revising (round ${ev.round}): ${ev.reason}`)
+      break
+    case 'crew_done':
+      console.log(`\n${c.bold}${c.green}  Final answer${c.reset}\n`)
+      console.log(ev.answer || '(empty)')
+      break
+    case 'error':
+    case 'agent_error':
+      err(`${ev.role || 'crew'}: ${ev.message || 'unknown error'}`)
+      break
+  }
 }
 
 // ── Check ─────────────────────────────────────────────────────────────────────

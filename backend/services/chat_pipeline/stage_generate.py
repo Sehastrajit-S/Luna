@@ -12,6 +12,7 @@ from backend.services.command_parser import is_coding_request
 from backend.services.coding_agent import stream_coding_agent
 from backend.services.task_planner import is_complex_task, generate_plan, TaskPlan
 from backend.services.response_formatter import format_luna_response
+from backend.services.agents import is_crew_request, run_crew, CrewEventType
 from backend.services.chat_pipeline.context import ChatContext
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,13 @@ async def generate(ctx: ChatContext) -> None:
         return
 
     conv_id = ctx.conv.id
+
+    # ── Crew Mode (multi-agent orchestration) fast-path ───────────────────────
+    if is_crew_request(ctx.user_message) and not ctx.is_business:
+        ctx.voice_streamed = True
+        ctx.had_tool_call = True
+        await _run_crew_mode(ctx)
+        return
 
     # ── Coding agent fast-path ────────────────────────────────────────────────
     if is_coding_request(ctx.user_message) and not ctx.is_business:
@@ -107,3 +115,56 @@ async def generate(ctx: ChatContext) -> None:
             ctx.emit_sse({"type": "plan_done", "summary": plan.progress_summary()})
         else:
             ctx.emit_sse({"type": "plan_progress", "step": plan.current, "total": plan.total})
+
+
+# ── Crew Mode helper ─────────────────────────────────────────────────────────
+
+
+async def _run_crew_mode(ctx: ChatContext) -> None:
+    """
+    Dispatch the user's request to the multi-agent crew.
+
+    Streams agent events to the UI via ctx.sse_events. The final crew answer
+    becomes ctx.full_response so downstream stages (finalize) can persist it.
+    """
+    final_answer = ""
+
+    try:
+        async for event in run_crew(ctx.user_message):
+            payload = event.to_dict()
+            etype = event.type
+
+            if etype == CrewEventType.AGENT_TOKEN:
+                # Surface agent tokens as message_part events for the chat UI.
+                # Prefix with role so the UI can render an agent timeline.
+                role = payload.get("role", "agent")
+                content = payload.get("content", "")
+                ctx.full_response_parts.append(content)
+                ctx.emit_sse({
+                    "type": "agent_token",
+                    "role": role,
+                    "content": content,
+                })
+
+            elif etype == CrewEventType.CREW_DONE:
+                final_answer = payload.get("answer", "")
+                ctx.emit_sse({
+                    "type": "crew_done",
+                    "answer": final_answer,
+                    "scratchpad": payload.get("scratchpad", {}),
+                })
+
+            elif etype == CrewEventType.ERROR:
+                logger.warning("Crew error: %s", payload.get("message"))
+                ctx.emit_sse({"type": "agent_error", **payload})
+
+            else:
+                # All other events forwarded as-is for the UI to consume.
+                ctx.emit_sse({"type": etype.value, **{k: v for k, v in payload.items() if k != "type"}})
+    except Exception as e:
+        logger.error("Crew mode failed: %s", e, exc_info=True)
+        ctx.emit_sse({"type": "error", "message": f"Crew mode failed: {e}"})
+        final_answer = f"I tried to coordinate multiple agents but ran into an issue: {e}"
+
+    ctx.full_response = final_answer or "".join(ctx.full_response_parts) or "(no answer produced)"
+    ctx.tool_succeeded = bool(final_answer)

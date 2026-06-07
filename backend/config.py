@@ -238,6 +238,11 @@ class Settings(BaseSettings):
     # Example: "http://localhost:5173,https://luna.example.com"
     cors_origins: str = ""
 
+    # ── Skills marketplace ────────────────────────────────────────────────────
+    # URL of the curated registry index. Override with a self-hosted JSON file
+    # to run a private/team marketplace.
+    skill_registry_url: str = ""
+
     # ── Variant ───────────────────────────────────────────────────────────────
     # personal  — casual companion, voice, desktop automation, single user
     # business  — professional team assistant, multi-user JWT, rate limiting on
