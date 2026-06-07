@@ -3,13 +3,18 @@ Extracts facts, calendar events, and tasks about the user from conversations.
 Runs after every N messages (interval) and on-demand when correction signals detected.
 """
 import json
+import logging
 import re
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
+
+import httpx
 from sqlalchemy.orm import Session
 from backend.services.llm import ollama
 from backend.services.memory_manager import MemoryManager
+
+logger = logging.getLogger(__name__)
 
 _RLHF_PATH = Path(__file__).parent.parent.parent / "data" / "rlhf_pairs.json"
 
@@ -36,7 +41,8 @@ def _build_extraction_examples(n: int = 20) -> str:
     import random
     try:
         pairs = json.loads(_RLHF_PATH.read_text(encoding="utf-8"))
-    except Exception:
+    except (OSError, json.JSONDecodeError) as e:
+        logger.debug("Could not load RLHF examples: %s", e)
         return ""
     extraction = [p for p in pairs if p.get("mode") == "extraction"]
     if not extraction:
@@ -186,8 +192,8 @@ async def extract_facts_from_conversation(
                         db.commit()
                         events_created.append(title)
                         stored.append(item)
-                except Exception:
-                    pass
+                except (ValueError, TypeError, KeyError) as e:
+                    logger.debug("Skipping invalid calendar event item: %s", e)
                 continue
 
             # ── Task creation ────────────────────────────────────────────────
@@ -209,8 +215,8 @@ async def extract_facts_from_conversation(
                         db.commit()
                         tasks_created.append(title)
                         stored.append(item)
-                except Exception:
-                    pass
+                except (ValueError, TypeError, KeyError) as e:
+                    logger.debug("Skipping invalid task item: %s", e)
                 continue
 
             # ── Regular fact ─────────────────────────────────────────────────
@@ -245,7 +251,11 @@ async def extract_facts_from_conversation(
                     proactive_queue.append(f"Added to your tasks: {title}.")
 
         return stored
-    except Exception:
+    except (json.JSONDecodeError, ValueError) as e:
+        logger.warning("Fact extraction parsing failed: %s", e)
+        return []
+    except Exception as e:
+        logger.error("Unexpected error in fact extraction: %s", e, exc_info=True)
         return []
 
 
@@ -260,8 +270,8 @@ async def extract_emotional_arc(conversation_text: str) -> str:
         result = result.strip().strip('"')
         if result and len(result) > 8 and "empty" not in result.lower():
             return result
-    except Exception:
-        pass
+    except (httpx.HTTPError, OSError, ValueError) as e:
+        logger.warning("Emotional arc extraction failed: %s", e)
     return ""
 
 
@@ -272,7 +282,8 @@ async def summarize_conversation(conversation_text: str) -> str:
             system=SUMMARIZE_SYSTEM,
             temperature=0.2,
         )
-    except Exception:
+    except (httpx.HTTPError, OSError, ValueError) as e:
+        logger.warning("Conversation summarization failed: %s", e)
         return ""
 
 
@@ -286,8 +297,8 @@ async def extract_user_name(conversation_text: str) -> Optional[str]:
         name = name.strip().strip('"').strip("'")
         if name and name.lower() != "unknown" and len(name) < 50:
             return name
-    except Exception:
-        pass
+    except (httpx.HTTPError, OSError, ValueError) as e:
+        logger.warning("User name extraction failed: %s", e)
     return None
 
 

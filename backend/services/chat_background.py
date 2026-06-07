@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 
 from sqlalchemy.orm import Session
@@ -19,6 +20,8 @@ from backend.services.fact_extractor import (
     format_conversation_for_extraction,
     _should_trigger_extraction,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _auto_save_rlhf_pair(user_message: str, luna_response: str, mood: str) -> None:
@@ -43,8 +46,8 @@ def _auto_save_rlhf_pair(user_message: str, luna_response: str, mood: str) -> No
             "auto_generated": True,
         })
         path.write_text(json.dumps(pairs, indent=2, ensure_ascii=False), encoding="utf-8")
-    except Exception:
-        pass
+    except (OSError, json.JSONDecodeError) as e:
+        logger.warning("Failed to save RLHF pair: %s", e)
 
 
 async def track_activity_bg(message: str, conversation_id: int) -> None:
@@ -57,8 +60,10 @@ async def track_activity_bg(message: str, conversation_id: int) -> None:
         for act in active:
             await tracker.check_progress(message, act)
         db.close()
-    except Exception:
-        pass
+    except (OSError, RuntimeError) as e:
+        logger.warning("Activity tracking failed for conv %d: %s", conversation_id, e)
+    except Exception as e:
+        logger.error("Unexpected error in track_activity_bg: %s", e, exc_info=True)
 
 
 async def post_conversation_processing(
@@ -152,5 +157,8 @@ async def post_conversation_processing(
                         expires_in_days=7,
                     )
 
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error(
+            "post_conversation_processing failed for conv %d: %s",
+            conversation_id, e, exc_info=True,
+        )

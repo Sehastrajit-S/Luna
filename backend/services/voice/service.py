@@ -600,7 +600,7 @@ class VoiceService:
                 break
             if self._stop.is_set():
                 break
-            from backend.routers.chat import strip_tool_call_json
+            from backend.services.tool_runner import strip_tool_call_json
             clean = strip_tool_call_json(sentence)
             clean = re.sub(r"\[(?:LAUNCH|TASK|EVENT|SPOTIFY|BROWSE|MAP|WIDGET):[^\]]+\]", "", clean).strip()
             if not clean:

@@ -32,7 +32,7 @@ class BrowserWebToolTests(unittest.IsolatedAsyncioTestCase):
         )
 
     def test_web_answer_reference_safeguard(self) -> None:
-        from backend.routers.chat import _ensure_references
+        from backend.services.response_formatter import ensure_references as _ensure_references
 
         tool_result = "References:\n[1] Example - https://example.com/"
         answer = _ensure_references("Short answer.", tool_result)
@@ -40,7 +40,7 @@ class BrowserWebToolTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("https://example.com/", answer)
 
     def test_web_answer_reference_safeguard_separates_jammed_references(self) -> None:
-        from backend.routers.chat import _ensure_references
+        from backend.services.response_formatter import ensure_references as _ensure_references
 
         answer = _ensure_references(
             "Short answer.References:\n[1] Example - https://example.com/",
@@ -49,7 +49,7 @@ class BrowserWebToolTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(answer, "Short answer.\n\nReferences:\n[1] Example - https://example.com/")
 
     def test_web_answer_reference_safeguard_strips_malformed_source_bleed(self) -> None:
-        from backend.routers.chat import _ensure_references
+        from backend.services.response_formatter import ensure_references as _ensure_references
 
         noisy = (
             "The SEC is a U.S. agency.(https://bad.example/source)\n"
@@ -63,7 +63,7 @@ class BrowserWebToolTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("bad.example", answer)
 
     def test_web_answer_reference_safeguard_strips_inline_title_url_bleed(self) -> None:
-        from backend.routers.chat import _ensure_references
+        from backend.services.response_formatter import ensure_references as _ensure_references
 
         noisy = (
             "Pool pump efficiency uses WEF. "
@@ -78,25 +78,25 @@ class BrowserWebToolTests(unittest.IsolatedAsyncioTestCase):
         )
 
     def test_direct_research_query_detection_handles_citations_typo(self) -> None:
-        from backend.routers.chat import _extract_direct_research_query
+        from backend.services.command_parser import extract_direct_research_query as _extract_direct_research_query
 
         query = _extract_direct_research_query("research what is SEC and include the sitations")
         self.assertEqual(query, "what is SEC")
 
     def test_direct_research_query_detection_handles_citations_without_research_word(self) -> None:
-        from backend.routers.chat import _extract_direct_research_query
+        from backend.services.command_parser import extract_direct_research_query as _extract_direct_research_query
 
         query = _extract_direct_research_query("what is SEC with citations")
         self.assertEqual(query, "what is SEC")
 
     def test_direct_research_query_detection_strips_cite_references(self) -> None:
-        from backend.routers.chat import _extract_direct_research_query
+        from backend.services.command_parser import extract_direct_research_query as _extract_direct_research_query
 
         query = _extract_direct_research_query("research what is SEC and cite the references")
         self.assertEqual(query, "what is SEC")
 
     def test_direct_research_query_detection_ten_prompt_smoke(self) -> None:
-        from backend.routers.chat import _extract_direct_research_query
+        from backend.services.command_parser import extract_direct_research_query as _extract_direct_research_query
 
         cases = {
             "research what is SEC and cite the references": "what is SEC",

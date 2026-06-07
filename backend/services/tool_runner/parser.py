@@ -1,5 +1,8 @@
 """JSON tool call extraction and stripping from LLM response text."""
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def _scan_json_object(text: str, start: int) -> int | None:
@@ -44,7 +47,7 @@ def parse_tool_call_json(response: str) -> dict | None:
                 tc = obj.get("tool_call")
                 if tc and "tool" in tc:
                     return tc
-            except Exception:
+            except (json.JSONDecodeError, ValueError):
                 pass
         i += 1
 
@@ -60,7 +63,7 @@ def parse_tool_call_json(response: str) -> dict | None:
                 tc = json.loads(response[brace_start:end + 1])
                 if "tool" in tc:
                     return tc
-            except Exception:
+            except (json.JSONDecodeError, ValueError):
                 pass
         idx = response.find(bracket_marker, idx + 1)
     return None
@@ -104,7 +107,7 @@ def strip_tool_call_json(response: str) -> str:
                     out.append(' ')
                     i = end + 1
                     continue
-            except Exception:
+            except (json.JSONDecodeError, ValueError):
                 pass
         out.append(result[i])
         i += 1

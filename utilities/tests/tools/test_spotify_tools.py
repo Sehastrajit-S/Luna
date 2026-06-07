@@ -7,7 +7,7 @@ from tests.tools import _bootstrap  # noqa: F401
 
 class SpotifyToolTests(unittest.TestCase):
     def test_direct_command_parser(self) -> None:
-        from backend.routers.chat import parse_user_spotify_request
+        from backend.services.command_parser import parse_user_spotify_request
 
         cases = {
             "play shape of you": {"action": "play", "query": "shape of you"},

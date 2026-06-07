@@ -52,6 +52,10 @@ class Settings(BaseSettings):
     port: int = 8899
     debug: bool = False
 
+    # ── Logging ───────────────────────────────────────────────────────────────
+    log_level: str = "INFO"     # DEBUG | INFO | WARNING | ERROR
+    log_format: str = "text"    # text | json (json for log aggregation)
+
     # ── LLM — provider selection ──────────────────────────────────────────────
     # Values: ollama | openai-compatible | nvidia-nim | anthropic | google | groq | cohere | mistral
     llm_provider: str = "ollama"
@@ -146,6 +150,10 @@ class Settings(BaseSettings):
     # Production: set to a long random string; used to sign per-user JWT tokens.
     jwt_secret: str = ""
     jwt_expiry_hours: int = 720  # 30 days
+    # One-time secret for bootstrapping the first admin JWT (see /api/admin/bootstrap).
+    # Generate with: python -c "import secrets; print(secrets.token_urlsafe(32))"
+    # Remove from .env after first admin token is created.
+    admin_bootstrap_secret: str = ""
 
     # ── Rate limiting (production) ────────────────────────────────────────────
     rate_limit_enabled: bool = False
@@ -224,6 +232,11 @@ class Settings(BaseSettings):
     # or POST /api/health/webhook/samsung
     # Set a shared secret to authenticate inbound webhooks.
     health_webhook_secret: str = ""
+
+    # ── CORS ──────────────────────────────────────────────────────────────────
+    # Comma-separated list of allowed origins. Empty = localhost defaults.
+    # Example: "http://localhost:5173,https://luna.example.com"
+    cors_origins: str = ""
 
     # ── Variant ───────────────────────────────────────────────────────────────
     # personal  — casual companion, voice, desktop automation, single user

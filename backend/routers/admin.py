@@ -1,12 +1,25 @@
 """
 Admin API — production user and JWT token management.
 
-All endpoints require  Authorization: Bearer <jwt_secret>  header.
-Enabled only when  jwt_secret  is non-empty in .env.
+Authentication
+──────────────
+All admin endpoints require a valid admin-role JWT in the Authorization header:
+    Authorization: Bearer <admin-jwt>
+
+To bootstrap the first admin token, use the /api/admin/bootstrap endpoint with
+the admin_bootstrap_secret set in .env. This one-time secret is NEVER used as a
+bearer token for other endpoints — it only generates the initial admin JWT.
+
+After bootstrapping, use the returned admin JWT for all further admin calls.
 
 Usage
 ─────
-Create a user and get a JWT token:
+Bootstrap admin (first time only):
+  POST /api/admin/bootstrap
+  Body: { "bootstrap_secret": "<admin_bootstrap_secret from .env>" }
+  Returns: { "token": "<admin-jwt>", "user_id": "...", "username": "admin" }
+
+Create a user:
   POST /api/admin/users
   Body: { "username": "alice", "role": "user" }
   Returns: { "user_id": "...", "token": "..." }
@@ -26,6 +39,7 @@ System info:
 import secrets
 import time
 import uuid
+import logging
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Literal
@@ -36,6 +50,8 @@ from sqlalchemy.orm import Session
 from backend.config import settings
 from backend.models.database import get_db
 import backend.services.db_manager as db_mgr
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -67,7 +83,8 @@ def verify_jwt(token: str) -> dict | None:
     try:
         import jwt
         return jwt.decode(token, settings.jwt_secret, algorithms=["HS256"])
-    except Exception:
+    except (ImportError, Exception) as e:
+        logger.debug("JWT verification failed: %s", e)
         return None
 
 
@@ -78,8 +95,8 @@ def _load_users() -> dict:
     if _USERS_FILE.exists():
         try:
             return json.loads(_USERS_FILE.read_text())
-        except Exception:
-            pass
+        except (json.JSONDecodeError, OSError) as e:
+            logger.warning("Failed to load users file: %s", e)
     return {}
 
 
@@ -92,12 +109,83 @@ def _save_users(users: dict):
 # ── auth guard ────────────────────────────────────────────────────────────────
 
 def _require_admin(request: Request):
-    secret = settings.jwt_secret
-    if not secret:
+    """
+    Verify the caller has a valid admin-role JWT.
+
+    SECURITY: The jwt_secret is NEVER accepted as a bearer token directly.
+    Admin access requires a properly signed JWT with role="admin".
+    """
+    if not settings.jwt_secret:
         raise HTTPException(403, "Admin API requires jwt_secret to be set in .env")
+
     auth = request.headers.get("Authorization", "")
-    if not auth.startswith("Bearer ") or auth[7:] != secret:
-        raise HTTPException(401, "Unauthorized")
+    if not auth.startswith("Bearer "):
+        raise HTTPException(401, "Missing Authorization: Bearer <token> header")
+
+    token = auth[7:]
+    payload = verify_jwt(token)
+    if payload is None:
+        raise HTTPException(401, "Invalid or expired token")
+    if payload.get("role") != "admin":
+        raise HTTPException(403, "Admin role required")
+
+
+# ── bootstrap endpoint ────────────────────────────────────────────────────────
+
+@router.post("/bootstrap")
+async def bootstrap_admin(request: Request):
+    """
+    One-time admin token generation using the bootstrap secret from .env.
+
+    The bootstrap secret (admin_bootstrap_secret) is a separate value from
+    jwt_secret, and is only used here to create the initial admin JWT.
+    It should be rotated/removed from .env after first use in production.
+    """
+    if not settings.jwt_secret:
+        raise HTTPException(503, "jwt_secret must be set in .env")
+    if not settings.admin_bootstrap_secret:
+        raise HTTPException(503, "admin_bootstrap_secret must be set in .env for bootstrapping")
+
+    body = await request.json()
+    provided_secret = str(body.get("bootstrap_secret", "")).strip()
+
+    if not provided_secret:
+        raise HTTPException(400, "bootstrap_secret is required in request body")
+
+    # Constant-time comparison to prevent timing attacks
+    if not secrets.compare_digest(provided_secret, settings.admin_bootstrap_secret):
+        logger.warning("Failed admin bootstrap attempt from %s", request.client.host if request.client else "unknown")
+        raise HTTPException(401, "Invalid bootstrap secret")
+
+    # Create or find the admin user
+    users = _load_users()
+    admin_user = None
+    for u in users.values():
+        if u.get("username") == "admin" and u.get("role") == "admin":
+            admin_user = u
+            break
+
+    if admin_user is None:
+        user_id = str(uuid.uuid4())
+        token = _sign_jwt(user_id, "admin", "admin")
+        users[user_id] = {
+            "user_id": user_id,
+            "username": "admin",
+            "role": "admin",
+            "token": token,
+            "created_at": datetime.utcnow().isoformat(),
+            "active": True,
+        }
+        _save_users(users)
+        logger.info("Admin user bootstrapped: %s", user_id)
+        return {"user_id": user_id, "username": "admin", "role": "admin", "token": token}
+    else:
+        # Rotate existing admin token
+        token = _sign_jwt(admin_user["user_id"], "admin", "admin")
+        admin_user["token"] = token
+        _save_users(users)
+        logger.info("Admin token rotated via bootstrap for: %s", admin_user["user_id"])
+        return {"user_id": admin_user["user_id"], "username": "admin", "role": "admin", "token": token}
 
 
 # ── endpoints ─────────────────────────────────────────────────────────────────

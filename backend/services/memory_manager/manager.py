@@ -1,6 +1,7 @@
 """MemoryManager: SQLite facts, ChromaDB vector search, conversation context."""
 import asyncio
 import json as _json
+import logging
 import re as _re
 from datetime import datetime, timedelta
 from typing import Optional
@@ -12,6 +13,8 @@ from sqlalchemy.orm import Session
 from backend.config import settings
 from backend.models.database import Conversation, Fact, Message
 from backend.services.llm import ollama
+
+logger = logging.getLogger(__name__)
 
 
 class MemoryManager:
@@ -106,15 +109,17 @@ class MemoryManager:
                         "created_at": datetime.utcnow().timestamp(),
                     }],
                 )
-        except Exception:
-            pass
+        except (chromadb.errors.ChromaError, OSError, ValueError) as e:
+            logger.warning("Failed to store fact embedding (fact_id=%d): %s", fact.id, e)
+        except Exception as e:
+            logger.error("Unexpected error storing fact embedding: %s", e, exc_info=True)
 
         try:
             asyncio.create_task(
                 self._bg_llm_contradiction_check(fact.id, content, category, conversation_id)
             )
-        except Exception:
-            pass
+        except RuntimeError as e:
+            logger.debug("Could not schedule contradiction check: %s", e)
 
         return fact.id
 
@@ -215,8 +220,8 @@ class MemoryManager:
 
             try:
                 col.delete(ids=[f"fact_{contradicts_id}"])
-            except Exception:
-                pass
+            except (chromadb.errors.ChromaError, OSError) as e:
+                logger.warning("Failed to delete superseded fact from ChromaDB: %s", e)
 
             _store_note(
                 f'Memory just updated: you previously knew "{old_content}" '
@@ -225,7 +230,10 @@ class MemoryManager:
                 conversation_id=conversation_id,
             )
 
-        except Exception:
+        except (_json.JSONDecodeError, ValueError, TypeError) as e:
+            logger.debug("Contradiction check parse error: %s", e)
+        except Exception as e:
+            logger.error("Contradiction check failed for fact %d: %s", new_fact_id, e, exc_info=True)
             try:
                 db.rollback()
             except Exception:
@@ -248,8 +256,8 @@ class MemoryManager:
                         "created_at": datetime.utcnow().timestamp(),
                     }],
                 )
-        except Exception:
-            pass
+        except (chromadb.errors.ChromaError, OSError, ValueError) as e:
+            logger.warning("Failed to store conversation summary embedding (conv %d): %s", conversation_id, e)
 
     async def retrieve_relevant(self, query: str, n: int = None) -> dict[str, list[str]]:
         n    = n or settings.memory_retrieval_count
@@ -296,7 +304,8 @@ class MemoryManager:
             long_term  = [d for d, _, age in scored if age >= 2][:half]
             return {"short_term": short_term, "long_term": long_term}
 
-        except Exception:
+        except (chromadb.errors.ChromaError, OSError, ValueError) as e:
+            logger.warning("Memory retrieval failed, using fallback facts: %s", e)
             return {"short_term": [], "long_term": self._fallback_facts()}
 
     def _fallback_facts(self) -> list[str]:

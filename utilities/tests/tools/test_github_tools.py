@@ -8,7 +8,7 @@ from tests.tools import _bootstrap  # noqa: F401
 
 class GitHubToolTests(unittest.IsolatedAsyncioTestCase):
     async def test_execute_github_safe_read_tools(self) -> None:
-        from backend.routers.chat import execute_tool_call
+        from backend.services.tool_runner import execute_tool_call
 
         with patch("backend.services.github.list_repos", new=AsyncMock(return_value=[])):
             result = await execute_tool_call({"tool": "github_list_repos", "args": {}}, None, 0)

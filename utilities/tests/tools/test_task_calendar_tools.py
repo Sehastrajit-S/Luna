@@ -22,7 +22,7 @@ class TaskCalendarToolTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_create_task_tool_uses_database_session(self) -> None:
         from backend.models.database import Task
-        from backend.routers.chat import execute_tool_call
+        from backend.services.tool_runner import execute_tool_call
 
         result = await execute_tool_call(
             {"tool": "create_task", "args": {"title": "Smoke task", "priority": "low"}},
@@ -34,7 +34,7 @@ class TaskCalendarToolTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_create_event_tool_uses_database_session(self) -> None:
         from backend.models.database import CalendarEvent
-        from backend.routers.chat import execute_tool_call
+        from backend.services.tool_runner import execute_tool_call
 
         result = await execute_tool_call(
             {
