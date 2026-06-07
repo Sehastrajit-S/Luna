@@ -95,7 +95,7 @@ async def training_chat(body: dict, db: Session = Depends(get_db)):
     every feature can be trained — Spotify, maps, tasks, etc.
     """
     import asyncio
-    from backend.routers.chat import build_system_prompt
+    from backend.services.prompt_builder import build_system_prompt
     from backend.services.spotify import spotify_service
 
     history: list[dict] = body.get("history", [])

@@ -1,4 +1,5 @@
 """LLMClient — unified streaming + completion interface over all providers."""
+import logging
 from typing import AsyncGenerator
 
 import httpx
@@ -20,6 +21,8 @@ from backend.services.llm.providers import (
     _complete_google,
     _openai_headers,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class LLMClient:
@@ -54,7 +57,8 @@ class LLMClient:
                 async with httpx.AsyncClient(timeout=httpx.Timeout(3.0)) as client:
                     r = await client.get(f"{settings.ollama_base_url}/api/tags")
                     return r.status_code == 200
-            except Exception:
+            except (httpx.HTTPError, OSError) as e:
+                logger.debug("Ollama availability check failed: %s", e)
                 return False
         if p == "openai-compatible":
             return bool(settings.openai_api_key and settings.openai_base_url and settings.openai_model)

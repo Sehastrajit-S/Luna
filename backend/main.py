@@ -16,9 +16,13 @@ from backend.routers.coding import router as coding_router
 from backend.routers.observe import router as observe_router
 from backend.routers.health_integrations import router as health_router
 from backend.middleware.rate_limit import RateLimitMiddleware
+from backend.middleware.logging_middleware import RequestIDMiddleware, configure_logging
 from backend.processes.registry import start_lifecycle_processes, stop_lifecycle_processes
 from backend.services.telemetry import tracer
 from backend.models.database import SessionLocal
+
+# Configure structured logging before anything else logs
+configure_logging()
 
 
 @asynccontextmanager
@@ -42,14 +46,39 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Middleware order matters: outermost (first added) wraps everything.
+# RequestID → RateLimit → CORS → route handler
+app.add_middleware(RequestIDMiddleware)
 app.add_middleware(RateLimitMiddleware)
+
+# ── CORS ──────────────────────────────────────────────────────────────────────
+# allow_origins=["*"] + allow_credentials=True is invalid per the CORS spec
+# and creates CSRF exposure when JWT auth is active.  Use an explicit origin list.
+_DEFAULT_ORIGINS = [
+    "http://localhost:5173",
+    "http://localhost:8899",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:8899",
+]
+_configured_origins = (
+    [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
+    if settings.cors_origins
+    else _DEFAULT_ORIGINS
+)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_configured_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*", "X-Voice-Emotion", "X-Volume", "X-Speech-Speed", "X-Speech-Duration"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "X-Voice-Emotion",
+        "X-Volume",
+        "X-Speech-Speed",
+        "X-Speech-Duration",
+    ],
 )
 
 

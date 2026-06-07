@@ -8,7 +8,7 @@ from tests.tools import _bootstrap  # noqa: F401
 
 class RegistryToolTests(unittest.TestCase):
     def test_every_registered_tool_has_a_dispatch_handler(self) -> None:
-        from backend.routers.chat import execute_tool_call
+        from backend.services.tool_runner import execute_tool_call
         from backend.services.tool_registry import TOOL_REGISTRY
 
         source = inspect.getsource(execute_tool_call)

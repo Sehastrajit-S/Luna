@@ -1,0 +1,39 @@
+# L.U.N.A. — Ruff linter configuration
+# Run: ruff check backend/
+# Fix: ruff check backend/ --fix
+
+[lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "BLE",    # flake8-blind-except (BLE001 = bare except)
+    "T20",    # flake8-print (flag print statements in production code)
+    "LOG",    # flake8-logging
+]
+
+ignore = [
+    "E501",   # line too long — handled by formatter
+    "T201",   # print() — allow for now (chat.py uses it deliberately), tighten later
+]
+
+# BLE001 — Do not catch blind exception: `Exception`
+# This is the key rule. Forces explicit exception types + logging.
+# New code MUST NOT use bare `except Exception:` or `except:`.
+# Existing code should be migrated progressively.
+
+[lint.per-file-ignores]
+# Allow bare exceptions in these files temporarily while they're migrated.
+# REMOVE files from this list as they are fixed.
+"backend/services/voice/*" = ["BLE001"]
+"backend/services/spotify.py" = ["BLE001"]
+"backend/services/state_engine/*" = ["BLE001"]
+"backend/services/system_controls/*" = ["BLE001"]
+"backend/services/app_launcher/*" = ["BLE001"]
+"backend/services/media_context.py" = ["BLE001"]
+"backend/services/screen_perception.py" = ["BLE001"]
+
+[format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
