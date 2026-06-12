@@ -337,6 +337,12 @@ function hasArg(args, flag) {
   return args.includes(flag)
 }
 
+function venvPythonPath() {
+  return isWin
+    ? join(root, '.venv', 'Scripts', 'python.exe')
+    : join(root, '.venv', 'bin', 'python')
+}
+
 // ── Setup ─────────────────────────────────────────────────────────────────────
 async function setup() {
   console.log(`\n${c.bold}${c.purple}  ██╗     ██╗   ██╗███╗   ██╗ █████╗ ${c.reset}`)
@@ -397,12 +403,9 @@ async function setup() {
     ok('.venv already exists')
   }
 
-  const pip = isWin
-    ? join(root, '.venv', 'Scripts', 'pip.exe')
-    : join(root, '.venv', 'bin', 'pip')
-
-  runSync(pip, ['install', '--upgrade', 'pip', '--quiet'])
-  runSync(pip, ['install', '-r', 'backend/requirements.txt', '--quiet'])
+  const venvPython = venvPythonPath()
+  runSync(venvPython, ['-m', 'pip', 'install', '--upgrade', 'pip', '--quiet'])
+  runSync(venvPython, ['-m', 'pip', 'install', '-r', 'backend/requirements.txt', '--quiet'])
   ok('Python dependencies installed')
 
   // ── Ollama models (personal only — business typically uses cloud) ─────────────
@@ -457,13 +460,11 @@ function install() {
   runSync(isWin ? 'npm.cmd' : 'npm', ['install', '--prefix', 'frontend'])
   ok('Node done')
 
-  const pip = isWin
-    ? join(root, '.venv', 'Scripts', 'pip.exe')
-    : join(root, '.venv', 'bin', 'pip')
+  const venvPython = venvPythonPath()
 
-  if (existsSync(pip)) {
+  if (existsSync(venvPython)) {
     head('Installing Python dependencies...')
-    runSync(pip, ['install', '-r', 'backend/requirements.txt', '--quiet'])
+    runSync(venvPython, ['-m', 'pip', 'install', '-r', 'backend/requirements.txt', '--quiet'])
     ok('Python done')
   } else {
     warn('No .venv found — run: luna setup')
