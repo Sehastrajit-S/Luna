@@ -19,6 +19,8 @@ import { fileURLToPath } from 'node:url'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root      = resolve(__dirname, '..')
 const isWin     = platform() === 'win32'
+const cliNpmPackage = 'luna-workspace'
+const cliGithubPackage = 'github:Sehastrajit/Luna'
 
 // ── Colours ───────────────────────────────────────────────────────────────────
 const c = {
@@ -44,6 +46,26 @@ const COMMANDS = {
     group: 'Setup',
     summary: 'Install Node and Python dependencies',
     run: install,
+  },
+  'install:command': {
+    group: 'Setup',
+    summary: 'Print the one-line CLI installer',
+    run: installCommand,
+  },
+  update: {
+    group: 'Setup',
+    summary: 'Pull latest Luna code and refresh dependencies',
+    run: () => updateCli(rest),
+  },
+  'self:update': {
+    group: 'Setup',
+    summary: 'Alias for update',
+    run: () => updateCli(rest),
+  },
+  'cli:install': {
+    group: 'Setup',
+    summary: 'Install the luna command globally with npm link',
+    run: installCli,
   },
 
   // ── Development ──
@@ -155,12 +177,37 @@ const COMMANDS = {
     summary: 'Check if the running Luna backend is healthy',
     run: healthCheck,
   },
+  status: {
+    group: 'Diagnostics',
+    summary: 'Show backend, model, app, and permission status',
+    run: statusCli,
+  },
 
   // ── Docs ──
   chat: {
     group: 'Chat',
     summary: 'Interactive terminal chat with the running Luna backend',
     run: () => chatCli(rest),
+  },
+  model: {
+    group: 'Chat',
+    summary: 'List or switch model provider (luna model [provider] [model])',
+    run: () => modelCli(rest),
+  },
+  connect_app: {
+    group: 'Chat',
+    summary: 'Show app connector status or setup hints',
+    run: () => connectAppCli(rest),
+  },
+  apps: {
+    group: 'Chat',
+    summary: 'Alias for connect_app',
+    run: () => connectAppCli(rest),
+  },
+  bugfix: {
+    group: 'Chat',
+    summary: 'Run enterprise bugfix workflow from the CLI (luna bugfix "<bug>")',
+    run: () => bugfixRun(rest),
   },
 
   // ── Skills marketplace ──
@@ -284,6 +331,10 @@ function run(bin, args) {
 function quiet(cmd) {
   try { return execSync(cmd, { cwd: root, stdio: 'pipe' }).toString().trim() }
   catch { return '' }
+}
+
+function hasArg(args, flag) {
+  return args.includes(flag)
 }
 
 // ── Setup ─────────────────────────────────────────────────────────────────────
@@ -419,7 +470,71 @@ function install() {
   }
 }
 
+function installCommand() {
+  head('One-line Luna CLI install')
+  console.log(`  ${c.bold}npm i -g ${cliNpmPackage}${c.reset}`)
+  console.log()
+  console.log(`${c.dim}Shortest first run without a permanent install:${c.reset}`)
+  console.log(`  ${c.bold}npx ${cliNpmPackage} setup${c.reset}`)
+  console.log()
+  console.log(`${c.dim}Works on macOS, Windows, and Linux when Node.js/npm are installed.${c.reset}`)
+  console.log(`${c.dim}If the npm package is not published yet, use:${c.reset}`)
+  console.log(`  ${c.bold}npm i -g ${cliGithubPackage}${c.reset}`)
+  console.log()
+  info('Then run: luna setup')
+}
+
+function updateCli(args = []) {
+  const force = hasArg(args, '--force')
+  const skipInstall = hasArg(args, '--skip-install')
+  const skipCheck = hasArg(args, '--skip-check')
+  const doRelink = hasArg(args, '--link') || hasArg(args, '--relink')
+  const branch = quiet('git branch --show-current') || 'current branch'
+  const trackedStatus = quiet('git status --porcelain --untracked-files=no')
+
+  head('Updating Luna')
+  info(`Repository: ${root}`)
+  info(`Branch: ${branch}`)
+
+  if (trackedStatus && !force) {
+    warn('Tracked files have local changes. Commit, stash, or rerun with --force to continue.')
+    console.log(`${c.dim}${trackedStatus.split('\n').slice(0, 12).join('\n')}${c.reset}`)
+    if (trackedStatus.split('\n').length > 12) console.log(`${c.dim}...${c.reset}`)
+    process.exit(1)
+  }
+
+  runSync('git', ['fetch', '--prune'])
+  runSync('git', ['pull', '--ff-only'])
+
+  if (!skipInstall) {
+    runSync(isWin ? 'npm.cmd' : 'npm', ['install'])
+  } else {
+    warn('Skipped dependency install')
+  }
+
+  if (doRelink) {
+    runSync(isWin ? 'npm.cmd' : 'npm', ['link'])
+  }
+
+  if (!skipCheck) {
+    runSync(isWin ? 'npm.cmd' : 'npm', ['run', 'test:smoke'])
+  } else {
+    warn('Skipped smoke checks')
+  }
+
+  ok('Luna update complete')
+  info('Use: luna update --skip-check for a faster local refresh')
+}
+
 // ── Health check ──────────────────────────────────────────────────────────────
+function installCli() {
+  head('Installing Luna CLI globally...')
+  runSync(isWin ? 'npm.cmd' : 'npm', ['link'])
+  ok('Installed global `luna` command')
+  info('Try: luna help')
+  info('Remove later with: npm unlink -g luna-workspace')
+}
+
 async function healthCheck() {
   const env  = readEnvFile()
   const port = env.port || '8899'
@@ -446,7 +561,7 @@ async function chatCli(args = []) {
   const denyAll = args.includes('--no')
   const firstMessage = args.filter(a => !['--yes', '-y', '--no'].includes(a)).join(' ').trim()
 
-  console.log(`${c.bold}
+  console.log(`${c.bold}${c.purple}
   ██╗     ██╗   ██╗███╗   ██╗ █████╗
   ██║     ██║   ██║████╗  ██║██╔══██╗
   ██║     ██║   ██║██╔██╗ ██║███████║
@@ -594,6 +709,216 @@ ${c.reset}  Large Unified Nexus Mind AI
     return `${cmd.type || 'command'} ${JSON.stringify(cmd)}`
   }
 
+  async function apiJson(path, opts = {}) {
+    const r = await fetch(`${baseUrl}${path}`, {
+      ...opts,
+      headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+      signal: opts.signal || AbortSignal.timeout(120000),
+    })
+    const text = await r.text()
+    let body = null
+    try { body = text ? JSON.parse(text) : null } catch { body = { raw: text } }
+    if (!r.ok) throw new Error((body && (body.detail || body.error)) || `HTTP ${r.status}`)
+    return body
+  }
+
+  async function modelCommand(raw = '') {
+    const parts = raw.trim().split(/\s+/).filter(Boolean)
+    const settings = await apiJson('/api/coding/settings')
+    const providers = settings.providers || {}
+    const modelKey = {
+      ollama: 'ollama_model',
+      anthropic: 'anthropic_model',
+      groq: 'groq_model',
+      google: 'google_model',
+      'openai-compatible': 'openai_model',
+      mistral: 'mistral_model',
+      cohere: 'cohere_model',
+      'nvidia-nim': 'nvidia_nim_model',
+    }
+
+    if (parts.length === 0 || parts[0] === 'list') {
+      console.log(`\n${c.bold}Models${c.reset}`)
+      console.log(`  active provider: ${c.cyan}${settings.llm_provider}${c.reset}`)
+      for (const [id, meta] of Object.entries(providers)) {
+        const key = modelKey[id]
+        const model = key ? settings[key] : ''
+        const mark = id === settings.llm_provider ? '*' : ' '
+        const configured = meta.configured ? c.green + 'configured' + c.reset : c.yellow + 'missing key' + c.reset
+        console.log(`  ${mark} ${c.bold}${id.padEnd(18)}${c.reset} ${configured} ${c.dim}${model || ''}${c.reset}`)
+      }
+      console.log(`\n  ${c.dim}Use: /model <provider> [model]${c.reset}`)
+      return
+    }
+
+    const provider = parts[0]
+    if (!providers[provider]) {
+      warn(`Unknown provider: ${provider}`)
+      info(`Use /model list`)
+      return
+    }
+
+    const payload = { llm_provider: provider }
+    const model = parts.slice(1).join(' ').trim()
+    if (model && modelKey[provider]) payload[modelKey[provider]] = model
+    const updated = await apiJson('/api/coding/settings', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+    ok(`Model updated: ${provider}${model ? ` / ${model}` : ''}`)
+    if (updated.updated) console.log(`${c.dim}${JSON.stringify(updated.updated)}${c.reset}`)
+  }
+
+  async function connectAppCommand(raw = '') {
+    const app = raw.trim().toLowerCase()
+    const envNow = readEnvFile()
+    const workspace = await apiJson('/api/integrations/workspace/status').catch(() => null)
+    const rows = [
+      ['GitHub', Boolean(envNow.github_token), 'github_token'],
+      ['Slack', Boolean(envNow.slack_bot_token), 'slack_bot_token'],
+      ['Jira', Boolean(envNow.jira_base_url && envNow.jira_email && envNow.jira_api_token), 'jira_base_url, jira_email, jira_api_token'],
+      ['Google Workspace', Boolean(workspace?.google?.configured), 'google_workspace_refresh_token or access token'],
+      ['Microsoft 365', Boolean(workspace?.microsoft?.configured), 'microsoft_workspace_refresh_token or access token'],
+      ['Salesforce', false, 'not implemented yet'],
+      ['Notion', false, 'not implemented yet'],
+      ['Database tools', false, 'not implemented yet'],
+      ['Internal APIs', false, 'not implemented yet'],
+    ]
+
+    if (!app || app === 'list' || app === 'status') {
+      console.log(`\n${c.bold}Connected Apps${c.reset}`)
+      for (const [name, configured, hint] of rows) {
+        const status = configured ? `${c.green}configured${c.reset}` : `${c.yellow}not configured${c.reset}`
+        console.log(`  ${name.padEnd(18)} ${status} ${c.dim}${hint}${c.reset}`)
+      }
+      console.log(`\n  ${c.dim}Use: /connect_app google | github | slack | jira${c.reset}`)
+      return
+    }
+
+    if (app === 'google') {
+      console.log(`Open this URL to connect Google Workspace:\n${c.cyan}${baseUrl}/api/integrations/workspace/google/oauth/start${c.reset}`)
+      return
+    }
+    if (app === 'github') {
+      console.log(`Set ${c.cyan}github_token${c.reset} in .env with repo scope, then restart chat.`)
+      return
+    }
+    if (app === 'slack') {
+      console.log(`Set ${c.cyan}slack_bot_token${c.reset}, ${c.cyan}slack_signing_secret${c.reset}, and optional ${c.cyan}slack_default_channel${c.reset} in .env.`)
+      console.log(`${c.dim}For history/search, grant Slack search/conversations scopes to the bot token.${c.reset}`)
+      return
+    }
+    if (app === 'jira') {
+      console.log(`Set ${c.cyan}jira_base_url${c.reset}, ${c.cyan}jira_email${c.reset}, and ${c.cyan}jira_api_token${c.reset} in .env.`)
+      return
+    }
+    warn(`No connector setup helper for '${app}'. Use /connect_app to see supported apps.`)
+  }
+
+  async function bugfixCommand(raw = '', rl = null) {
+    const bugQuery = raw.trim()
+    if (!bugQuery) {
+      warn('Usage: /bugfix <bug description>')
+      return
+    }
+    const approved = await confirmTool({
+      tool: 'enterprise_bugfix_workflow',
+      message: `Run enterprise bugfix workflow for "${bugQuery}"?`,
+      args: { bug_query: bugQuery },
+    }, rl)
+    if (!approved) {
+      warn('Bugfix workflow cancelled.')
+      return
+    }
+    const result = await apiJson('/api/agent/enterprise/bugfix', {
+      method: 'POST',
+      body: JSON.stringify({ bug_query: bugQuery }),
+      signal: AbortSignal.timeout(900000),
+    })
+    renderBugfixResult(result)
+  }
+
+  async function statusCommand() {
+    const health = await apiJson('/api/system/health').catch(e => ({ error: e.message }))
+    console.log(`\n${c.bold}Status${c.reset}`)
+    console.log(`  backend        ${health.error ? c.red + health.error + c.reset : c.green + 'healthy' + c.reset}`)
+    await modelCommand('list')
+    await connectAppCommand('status')
+  }
+
+  async function updateCommand(raw = '', rl = null) {
+    const args = raw.trim() ? raw.trim().split(/\s+/) : []
+    const approved = await confirmTool({
+      tool: 'luna_update',
+      message: `Run Luna update${args.length ? ` with ${args.join(' ')}` : ''}?`,
+      args: { flags: args },
+    }, rl)
+    if (!approved) {
+      warn('Update cancelled.')
+      return
+    }
+    updateCli(args)
+  }
+
+  async function skillsCommand() {
+    const data = await apiJson('/api/skills/installed')
+    const skills = data.skills || []
+    console.log(`\n${c.bold}Skills${c.reset}`)
+    if (!skills.length) {
+      warn('No skills installed.')
+      return
+    }
+    for (const s of skills) {
+      const origin = s.origin ? ` ${c.dim}[${s.origin}]${c.reset}` : ''
+      console.log(`  ${c.cyan}${String(s.id || '').padEnd(28)}${c.reset}${origin} ${c.dim}${s.description || ''}${c.reset}`)
+    }
+  }
+
+  async function permissionsCommand() {
+    const data = await apiJson('/api/agent/permissions')
+    console.log(`\n${c.bold}Tool Permissions${c.reset}`)
+    const tools = data.tools || {}
+    for (const [name, meta] of Object.entries(tools)) {
+      if (meta.mode === 'allow' && meta.risk === 'safe') continue
+      const color = meta.mode === 'allow' ? c.green : meta.mode === 'confirm' ? c.yellow : c.red
+      console.log(`  ${name.padEnd(32)} ${color}${meta.mode}${c.reset} ${c.dim}${meta.risk}${c.reset}`)
+    }
+    console.log(`\n  ${c.dim}Only non-default or risky tools are shown.${c.reset}`)
+  }
+
+  async function crewCommand(raw = '') {
+    const task = raw.trim()
+    if (!task) {
+      warn('Usage: /crew <task description>')
+      return
+    }
+    const r = await fetch(`${baseUrl}/api/agent/crew/run`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ task }),
+      signal: AbortSignal.timeout(300000),
+    })
+    if (!r.ok || !r.body) throw new Error(`Crew failed: HTTP ${r.status}`)
+    const reader = r.body.getReader()
+    const decoder = new TextDecoder()
+    let buf = ''
+    while (true) {
+      const { value, done } = await reader.read()
+      if (done) break
+      buf += decoder.decode(value, { stream: true })
+      const parts = buf.split('\n\n')
+      buf = parts.pop() || ''
+      for (const part of parts) {
+        const line = part.replace(/^data:\s*/, '').trim()
+        if (!line) continue
+        let ev
+        try { ev = JSON.parse(line) } catch { continue }
+        renderCrewEvent(ev, () => {})
+      }
+    }
+    console.log()
+  }
+
   async function sendMessage(message, rl = null) {
     const body = { message }
     if (conversationId) body.conversation_id = conversationId
@@ -728,10 +1053,60 @@ ${c.reset}  Large Unified Nexus Mind AI
         continue
       }
       if (message === '/help') {
-        console.log(`${c.dim}/new      start a new conversation${c.reset}`)
-        console.log(`${c.dim}/exit     quit chat${c.reset}`)
-        console.log(`${c.dim}/quit     quit chat${c.reset}`)
+        console.log(`${c.dim}/new          start a new conversation${c.reset}`)
+        console.log(`${c.dim}/status       show backend, model, and connector status${c.reset}`)
+        console.log(`${c.dim}/model        list or choose model: /model <provider> [model]${c.reset}`)
+        console.log(`${c.dim}/connect_app  show configured apps or setup hints${c.reset}`)
+        console.log(`${c.dim}/apps         alias for /connect_app${c.reset}`)
+        console.log(`${c.dim}/skills       list installed skills${c.reset}`)
+        console.log(`${c.dim}/permissions  show risky or non-default tool permissions${c.reset}`)
+        console.log(`${c.dim}/crew         run a multi-agent crew: /crew <task>${c.reset}`)
+        console.log(`${c.dim}/bugfix       run enterprise bugfix workflow${c.reset}`)
+        console.log(`${c.dim}/update       pull latest Luna code and refresh dependencies${c.reset}`)
+        console.log(`${c.dim}/exit         quit chat${c.reset}`)
+        console.log(`${c.dim}/quit         quit chat${c.reset}`)
         console.log(`${c.dim}Use natural language for tools, files, web research, workspace integrations, plans, and app actions.${c.reset}`)
+        continue
+      }
+      if (message === '/status') {
+        try { await statusCommand() }
+        catch (e) { err(e.message) }
+        continue
+      }
+      if (message === '/model' || message.startsWith('/model ')) {
+        try { await modelCommand(message.slice('/model'.length)) }
+        catch (e) { err(e.message) }
+        continue
+      }
+      if (message === '/connect_app' || message.startsWith('/connect_app ') || message === '/apps' || message.startsWith('/apps ')) {
+        const prefix = message.startsWith('/apps') ? '/apps' : '/connect_app'
+        try { await connectAppCommand(message.slice(prefix.length)) }
+        catch (e) { err(e.message) }
+        continue
+      }
+      if (message === '/skills') {
+        try { await skillsCommand() }
+        catch (e) { err(e.message) }
+        continue
+      }
+      if (message === '/permissions') {
+        try { await permissionsCommand() }
+        catch (e) { err(e.message) }
+        continue
+      }
+      if (message === '/crew' || message.startsWith('/crew ')) {
+        try { await crewCommand(message.slice('/crew'.length)) }
+        catch (e) { err(e.message) }
+        continue
+      }
+      if (message === '/bugfix' || message.startsWith('/bugfix ')) {
+        try { await bugfixCommand(message.slice('/bugfix'.length), rl) }
+        catch (e) { err(e.message) }
+        continue
+      }
+      if (message === '/update' || message.startsWith('/update ')) {
+        try { await updateCommand(message.slice('/update'.length), rl) }
+        catch (e) { err(e.message) }
         continue
       }
       await sendMessage(message, rl)
@@ -919,6 +1294,120 @@ async function skillValidate(args) {
 }
 
 // ── Multi-agent crew ─────────────────────────────────────────────────────────
+async function modelCli(args = []) {
+  const provider = (args[0] || '').trim()
+  const model = args.slice(1).join(' ').trim()
+  try {
+    const settings = await skillFetch('/api/coding/settings')
+    if (!provider || provider === 'list') {
+      renderModelStatus(settings)
+      return
+    }
+    const modelKey = providerModelKey(provider)
+    if (!settings.providers?.[provider]) {
+      err(`Unknown provider: ${provider}`)
+      process.exit(1)
+    }
+    const payload = { llm_provider: provider }
+    if (model && modelKey) payload[modelKey] = model
+    const updated = await skillFetch('/api/coding/settings', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+    ok(`Model updated: ${provider}${model ? ` / ${model}` : ''}`)
+    if (updated.updated) console.log(`${c.dim}${JSON.stringify(updated.updated)}${c.reset}`)
+  } catch (e) { err(e.message); process.exit(1) }
+}
+
+async function connectAppCli(args = []) {
+  const app = (args[0] || '').trim().toLowerCase()
+  try {
+    const workspace = await skillFetch('/api/integrations/workspace/status').catch(() => null)
+    renderConnectorStatus(app, workspace)
+  } catch (e) { err(e.message); process.exit(1) }
+}
+
+async function statusCli() {
+  head('Runtime status')
+  try {
+    await healthCheckNoExit()
+    renderModelStatus(await skillFetch('/api/coding/settings'))
+    const workspace = await skillFetch('/api/integrations/workspace/status').catch(() => null)
+    renderConnectorStatus('', workspace)
+    const permissions = await skillFetch('/api/agent/permissions').catch(() => null)
+    if (permissions?.tools) {
+      console.log(`\n${c.bold}Risky Tool Permissions${c.reset}`)
+      for (const [name, meta] of Object.entries(permissions.tools)) {
+        if (meta.risk === 'safe' && meta.mode === 'allow') continue
+        const color = meta.mode === 'allow' ? c.green : meta.mode === 'confirm' ? c.yellow : c.red
+        console.log(`  ${name.padEnd(32)} ${color}${meta.mode}${c.reset} ${c.dim}${meta.risk}${c.reset}`)
+      }
+    }
+  } catch (e) { err(e.message); process.exit(1) }
+}
+
+async function healthCheckNoExit() {
+  const env = readEnvFile()
+  const port = env.port || '8899'
+  const url = process.env.LUNA_URL || env.luna_url || `http://localhost:${port}`
+  const r = await fetch(`${url}/api/system/health`, { signal: AbortSignal.timeout(5000) })
+  const body = await r.json().catch(() => ({}))
+  if (!r.ok) throw new Error(`Backend unhealthy ${r.status}: ${JSON.stringify(body)}`)
+  ok(`Backend healthy at ${url}`)
+}
+
+function renderModelStatus(settings) {
+  const providers = settings.providers || {}
+  console.log(`\n${c.bold}Models${c.reset}`)
+  console.log(`  active provider: ${c.cyan}${settings.llm_provider}${c.reset}`)
+  for (const [id, meta] of Object.entries(providers)) {
+    const key = providerModelKey(id)
+    const current = id === settings.llm_provider ? '*' : ' '
+    const configured = meta.configured ? c.green + 'configured' + c.reset : c.yellow + 'missing key' + c.reset
+    console.log(`  ${current} ${c.bold}${id.padEnd(18)}${c.reset} ${configured} ${c.dim}${key ? settings[key] || '' : ''}${c.reset}`)
+  }
+  console.log(`\n  ${c.dim}Set with: luna model <provider> [model]${c.reset}`)
+}
+
+function renderConnectorStatus(app = '', workspace = null) {
+  const envNow = readEnvFile()
+  const rows = [
+    ['github', 'GitHub', Boolean(envNow.github_token), 'set github_token in .env'],
+    ['slack', 'Slack', Boolean(envNow.slack_bot_token), 'set slack_bot_token, slack_signing_secret, optional slack_default_channel'],
+    ['jira', 'Jira', Boolean(envNow.jira_base_url && envNow.jira_email && envNow.jira_api_token), 'set jira_base_url, jira_email, jira_api_token'],
+    ['google', 'Google Workspace', Boolean(workspace?.google?.configured), 'open /api/integrations/workspace/google/oauth/start'],
+    ['microsoft', 'Microsoft 365', Boolean(workspace?.microsoft?.configured), 'set microsoft workspace OAuth token or refresh token'],
+    ['salesforce', 'Salesforce', false, 'not implemented yet'],
+    ['notion', 'Notion', false, 'not implemented yet'],
+    ['database', 'Database tools', false, 'not implemented yet'],
+    ['internal', 'Internal APIs', false, 'not implemented yet'],
+  ]
+  const selected = app && app !== 'list' && app !== 'status' ? rows.filter(([id]) => id === app) : rows
+  if (!selected.length) {
+    warn(`Unknown app: ${app}`)
+    info('Known apps: github, slack, jira, google, microsoft')
+    return
+  }
+  console.log(`\n${c.bold}Connected Apps${c.reset}`)
+  for (const [, name, configured, hint] of selected) {
+    const status = configured ? `${c.green}configured${c.reset}` : `${c.yellow}not configured${c.reset}`
+    console.log(`  ${name.padEnd(18)} ${status} ${c.dim}${hint}${c.reset}`)
+  }
+}
+
+function providerModelKey(provider) {
+  return {
+    ollama: 'ollama_model',
+    anthropic: 'anthropic_model',
+    groq: 'groq_model',
+    google: 'google_model',
+    'openai-compatible': 'openai_model',
+    mistral: 'mistral_model',
+    cohere: 'cohere_model',
+    'nvidia-nim': 'nvidia_nim_model',
+  }[provider]
+}
+
 async function crewRoles() {
   head('Available agent roles')
   try {
@@ -969,6 +1458,89 @@ async function crewRun(args) {
     console.log()
     ok('Crew complete')
   } catch (e) { err(e.message); process.exit(1) }
+}
+
+async function bugfixRun(args) {
+  const parsed = parseBugfixArgs(args)
+  if (!parsed.bug_query) {
+    err('Usage: luna bugfix "<bug description>" [--repo owner/repo] [--jira KEY] [--pr 123] [--slack query] [--yes]')
+    process.exit(1)
+  }
+
+  const yes = parsed.yes
+  delete parsed.yes
+  head(`Enterprise bugfix: ${parsed.bug_query}`)
+
+  if (!yes && input.isTTY) {
+    const rl = createInterface({ input, output })
+    try {
+      const ans = (await rl.question(`${c.yellow}Run workflow and allow branch/commit/push/PR if tests pass?${c.reset} [y/N] `)).trim()
+      if (!/^(y|yes)$/i.test(ans)) {
+        warn('Cancelled.')
+        return
+      }
+    } finally {
+      rl.close()
+    }
+  } else if (!yes) {
+    err('Refusing to run non-interactively without --yes')
+    process.exit(1)
+  }
+
+  const base = await skillApiBase()
+  try {
+    const r = await fetch(`${base}/api/agent/enterprise/bugfix`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(parsed),
+      signal: AbortSignal.timeout(900000),
+    })
+    const text = await r.text()
+    let result
+    try { result = JSON.parse(text) } catch { result = { ok: false, summary: text } }
+    renderBugfixResult(result)
+    process.exit(r.ok && result.ok ? 0 : 1)
+  } catch (e) {
+    err(`Bugfix workflow failed: ${e.message}`)
+    process.exit(1)
+  }
+}
+
+function parseBugfixArgs(args) {
+  const out = {}
+  const words = []
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i]
+    if (arg === '--yes' || arg === '-y') out.yes = true
+    else if (arg === '--repo') out.repo = args[++i] || ''
+    else if (arg === '--jira') out.jira_key = args[++i] || ''
+    else if (arg === '--pr') out.pr_number = Number(args[++i] || 0)
+    else if (arg === '--slack') out.slack_query = args[++i] || ''
+    else if (arg === '--channel') out.slack_channel = args[++i] || ''
+    else if (arg === '--test') out.test_command = args[++i] || ''
+    else if (arg === '--no-pr') out.create_pr = false
+    else words.push(arg)
+  }
+  out.bug_query = words.join(' ').trim()
+  return out
+}
+
+function renderBugfixResult(result) {
+  const status = result.ok ? c.green : c.yellow
+  console.log(`\n${status}${result.ok ? 'Completed' : 'Stopped'}${c.reset}: ${result.summary || ''}`)
+  for (const step of result.steps || []) {
+    const color = step.status === 'ok' ? c.green : step.status === 'skipped' ? c.yellow : c.red
+    console.log(`  ${color}${step.status.padEnd(7)}${c.reset} ${step.name}${step.detail ? ` ${c.dim}${step.detail}${c.reset}` : ''}`)
+  }
+  if ((result.changed_files || []).length) {
+    console.log(`\n${c.bold}Changed files${c.reset}`)
+    for (const file of result.changed_files) console.log(`  ${file}`)
+  }
+  if (result.pr?.url) {
+    console.log(`\n${c.bold}Pull request${c.reset}`)
+    console.log(`  ${c.cyan}${result.pr.url}${c.reset}`)
+  }
+  console.log()
 }
 
 function renderCrewEvent(ev, setRole) {

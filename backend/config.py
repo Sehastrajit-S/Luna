@@ -178,12 +178,23 @@ class Settings(BaseSettings):
     # Slack: set bot token + signing secret; Events API → /api/channels/slack
     slack_bot_token: str = ""
     slack_signing_secret: str = ""
+    slack_default_channel: str = ""         # Optional channel ID for history lookup
     # GitHub: PAT for API calls, webhook secret for event signature verification
     github_token: str = ""                  # Personal Access Token (repo scope)
     github_webhook_secret: str = ""         # Secret set in GitHub webhook settings
     github_default_repo: str = ""           # e.g. "owner/repo" — default for tool calls
     github_notify_slack_channel: str = ""   # Slack channel ID for event notifications
     github_notify_telegram_chat_id: str = "" # Telegram chat ID for event notifications
+
+    # Jira Cloud: used by enterprise bugfix workflows
+    jira_base_url: str = ""                  # e.g. https://company.atlassian.net
+    jira_email: str = ""
+    jira_api_token: str = ""
+
+    # Enterprise workflow defaults
+    enterprise_workflow_workspace_root: str = str(BASE_DIR)
+    enterprise_workflow_base_branch: str = "main"
+    enterprise_workflow_test_command: str = "python -W ignore -m unittest discover -s utilities/tests/tools -p \"test_*.py\" -v"
 
     # Google Workspace / Microsoft 365 (OAuth access tokens; opt-in)
     google_workspace_client_id: str = ""

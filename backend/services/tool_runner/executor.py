@@ -227,6 +227,44 @@ async def execute_tool_call(tc: dict, db: Session, conversation_id: int) -> str:
                 return json.dumps(await github.list_prs(args.get("repo", "")))[:4000]
             if tool_name == "github_get_pr":
                 return json.dumps(await github.get_pr(args.get("repo", ""), int(args.get("number", 0))))[:4000]
+            if tool_name == "github_create_pr":
+                return json.dumps(await github.create_pull_request(
+                    args.get("repo", ""),
+                    args.get("title", ""),
+                    args.get("head", ""),
+                    args.get("base", "main"),
+                    args.get("body", ""),
+                    bool(args.get("draft", True)),
+                ))[:4000]
+
+        elif tool_name.startswith("slack_"):
+            from backend.services import slack
+            if tool_name == "slack_search_messages":
+                return json.dumps(await slack.search_messages(
+                    args.get("query", ""),
+                    int(args.get("count", 10)),
+                ))[:4000]
+            if tool_name == "slack_channel_history":
+                return json.dumps(await slack.channel_history(
+                    args.get("channel_id", ""),
+                    float(args.get("oldest", 0) or 0),
+                    int(args.get("limit", 20)),
+                ))[:4000]
+
+        elif tool_name.startswith("jira_"):
+            from backend.services import jira
+            if tool_name == "jira_search_issues":
+                return json.dumps(await jira.search_issues(
+                    args.get("jql", ""),
+                    int(args.get("max_results", 5)),
+                ))[:4000]
+            if tool_name == "jira_get_issue":
+                return json.dumps(await jira.get_issue(args.get("issue_key", "")))[:4000]
+
+        elif tool_name == "enterprise_bugfix_workflow":
+            from backend.services.enterprise_workflow import run_enterprise_bugfix_workflow
+            result = await run_enterprise_bugfix_workflow(args)
+            return json.dumps(result.as_dict())[:8000]
 
         elif tool_name in (
             "code_read_file", "code_write_file", "code_list_files", "code_search", "code_run_shell",

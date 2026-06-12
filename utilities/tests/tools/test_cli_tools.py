@@ -21,6 +21,25 @@ class CliToolTests(unittest.TestCase):
         for marker in (
             "confirmation_required",
             "/api/chat/confirm/",
+            "/api/coding/settings",
+            "/api/integrations/workspace/status",
+            "/api/agent/enterprise/bugfix",
+            "statusCli",
+            "modelCli",
+            "connectAppCli",
+            "updateCli",
+            "install:command",
+            "npm i -g",
+            "npx",
+            "/model",
+            "/connect_app",
+            "/apps",
+            "/status",
+            "/skills",
+            "/permissions",
+            "/crew",
+            "/bugfix",
+            "/update",
             "plan_progress",
             "plan_done",
             "commands",
@@ -38,11 +57,11 @@ class CliToolTests(unittest.TestCase):
         self.assertNotIn("num_ctx=2048 if cli", source)
 
     def test_cli_chat_preserves_spacing_between_streamed_message_parts(self) -> None:
-        source = (_bootstrap.ROOT / "backend" / "routers" / "chat.py").read_text(encoding="utf-8")
-        self.assertIn('content = f"\\n\\n{part}" if cli and index > 0 else part', source)
+        source = (_bootstrap.ROOT / "backend" / "services" / "chat_pipeline" / "stages.py").read_text(encoding="utf-8")
+        self.assertIn('content = f"\\n\\n{part}" if ctx.cli and index > 0 else part', source)
 
     def test_chat_stream_keeps_references_when_body_has_multiple_parts(self) -> None:
-        source = (_bootstrap.ROOT / "backend" / "routers" / "chat.py").read_text(encoding="utf-8")
+        source = (_bootstrap.ROOT / "backend" / "services" / "chat_pipeline" / "stages.py").read_text(encoding="utf-8")
         self.assertIn("refs_match = re.search", source)
         self.assertIn("body_parts[:_max_parts] + ([refs_text] if refs_text else [])", source)
 

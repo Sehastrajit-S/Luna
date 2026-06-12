@@ -18,6 +18,24 @@ export default function CLI() {
     >
       <section>
         <h2 id="usage">Usage</h2>
+        <p>Install the CLI globally on macOS, Windows, or Linux:</p>
+
+        <CodeFile label="terminal">
+          <pre><code>{`npm i -g luna-workspace`}</code></pre>
+        </CodeFile>
+
+        <p>Shortest first run without a permanent install:</p>
+
+        <CodeFile label="terminal">
+          <pre><code>{`npx luna-workspace setup`}</code></pre>
+        </CodeFile>
+
+        <p>If the npm package is not published yet, install directly from GitHub:</p>
+
+        <CodeFile label="terminal">
+          <pre><code>{`npm i -g github:Sehastrajit/Luna`}</code></pre>
+        </CodeFile>
+
         <p>Run the CLI from the repository root:</p>
 
         <CodeFile label="terminal">
@@ -45,6 +63,7 @@ luna help       # list all commands`}</code></pre>
           <thead><tr><th>Command</th><th>Description</th></tr></thead>
           <tbody>
             <tr><td><code>help</code></td><td>Print command list and usage.</td></tr>
+            <tr><td><code>install:command</code></td><td>Print the one-line global CLI installer.</td></tr>
             <tr><td><code>setup</code></td><td>Interactive first-time wizard — selects variant, installs dependencies, creates <code>.env</code>, and pulls Ollama models.</td></tr>
             <tr><td><code>doctor</code></td><td>Verify Node.js, npm, Python, Ollama, and Docker are installed and at the right versions.</td></tr>
             <tr><td><code>health</code></td><td>Hit the running backend's <code>/api/system/health</code> endpoint and display the JSON response.</td></tr>

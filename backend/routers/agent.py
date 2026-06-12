@@ -15,6 +15,7 @@ from backend.services.browser_automation import browser_open, browser_read, play
 from backend.services.permission_manager import permission_manager
 from backend.services.skill_manager import list_skills
 from backend.services.task_planner import generate_plan
+from backend.services.enterprise_workflow import run_enterprise_bugfix_workflow
 from backend.services.workspace import (
     list_workspace,
     read_workspace_file,
@@ -128,6 +129,17 @@ def patch_task(task_id: str, payload: dict = Body(default={})):
     if not task:
         return JSONResponse({"detail": "task not found"}, status_code=404)
     return task
+
+
+@router.post("/enterprise/bugfix")
+async def enterprise_bugfix(payload: dict = Body(default={})):
+    """
+    Run the enterprise bugfix workflow:
+    Jira/GitHub/Slack context -> coding agent -> tests -> commit/push -> draft PR.
+    """
+    result = await run_enterprise_bugfix_workflow(payload)
+    status_code = 200 if result.ok else 400
+    return JSONResponse(result.as_dict(), status_code=status_code)
 
 
 # ── Crew Mode (multi-agent orchestration) ────────────────────────────────────

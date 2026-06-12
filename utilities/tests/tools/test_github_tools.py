@@ -30,6 +30,25 @@ class GitHubToolTests(unittest.IsolatedAsyncioTestCase):
             )
             self.assertEqual(result, "[]")
 
+        pr_result = {"number": 1, "url": "https://github.com/owner/repo/pull/1"}
+        with patch("backend.services.github.create_pull_request", new=AsyncMock(return_value=pr_result)):
+            result = await execute_tool_call(
+                {
+                    "tool": "github_create_pr",
+                    "args": {
+                        "repo": "owner/repo",
+                        "title": "Fix bug",
+                        "head": "fix-branch",
+                        "base": "main",
+                        "body": "Body",
+                        "draft": True,
+                    },
+                },
+                None,
+                0,
+            )
+            self.assertIn('"number": 1', result)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

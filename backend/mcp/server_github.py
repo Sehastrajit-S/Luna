@@ -1,6 +1,6 @@
 """Luna MCP server — GitHub tools.
 
-Exposes: list_repos, list_issues, create_issue, list_prs, get_pr, add_comment
+Exposes: list_repos, list_issues, create_issue, list_prs, get_pr, add_comment, create_pr
 
 Requires: github_token in .env
 
@@ -80,6 +80,22 @@ async def add_comment(repo: str, number: int, body: str) -> str:
         body: Comment body (markdown)
     """
     result = await gh.comment_on_issue(repo, number, body)
+    return json.dumps(result, indent=2)
+
+
+@mcp.tool()
+async def create_pr(repo: str, title: str, head: str, base: str = "main", body: str = "", draft: bool = True) -> str:
+    """Open a GitHub pull request from an already-pushed branch.
+
+    Args:
+        repo: Full repo name e.g. 'owner/repo'
+        title: Pull request title
+        head: Source branch name
+        base: Target branch name
+        body: Pull request description
+        draft: Whether to create a draft PR
+    """
+    result = await gh.create_pull_request(repo, title, head, base, body, draft)
     return json.dumps(result, indent=2)
 
 

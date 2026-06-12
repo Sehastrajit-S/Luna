@@ -127,3 +127,37 @@ async def get_pr(repo: str, number: int) -> dict:
             "deletions": pr["deletions"],
             "url": pr["html_url"],
         }
+
+
+async def create_pull_request(
+    repo: str,
+    title: str,
+    head: str,
+    base: str,
+    body: str = "",
+    draft: bool = True,
+) -> dict:
+    """Open a GitHub pull request from an existing pushed branch."""
+    payload = {
+        "title": title,
+        "head": head,
+        "base": base,
+        "body": body,
+        "draft": draft,
+    }
+    async with httpx.AsyncClient(timeout=15) as client:
+        r = await client.post(
+            f"{_BASE}/repos/{repo}/pulls",
+            headers=_auth_headers(),
+            json=payload,
+        )
+        r.raise_for_status()
+        pr = r.json()
+        return {
+            "number": pr["number"],
+            "title": pr["title"],
+            "draft": pr["draft"],
+            "url": pr["html_url"],
+            "head": pr["head"]["ref"],
+            "base": pr["base"]["ref"],
+        }

@@ -161,6 +161,22 @@ docker compose up -d
           <DownloadCard item={platforms[6]} />
         </div>
 
+        <CodeFile label="Luna CLI">
+          <pre><code>{`npm i -g luna-workspace
+luna setup`}</code></pre>
+        </CodeFile>
+
+        <CodeFile label="Shortest first run">
+          <pre><code>{`npx luna-workspace setup`}</code></pre>
+        </CodeFile>
+
+        <p>If the npm package is not published yet, install directly from GitHub:</p>
+
+        <CodeFile label="GitHub fallback">
+          <pre><code>{`npm i -g github:Sehastrajit/Luna
+luna setup`}</code></pre>
+        </CodeFile>
+
         <CodeFile label="VS Code extension">
           <pre><code>{`cd integrations/vscode
 npm install

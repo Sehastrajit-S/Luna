@@ -68,6 +68,12 @@ TOOL_REGISTRY: dict[str, ToolDef] = {
     "github_comment": ToolDef("github_comment", "Post a comment on a GitHub issue or pull request", RiskLevel.RISKY, ["repo", "number", "body"], "Post comment on {repo}#{number}?"),
     "github_list_prs": ToolDef("github_list_prs", "List open pull requests in a GitHub repository", RiskLevel.SAFE, ["repo"]),
     "github_get_pr": ToolDef("github_get_pr", "Get details about a specific pull request", RiskLevel.SAFE, ["repo", "number"]),
+    "github_create_pr": ToolDef("github_create_pr", "Open a GitHub pull request from an already-pushed branch", RiskLevel.RISKY, ["repo", "title", "head", "base", "body", "draft"], "Open GitHub PR '{title}' in {repo}?"),
+    "slack_search_messages": ToolDef("slack_search_messages", "Search Slack messages using Slack Web API", RiskLevel.SAFE, ["query", "count"]),
+    "slack_channel_history": ToolDef("slack_channel_history", "Read recent Slack messages from a channel", RiskLevel.SAFE, ["channel_id", "oldest", "limit"]),
+    "jira_search_issues": ToolDef("jira_search_issues", "Search Jira issues with JQL", RiskLevel.SAFE, ["jql", "max_results"]),
+    "jira_get_issue": ToolDef("jira_get_issue", "Read a Jira issue by key", RiskLevel.SAFE, ["issue_key"]),
+    "enterprise_bugfix_workflow": ToolDef("enterprise_bugfix_workflow", "Gather Jira/GitHub/Slack context, run the coding agent, run tests, and open a draft PR", RiskLevel.RISKY, ["bug_query", "repo", "jira_key", "pr_number", "slack_query", "slack_channel", "test_command"], "Run enterprise bugfix workflow for '{bug_query}'?"),
     # Google Workspace / Microsoft 365
     "google_workspace": ToolDef("google_workspace", "Call Google Workspace services such as Gmail, Calendar, Drive, Docs, Sheets, Slides, Tasks, and People", RiskLevel.RISKY, ["service", "action", "args"], "Run Google Workspace action {service}.{action}?"),
     "microsoft_workspace": ToolDef("microsoft_workspace", "Call Microsoft 365 services through Microsoft Graph such as Outlook, Calendar, OneDrive, Excel, To Do, and Teams", RiskLevel.RISKY, ["service", "action", "args"], "Run Microsoft 365 action {service}.{action}?"),
@@ -134,4 +140,5 @@ def get_tools_for_prompt() -> str:
     lines.append("Bracket tags (for map, Spotify, launches, simple URL): use as instructed in the behavior section.")
     lines.append("Google Workspace service/action pairs: gmail/search_messages, gmail/send_message, calendar/list_events, calendar/create_event, drive/search_files, sheets/get_values, docs/create_document.")
     lines.append("Microsoft Workspace service/action pairs: mail/search_messages, calendar/list_events, drive/search_files, excel/get_values, todo/list_tasks.")
+    lines.append("Enterprise workflow: enterprise_bugfix_workflow can gather Jira/GitHub/Slack context, edit code, run tests, and open a draft PR after confirmation.")
     return "\n".join(lines)
