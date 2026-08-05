@@ -20,7 +20,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const root      = resolve(__dirname, '..')
 const isWin     = platform() === 'win32'
 const cliNpmPackage = 'luna-workspace'
-const cliGithubPackage = 'github:Sehastrajit/Luna'
+const cliGithubPackage = 'github:Sehastrajit-S/Luna'
 
 // ── Colours ───────────────────────────────────────────────────────────────────
 const c = {

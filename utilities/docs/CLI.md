@@ -17,7 +17,7 @@ npx luna-workspace setup
 If the npm package is not published yet, install directly from GitHub:
 
 ```powershell
-npm i -g github:Sehastrajit/Luna
+npm i -g github:Sehastrajit-S/Luna
 ```
 
 Run it from the repo root:

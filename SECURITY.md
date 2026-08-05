@@ -8,7 +8,7 @@ Security fixes are applied to the latest commit on `main`. There are no versione
 
 **Do not open a public GitHub issue for security vulnerabilities.**
 
-Report privately by emailing the maintainer or using [GitHub's private vulnerability reporting](https://github.com/Sehastrajit/Luna/security/advisories/new).
+Report privately by emailing the maintainer or using [GitHub's private vulnerability reporting](https://github.com/Sehastrajit-S/Luna/security/advisories/new).
 
 Include:
 

@@ -79,3 +79,6 @@ scripts/screenshots/
 /data/chroma/635dbf62-1766-4f14-b898-a5716114bbe2
 /data/chroma/635dbf62-1766-4f14-b898-a5716114bbe2
 /data/chroma/635dbf62-1766-4f14-b898-a5716114bbe2
+
+.vercel
+.env*.local

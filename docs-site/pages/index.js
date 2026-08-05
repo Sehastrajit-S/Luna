@@ -104,7 +104,7 @@ export default function Home() {
               <span className="site-nav-logo">L.U.N.A.</span>
             </Link>
             <div className="site-nav-links">
-              <a href="https://github.com/Sehastrajit/Luna" target="_blank" rel="noopener noreferrer" className="site-nav-link">
+              <a href="https://github.com/Sehastrajit-S/Luna" target="_blank" rel="noopener noreferrer" className="site-nav-link">
                 <GitHubIcon /><span>GitHub</span>
               </a>
               <div className="site-nav-divider" aria-hidden="true" />
@@ -177,7 +177,7 @@ export default function Home() {
               <span className="lp-stat"><span className="lp-stat-dot" />FastAPI Backend</span>
             </div>
             <div className="lp-hero-actions">
-              <a href="https://github.com/Sehastrajit/Luna" target="_blank" rel="noopener noreferrer" className="lp-btn lp-btn-primary">
+              <a href="https://github.com/Sehastrajit-S/Luna" target="_blank" rel="noopener noreferrer" className="lp-btn lp-btn-primary">
                 <GitHubIcon />View on GitHub
               </a>
               <Link href="/downloads" className="lp-btn lp-btn-outline">
@@ -245,7 +245,7 @@ export default function Home() {
             <h2>Built in the open.</h2>
             <p>Free, open-source, and always will be. Inspect every line, fork it, or contribute.</p>
             <div className="lp-oss-actions">
-              <a href="https://github.com/Sehastrajit/Luna" target="_blank" rel="noopener noreferrer" className="lp-btn lp-btn-primary">
+              <a href="https://github.com/Sehastrajit-S/Luna" target="_blank" rel="noopener noreferrer" className="lp-btn lp-btn-primary">
                 <GitHubIcon />Star on GitHub
               </a>
             </div>
@@ -263,7 +263,7 @@ export default function Home() {
               </div>
             </div>
             <nav className="lp-footer-links">
-              <a href="https://github.com/Sehastrajit/Luna" target="_blank" rel="noopener noreferrer">GitHub</a>
+              <a href="https://github.com/Sehastrajit-S/Luna" target="_blank" rel="noopener noreferrer">GitHub</a>
               <Link href="/downloads">Downloads</Link>
               <Link href="/workflow">Workflow</Link>
               <Link href="/getting-started">Docs</Link>

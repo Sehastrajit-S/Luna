@@ -24,7 +24,7 @@ export default function Contributing() {
 
         <Steps>
           <Step num={1} title="Fork the repository">
-            <p>Click <strong>Fork</strong> on <a href="https://github.com/Sehastrajit/Luna" target="_blank" rel="noopener noreferrer" style={{ color: '#7c3aed' }}>github.com/Sehastrajit/Luna</a>.
+            <p>Click <strong>Fork</strong> on <a href="https://github.com/Sehastrajit-S/Luna" target="_blank" rel="noopener noreferrer" style={{ color: '#7c3aed' }}>github.com/Sehastrajit-S/Luna</a>.
             This creates your own copy where you can push changes freely.</p>
           </Step>
 
@@ -32,7 +32,7 @@ export default function Contributing() {
             <CodeFile label="terminal">
               <pre><code>{`git clone https://github.com/<your-username>/Luna.git
 cd Luna
-git remote add upstream https://github.com/Sehastrajit/Luna.git`}</code></pre>
+git remote add upstream https://github.com/Sehastrajit-S/Luna.git`}</code></pre>
             </CodeFile>
           </Step>
 

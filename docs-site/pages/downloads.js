@@ -1,7 +1,7 @@
 import DocsLayout from '../components/DocsLayout';
 import { Callout, CodeFile, NextSteps } from '../components/Docs';
 
-const repoUrl = 'https://github.com/Sehastrajit/Luna';
+const repoUrl = 'https://github.com/Sehastrajit-S/Luna';
 const releasesUrl = `${repoUrl}/releases/latest`;
 
 const toc = [
@@ -173,7 +173,7 @@ luna setup`}</code></pre>
         <p>If the npm package is not published yet, install directly from GitHub:</p>
 
         <CodeFile label="GitHub fallback">
-          <pre><code>{`npm i -g github:Sehastrajit/Luna
+          <pre><code>{`npm i -g github:Sehastrajit-S/Luna
 luna setup`}</code></pre>
         </CodeFile>
 
@@ -193,7 +193,7 @@ npx vsce package`}</code></pre>
         </p>
 
         <CodeFile label="terminal">
-          <pre><code>{`git clone https://github.com/Sehastrajit/Luna.git
+          <pre><code>{`git clone https://github.com/Sehastrajit-S/Luna.git
 cd Luna
 npm install
 npm run luna -- setup

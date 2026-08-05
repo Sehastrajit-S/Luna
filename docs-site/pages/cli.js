@@ -33,7 +33,7 @@ export default function CLI() {
         <p>If the npm package is not published yet, install directly from GitHub:</p>
 
         <CodeFile label="terminal">
-          <pre><code>{`npm i -g github:Sehastrajit/Luna`}</code></pre>
+          <pre><code>{`npm i -g github:Sehastrajit-S/Luna`}</code></pre>
         </CodeFile>
 
         <p>Run the CLI from the repository root:</p>

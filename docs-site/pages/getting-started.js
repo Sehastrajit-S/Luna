@@ -60,7 +60,7 @@ export default function GettingStarted() {
         </p>
 
         <CodeFile label="terminal">
-          <pre><code>{`git clone https://github.com/Sehastrajit/Luna.git
+          <pre><code>{`git clone https://github.com/Sehastrajit-S/Luna.git
 cd Luna
 npm install
 npm run luna -- setup`}</code></pre>
@@ -150,7 +150,7 @@ npm run luna -- docker:gpu    # force GPU`}</code></pre>
         <Steps>
           <Step num={1} title="Run the setup wizard">
             <CodeFile label="terminal">
-              <pre><code>{`git clone https://github.com/Sehastrajit/Luna.git
+              <pre><code>{`git clone https://github.com/Sehastrajit-S/Luna.git
 cd Luna && npm install && npm run luna -- setup`}</code></pre>
             </CodeFile>
             <p>This installs all Node and Python dependencies, creates <code>.env</code>, and pulls

@@ -10,7 +10,7 @@ Luna is MIT-licensed. MIT lets you use, fork, and redistribute freely — but **
 
 - **Keep the copyright notice** in any source file you copy.
 - **Credit Luna visibly** if your project is built on or derived from Luna code:
-  - In your README: `Built with [L.U.N.A.](https://github.com/Sehastrajit/Luna)`
+  - In your README: `Built with [L.U.N.A.](https://github.com/Sehastrajit-S/Luna)`
   - In any public UI or about page that ships Luna-derived code
 - **Do not remove** the `L.U.N.A.` name, the copyright header, or the `LICENSE` file when distributing.
 
@@ -19,7 +19,7 @@ Luna is MIT-licensed. MIT lets you use, fork, and redistribute freely — but **
 ## Development setup
 
 ```bash
-git clone https://github.com/Sehastrajit/Luna.git && cd Luna && npm install && npm run luna -- setup
+git clone https://github.com/Sehastrajit-S/Luna.git && cd Luna && npm install && npm run luna -- setup
 ```
 
 The setup wizard installs Node and Python dependencies, configures your LLM provider, and pulls Ollama models. Then start the app:
@@ -119,4 +119,4 @@ Smoke tests are non-destructive — they do not launch apps, type, lock the scre
 
 ## Questions
 
-Open a [GitHub Discussion](https://github.com/Sehastrajit/Luna/discussions) before writing large changes — alignment first saves everyone time. Issues are for bugs and confirmed feature requests.
+Open a [GitHub Discussion](https://github.com/Sehastrajit-S/Luna/discussions) before writing large changes — alignment first saves everyone time. Issues are for bugs and confirmed feature requests.

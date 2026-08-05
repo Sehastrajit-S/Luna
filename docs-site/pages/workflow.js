@@ -133,7 +133,7 @@ export default function Workflow() {
               <span className="site-nav-logo">L.U.N.A.</span>
             </Link>
             <div className="site-nav-links">
-              <a href="https://github.com/Sehastrajit/Luna" target="_blank" rel="noopener noreferrer" className="site-nav-link">
+              <a href="https://github.com/Sehastrajit-S/Luna" target="_blank" rel="noopener noreferrer" className="site-nav-link">
                 <GitHubIcon /><span>GitHub</span>
               </a>
               <div className="site-nav-divider" aria-hidden="true" />
@@ -205,7 +205,7 @@ export default function Workflow() {
               Get Started →
             </Link>
             <a
-              href="https://github.com/Sehastrajit/Luna"
+              href="https://github.com/Sehastrajit-S/Luna"
               target="_blank"
               rel="noopener noreferrer"
               className="lp-btn lp-btn-outline"
@@ -227,7 +227,7 @@ export default function Workflow() {
               </div>
             </div>
             <nav className="lp-footer-links" aria-label="Footer navigation">
-              <a href="https://github.com/Sehastrajit/Luna" target="_blank" rel="noopener noreferrer">GitHub</a>
+              <a href="https://github.com/Sehastrajit-S/Luna" target="_blank" rel="noopener noreferrer">GitHub</a>
               <Link href="/downloads">Downloads</Link>
               <Link href="/">Home</Link>
               <Link href="/getting-started">Docs</Link>
