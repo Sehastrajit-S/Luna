@@ -76,7 +76,7 @@ async def process_tools(ctx: ChatContext) -> None:
         "web_search", "web_research", "web_fetch", "dataset_search",
         "workspace_read", "workspace_read_base64", "browser_read",
         "github_list_repos", "github_list_issues", "github_list_prs",
-        "github_get_pr", "slack_search_messages", "slack_channel_history",
+        "github_get_pr", "github_summarize_user_pr", "slack_search_messages", "slack_channel_history",
         "jira_search_issues", "jira_get_issue", "get_system_info", "get_volume",
         "get_brightness", "get_clipboard",
     }

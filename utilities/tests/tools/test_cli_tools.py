@@ -28,6 +28,13 @@ class CliToolTests(unittest.TestCase):
             "modelCli",
             "connectAppCli",
             "updateCli",
+            "configureGithubToken",
+            "validateGithubToken",
+            "normalizeGithubToken",
+            "reloadBackendConfig",
+            "/api/system/config/reload",
+            "writeEnvValue",
+            "github_token: ",
             "install:command",
             "npm i -g",
             "npx",
@@ -59,6 +66,25 @@ class CliToolTests(unittest.TestCase):
     def test_cli_chat_preserves_spacing_between_streamed_message_parts(self) -> None:
         source = (_bootstrap.ROOT / "backend" / "services" / "chat_pipeline" / "stages.py").read_text(encoding="utf-8")
         self.assertIn('content = f"\\n\\n{part}" if ctx.cli and index > 0 else part', source)
+
+    def test_cli_prompt_disables_markdown_bold(self) -> None:
+        source = (_bootstrap.ROOT / "backend" / "services" / "prompt_builder.py").read_text(encoding="utf-8")
+        self.assertIn("Never output **bold**", source)
+
+    def test_cli_visible_response_strips_markdown_bold(self) -> None:
+        from types import SimpleNamespace
+
+        from backend.services.chat_pipeline.stages import _build_visible_response_events
+
+        ctx = SimpleNamespace(
+            full_response="**Summary:** fixed the issue",
+            cli=True,
+            had_tool_call=True,
+        )
+
+        rendered = "".join(_build_visible_response_events(ctx))
+        self.assertNotIn("**", rendered)
+        self.assertIn("Summary:", rendered)
 
     def test_chat_stream_keeps_references_when_body_has_multiple_parts(self) -> None:
         source = (_bootstrap.ROOT / "backend" / "services" / "chat_pipeline" / "stages.py").read_text(encoding="utf-8")

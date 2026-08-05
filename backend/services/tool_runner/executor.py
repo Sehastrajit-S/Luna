@@ -211,31 +211,40 @@ async def execute_tool_call(tc: dict, db: Session, conversation_id: int) -> str:
 
         elif tool_name.startswith("github_"):
             from backend.services import github
-            if tool_name == "github_list_repos":
-                return json.dumps(await github.list_repos())[:4000]
-            if tool_name == "github_list_issues":
-                return json.dumps(await github.list_issues(args.get("repo", "")))[:4000]
-            if tool_name == "github_create_issue":
-                return json.dumps(await github.create_issue(
-                    args.get("repo", ""), args.get("title", ""), args.get("body", ""), args.get("labels"),
-                ))[:4000]
-            if tool_name == "github_comment":
-                return json.dumps(await github.comment_on_issue(
-                    args.get("repo", ""), int(args.get("number", 0)), args.get("body", ""),
-                ))[:4000]
-            if tool_name == "github_list_prs":
-                return json.dumps(await github.list_prs(args.get("repo", "")))[:4000]
-            if tool_name == "github_get_pr":
-                return json.dumps(await github.get_pr(args.get("repo", ""), int(args.get("number", 0))))[:4000]
-            if tool_name == "github_create_pr":
-                return json.dumps(await github.create_pull_request(
-                    args.get("repo", ""),
-                    args.get("title", ""),
-                    args.get("head", ""),
-                    args.get("base", "main"),
-                    args.get("body", ""),
-                    bool(args.get("draft", True)),
-                ))[:4000]
+            try:
+                if tool_name == "github_list_repos":
+                    return json.dumps(await github.list_repos())[:4000]
+                if tool_name == "github_list_issues":
+                    return json.dumps(await github.list_issues(args.get("repo", "")))[:4000]
+                if tool_name == "github_create_issue":
+                    return json.dumps(await github.create_issue(
+                        args.get("repo", ""), args.get("title", ""), args.get("body", ""), args.get("labels"),
+                    ))[:4000]
+                if tool_name == "github_comment":
+                    return json.dumps(await github.comment_on_issue(
+                        args.get("repo", ""), int(args.get("number", 0)), args.get("body", ""),
+                    ))[:4000]
+                if tool_name == "github_list_prs":
+                    return json.dumps(await github.list_prs(args.get("repo", "")))[:4000]
+                if tool_name == "github_get_pr":
+                    return json.dumps(await github.get_pr(args.get("repo", ""), int(args.get("number", 0))))[:4000]
+                if tool_name == "github_summarize_user_pr":
+                    return json.dumps(await github.summarize_user_pr_update(
+                        args.get("repo", ""),
+                        args.get("user", ""),
+                        args.get("state", "all"),
+                    ))[:8000]
+                if tool_name == "github_create_pr":
+                    return json.dumps(await github.create_pull_request(
+                        args.get("repo", ""),
+                        args.get("title", ""),
+                        args.get("head", ""),
+                        args.get("base", "main"),
+                        args.get("body", ""),
+                        bool(args.get("draft", True)),
+                    ))[:4000]
+            except Exception as exc:
+                return f"GitHub error: {exc}"
 
         elif tool_name.startswith("slack_"):
             from backend.services import slack

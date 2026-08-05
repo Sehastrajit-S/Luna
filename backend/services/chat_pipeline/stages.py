@@ -93,6 +93,8 @@ def _build_visible_response_events(ctx: ChatContext) -> list[str]:
     full_response = ctx.full_response
 
     visible_text = re.sub(STRIP_RE, "", full_response).strip()
+    if ctx.cli:
+        visible_text = _plain_terminal_format(visible_text)
     _max_parts = 10 if ctx.had_tool_call else 2
 
     refs_match = re.search(r"\n\s*References:\s*", visible_text, flags=re.IGNORECASE)
@@ -113,3 +115,11 @@ def _build_visible_response_events(ctx: ChatContext) -> list[str]:
         events.append(_sse({"type": "message_part", "content": content}))
 
     return events
+
+
+def _plain_terminal_format(text: str) -> str:
+    """Remove markdown emphasis markers that read poorly in terminal chat."""
+    text = re.sub(r"\*\*([^*\n][\s\S]*?[^*\n])\*\*", r"\1", text)
+    text = re.sub(r"__([^_\n][\s\S]*?[^_\n])__", r"\1", text)
+    text = re.sub(r"(?<!\*)\*([^*\n]+)\*(?!\*)", r"\1", text)
+    return text

@@ -9,6 +9,7 @@ numpy
 pygame
 uvicorn[standard]==0.32.1
 httpx==0.27.2
+ddgs==9.14.4
 sqlalchemy==2.0.36
 chromadb==0.5.20
 pydantic==2.10.3

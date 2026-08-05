@@ -6,7 +6,7 @@ from typing import Any
 
 import httpx
 
-from backend.config import settings
+from backend.config import reload_settings, settings
 
 
 class JiraNotConfiguredError(RuntimeError):
@@ -14,6 +14,7 @@ class JiraNotConfiguredError(RuntimeError):
 
 
 def _base_url() -> str:
+    reload_settings()
     return settings.jira_base_url.rstrip("/")
 
 

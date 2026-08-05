@@ -49,11 +49,13 @@ async def verify_tool_result(tool_name: str, args: dict, result: str, user_messa
             full += token
         return full.strip()[:5000]
 
-    if tool_name in ("github_list_repos", "github_list_issues", "github_list_prs", "github_get_pr"):
+    if tool_name in ("github_list_repos", "github_list_issues", "github_list_prs", "github_get_pr", "github_summarize_user_pr"):
+        if result.startswith("GitHub error:"):
+            return result
         prompt = (
             f"Tool '{tool_name}' returned:\n{result}\n\n"
             f"User asked: {user_message}\n\n"
-            "Present this GitHub data in a clean, readable markdown list. Include repo/issue names, numbers, and status."
+            "Present this GitHub data in a clean, readable markdown list. Include repo/issue/PR names, numbers, status, changed files, and URLs when present."
         )
         full = ""
         async for token in ollama.stream_chat(

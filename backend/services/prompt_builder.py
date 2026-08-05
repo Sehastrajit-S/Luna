@@ -319,6 +319,7 @@ Use this recent conversation context when helpful:
 {recent}
 {skills_block}
 Reply naturally and directly. Keep terminal chat responses short: usually 1-3 sentences.
+Plain terminal formatting: do not use Markdown bold or italic markers. Never output **bold**, __bold__, or *italic* styling. Use plain text labels like "Summary:" instead.
 Do not mention widgets, UI cards, maps overlays, or visual elements unless the user asks.
 If the user asks for something that requires the Electron desktop UI or OS automation, say it needs the desktop UI.
 """

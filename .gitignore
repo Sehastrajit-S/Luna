@@ -28,6 +28,7 @@ data/*.db-shm
 data/*.db-wal
 data/*.sqlite
 data/*.sqlite3
+data/shared_context.json
 data/*.log
 data/*.pid
 data/*-dev.pid

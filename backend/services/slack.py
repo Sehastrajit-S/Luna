@@ -6,7 +6,7 @@ from typing import Any
 
 import httpx
 
-from backend.config import settings
+from backend.config import reload_settings, settings
 
 
 class SlackNotConfiguredError(RuntimeError):
@@ -14,6 +14,7 @@ class SlackNotConfiguredError(RuntimeError):
 
 
 def _headers() -> dict[str, str]:
+    reload_settings()
     if not settings.slack_bot_token:
         raise SlackNotConfiguredError("Slack is not configured. Set slack_bot_token.")
     return {
@@ -23,6 +24,7 @@ def _headers() -> dict[str, str]:
 
 
 def is_configured() -> bool:
+    reload_settings()
     return bool(settings.slack_bot_token)
 
 

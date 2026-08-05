@@ -9,7 +9,7 @@
  */
 
 import { spawn, spawnSync, execSync } from 'node:child_process'
-import { existsSync, rmSync, copyFileSync, readFileSync } from 'node:fs'
+import { existsSync, rmSync, copyFileSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir, platform } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { createInterface } from 'node:readline/promises'
@@ -770,7 +770,7 @@ ${c.reset}  Large Unified Nexus Mind AI
     if (updated.updated) console.log(`${c.dim}${JSON.stringify(updated.updated)}${c.reset}`)
   }
 
-  async function connectAppCommand(raw = '') {
+  async function connectAppCommand(raw = '', rl = null) {
     const app = raw.trim().toLowerCase()
     const envNow = readEnvFile()
     const workspace = await apiJson('/api/integrations/workspace/status').catch(() => null)
@@ -801,7 +801,7 @@ ${c.reset}  Large Unified Nexus Mind AI
       return
     }
     if (app === 'github') {
-      console.log(`Set ${c.cyan}github_token${c.reset} in .env with repo scope, then restart chat.`)
+      await configureGithubToken(rl)
       return
     }
     if (app === 'slack') {
@@ -1081,7 +1081,7 @@ ${c.reset}  Large Unified Nexus Mind AI
       }
       if (message === '/connect_app' || message.startsWith('/connect_app ') || message === '/apps' || message.startsWith('/apps ')) {
         const prefix = message.startsWith('/apps') ? '/apps' : '/connect_app'
-        try { await connectAppCommand(message.slice(prefix.length)) }
+        try { await connectAppCommand(message.slice(prefix.length), rl) }
         catch (e) { err(e.message) }
         continue
       }
@@ -1323,9 +1323,108 @@ async function modelCli(args = []) {
 async function connectAppCli(args = []) {
   const app = (args[0] || '').trim().toLowerCase()
   try {
+    if (app === 'github') {
+      await configureGithubToken()
+      return
+    }
     const workspace = await skillFetch('/api/integrations/workspace/status').catch(() => null)
     renderConnectorStatus(app, workspace)
   } catch (e) { err(e.message); process.exit(1) }
+}
+
+async function configureGithubToken(rl = null) {
+  const envNow = readEnvFile()
+  let token = normalizeGithubToken(envNow.github_token || '')
+  if (envNow.github_token) {
+    ok('GitHub is already configured in .env')
+    const answer = rl
+      ? await rl.question('Replace github_token? [y/N] ')
+      : await promptLine('Replace github_token? [y/N] ')
+    if (!/^(y|yes)$/i.test(answer.trim())) {
+      await validateGithubToken(token, envNow.github_default_repo || inferLocalGithubRepo())
+      await reloadBackendConfig()
+      return
+    }
+  }
+
+  console.log(`\n${c.bold}Connect GitHub${c.reset}`)
+  console.log(`${c.dim}Paste a GitHub personal access token with repo scope. The token is saved to .env as github_token.${c.reset}`)
+  token = normalizeGithubToken(await promptSecret('github_token: ', rl))
+  if (!token) {
+    warn('No token entered; GitHub was not configured.')
+    return
+  }
+
+  await validateGithubToken(token, envNow.github_default_repo || inferLocalGithubRepo())
+  writeEnvValue('.env', 'github_token', token)
+  ok('Saved github_token to .env')
+  await reloadBackendConfig()
+}
+
+async function reloadBackendConfig() {
+  try {
+    await skillFetch('/api/system/config/reload', { method: 'POST' })
+    ok('Backend config reloaded; no restart needed')
+    return true
+  } catch (e) {
+    warn(`Saved locally, but backend reload was not available: ${e.message}`)
+    warn('Start Luna backend before using the new connector in chat.')
+    return false
+  }
+}
+
+async function validateGithubToken(token, repo = '') {
+  token = normalizeGithubToken(token)
+  if (!token) {
+    warn('No github_token found in .env')
+    return false
+  }
+  const headers = {
+    Accept: 'application/vnd.github+json',
+    Authorization: `Bearer ${token}`,
+    'X-GitHub-Api-Version': '2022-11-28',
+  }
+  const auth = await fetch('https://api.github.com/rate_limit', {
+    headers,
+    signal: AbortSignal.timeout(10000),
+  })
+  if (auth.status === 401) {
+    err('GitHub rejected this token. Create a new token and try /connect_app github again.')
+    info('Make sure you pasted only the token value, not "github_token=...".')
+    info('If this token was exposed, GitHub may have revoked it. Rotate it and paste the new token.')
+    return false
+  }
+  if (!auth.ok) {
+    warn(`Could not validate GitHub token: HTTP ${auth.status}`)
+    return false
+  }
+  ok('GitHub token accepted by API')
+
+  if (repo) {
+    const prCheck = await fetch(`https://api.github.com/repos/${repo}/pulls?state=all&per_page=1`, {
+      headers,
+      signal: AbortSignal.timeout(10000),
+    })
+    if (prCheck.status === 401 || prCheck.status === 403 || prCheck.status === 404) {
+      warn(`Token could not read PRs for ${repo} (HTTP ${prCheck.status}).`)
+      info('For fine-grained tokens, grant repository access and Pull requests: read.')
+      return false
+    }
+    if (prCheck.ok) ok(`Token can read pull requests for ${repo}`)
+  }
+  return true
+}
+
+function normalizeGithubToken(raw = '') {
+  let token = String(raw).trim()
+  if (token.includes('=')) token = token.slice(token.indexOf('=') + 1).trim()
+  return token.replace(/^['"]|['"]$/g, '').trim()
+}
+
+function inferLocalGithubRepo() {
+  const remote = quiet('git remote get-url origin')
+  const match = remote.match(/github\.com[:/]([^/]+)\/([^/.]+)(?:\.git)?$/)
+  return match ? `${match[1]}/${match[2]}` : ''
 }
 
 async function statusCli() {
@@ -1657,4 +1756,80 @@ function parseEnvFiles(files) {
       .filter(l => l.includes('=') && !l.startsWith('#'))
       .map(l => { const i = l.indexOf('='); return [l.slice(0, i).trim(), l.slice(i + 1).trim()] })
   )
+}
+
+function writeEnvValue(file, key, value) {
+  const target = resolve(root, file)
+  const lines = existsSync(target) ? readFileSync(target, 'utf8').split(/\r?\n/) : []
+  const nextLine = `${key}=${value}`
+  let found = false
+  const next = lines.map(line => {
+    const trimmed = line.trimStart()
+    if (trimmed.startsWith('#') || !trimmed.includes('=')) return line
+    const i = trimmed.indexOf('=')
+    if (trimmed.slice(0, i).trim() !== key) return line
+    found = true
+    return nextLine
+  })
+  if (!found) {
+    if (next.length && next[next.length - 1] !== '') next.push('')
+    next.push(nextLine)
+  }
+  writeFileSync(target, next.join('\n').replace(/\n*$/, '\n'), 'utf8')
+}
+
+async function promptLine(question) {
+  const rl = createInterface({ input, output })
+  try {
+    return await rl.question(question)
+  } finally {
+    rl.close()
+  }
+}
+
+async function promptSecret(question, existingRl = null) {
+  if (existingRl || !input.isTTY || !input.setRawMode) {
+    return existingRl ? existingRl.question(question) : promptLine(question)
+  }
+
+  return new Promise((resolve, reject) => {
+    let value = ''
+    const wasRaw = input.isRaw
+    const cleanup = () => {
+      input.off('data', onData)
+      input.setRawMode(wasRaw)
+      output.write('\n')
+    }
+    const onData = chunk => {
+      const text = chunk.toString('utf8')
+      for (const ch of text) {
+        if (ch === '\u0003') {
+          cleanup()
+          reject(new Error('Cancelled'))
+          return
+        }
+        if (ch === '\r' || ch === '\n') {
+          cleanup()
+          resolve(value)
+          return
+        }
+        if (ch === '\b' || ch === '\u007f') {
+          if (value) {
+            value = value.slice(0, -1)
+            output.write('\b \b')
+          }
+          continue
+        }
+        if (ch >= ' ') {
+          value += ch
+          output.write('*')
+        }
+      }
+    }
+
+    output.write(question)
+    input.setRawMode(true)
+    input.resume()
+    input.on('data', onData)
+  })
 }

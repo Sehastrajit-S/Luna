@@ -35,6 +35,12 @@ _GMAIL_INTENT_RE = re.compile(
     r"|\b(email[s]?|mail[s]?|inbox|gmail)\b.{0,20}\b(today|unread|new|recent|latest)\b",
     re.IGNORECASE,
 )
+_GITHUB_INTENT_RE = re.compile(
+    r"\b(github|repo|repository|pr|prs|pull request|pull requests|issue|issues|commit|commits|branch|changed files|updated|changed)\b",
+    re.IGNORECASE,
+)
+_OWNER_REPO_RE = re.compile(r"\b([\w.-]+/[\w.-]+)\b")
+_PR_NUMBER_RE = re.compile(r"(?:\bpr\b|\bpull request\b|#)\s*#?(\d+)", re.IGNORECASE)
 
 
 async def dispatch_direct_commands(ctx: ChatContext) -> None:
@@ -91,6 +97,14 @@ async def dispatch_direct_commands(ctx: ChatContext) -> None:
         ctx.direct_command_type = "gmail"
         ctx.had_tool_call = True
         await _handle_gmail(ctx)
+        return
+
+    # ── GitHub ────────────────────────────────────────────────────────────────
+    if bool(_GITHUB_INTENT_RE.search(msg)) and _looks_like_github_question(msg):
+        ctx.dispatched = True
+        ctx.direct_command_type = "github"
+        ctx.had_tool_call = True
+        await _handle_github(ctx)
         return
 
     # ── Research ──────────────────────────────────────────────────────────────
@@ -194,4 +208,60 @@ async def _handle_gmail(ctx: ChatContext) -> None:
     except (json.JSONDecodeError, KeyError, TypeError) as e:
         logger.warning("Gmail response parsing failed: %s", e)
         ctx.full_response = "Couldn't fetch your emails right now."
+    ctx.full_response_parts = [ctx.full_response]
+
+
+def _looks_like_github_question(msg: str) -> bool:
+    low = msg.lower()
+    return (
+        "github" in low
+        or "repo" in low
+        or "repository" in low
+        or "pull request" in low
+        or re.search(r"\bprs?\b", low) is not None
+        or (("issue" in low or "commit" in low or "changed files" in low) and ("my" in low or _OWNER_REPO_RE.search(msg)))
+        or (("updated" in low or "changed" in low) and re.search(r"\b(his|her|their|user|author|by)\b", low))
+    )
+
+
+def _extract_repo(msg: str) -> str:
+    match = _OWNER_REPO_RE.search(msg)
+    return match.group(1) if match else ""
+
+
+def _extract_pr_author(msg: str) -> str:
+    patterns = [
+        r"\buser\s+@?([\w.-]+)\b",
+        r"\bauthor\s+@?([\w.-]+)\b",
+        r"\bby\s+@?([\w.-]+)\b",
+        r"\bwhat\s+did\s+@?([\w.-]+)\s+(?:update|change)\b",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, msg, re.IGNORECASE)
+        if match:
+            return match.group(1)
+    return ""
+
+
+async def _handle_github(ctx: ChatContext) -> None:
+    msg = ctx.user_message
+    low = msg.lower()
+    repo = _extract_repo(msg)
+    author = _extract_pr_author(msg)
+    pr_number_match = _PR_NUMBER_RE.search(msg)
+
+    if author and ("pr" in low or "pull request" in low or "updated" in low or "changed" in low):
+        tc = {"tool": "github_summarize_user_pr", "args": {"repo": repo, "user": author, "state": "all"}, "speak": ""}
+    elif pr_number_match:
+        tc = {"tool": "github_get_pr", "args": {"repo": repo, "number": int(pr_number_match.group(1))}, "speak": ""}
+    elif "issue" in low:
+        tc = {"tool": "github_list_issues", "args": {"repo": repo}, "speak": ""}
+    elif "repo" in low and not ("pr" in low or "pull request" in low):
+        tc = {"tool": "github_list_repos", "args": {}, "speak": ""}
+    else:
+        tc = {"tool": "github_list_prs", "args": {"repo": repo}, "speak": ""}
+
+    result = await execute_tool_call(tc, ctx.db, ctx.conv.id)
+    ctx.tool_succeeded = "fail" not in result and "error" not in result
+    ctx.full_response = await verify_tool_result(tc["tool"], tc["args"], result, msg)
     ctx.full_response_parts = [ctx.full_response]
