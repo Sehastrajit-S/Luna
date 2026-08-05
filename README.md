@@ -1,27 +1,27 @@
 <div align="center">
-  <img src="docs-site/public/images/banner.svg" width="100%" alt="L.U.N.A. — Large Unified Nexus Mind AI" />
+  <img src="docs-site/public/images/banner.svg" width="100%" alt="L.U.N.A. - Large Unified Nexus Mind AI" />
   <br />
 
   <p>
-    <a href="https://github.com/Sehastrajit/Luna/stargazers">
-      <img src="https://img.shields.io/github/stars/Sehastrajit/Luna?style=for-the-badge&logo=github&color=6d28d9&labelColor=030306" alt="Stars" />
+    <a href="https://github.com/Sehastrajit-S/Luna/stargazers">
+      <img src="https://img.shields.io/github/stars/Sehastrajit-S/Luna?style=for-the-badge&logo=github&color=6d28d9&labelColor=030306" alt="Stars" />
     </a>
-    <a href="https://github.com/Sehastrajit/Luna/forks">
-      <img src="https://img.shields.io/github/forks/Sehastrajit/Luna?style=for-the-badge&logo=github&color=7c3aed&labelColor=030306" alt="Forks" />
+    <a href="https://github.com/Sehastrajit-S/Luna/forks">
+      <img src="https://img.shields.io/github/forks/Sehastrajit-S/Luna?style=for-the-badge&logo=github&color=7c3aed&labelColor=030306" alt="Forks" />
     </a>
-    <a href="https://github.com/Sehastrajit/Luna/blob/main/LICENSE">
-      <img src="https://img.shields.io/github/license/Sehastrajit/Luna?style=for-the-badge&color=8b5cf6&labelColor=030306" alt="License" />
+    <a href="https://github.com/Sehastrajit-S/Luna/blob/main/LICENSE">
+      <img src="https://img.shields.io/github/license/Sehastrajit-S/Luna?style=for-the-badge&color=8b5cf6&labelColor=030306" alt="License" />
     </a>
-    <a href="https://github.com/Sehastrajit/Luna/commits/main">
-      <img src="https://img.shields.io/github/last-commit/Sehastrajit/Luna?style=for-the-badge&color=a78bfa&labelColor=030306" alt="Last Commit" />
+    <a href="https://github.com/Sehastrajit-S/Luna/commits/main">
+      <img src="https://img.shields.io/github/last-commit/Sehastrajit-S/Luna?style=for-the-badge&color=a78bfa&labelColor=030306" alt="Last Commit" />
     </a>
-    <a href="https://github.com/Sehastrajit/Luna/issues">
-      <img src="https://img.shields.io/github/issues/Sehastrajit/Luna?style=for-the-badge&color=c4b5fd&labelColor=030306" alt="Issues" />
+    <a href="https://github.com/Sehastrajit-S/Luna/issues">
+      <img src="https://img.shields.io/github/issues/Sehastrajit-S/Luna?style=for-the-badge&color=c4b5fd&labelColor=030306" alt="Issues" />
     </a>
   </p>
 
   <p>
-    <a href="https://github.com/Sehastrajit/Luna">
+    <a href="https://github.com/Sehastrajit-S/Luna">
       <img src="https://img.shields.io/badge/View%20on%20GitHub-%23030306?style=for-the-badge&logo=github&logoColor=white" alt="View on GitHub" />
     </a>
   </p>
@@ -51,7 +51,7 @@ It ships as two modes: **Personal** (voice, vision, Spotify, health data, deskto
 ## Get started
 
 ```bash
-git clone https://github.com/Sehastrajit/Luna.git && cd Luna && npm install && npm run luna -- setup
+git clone https://github.com/Sehastrajit-S/Luna.git && cd Luna && npm install && npm run luna -- setup
 ```
 
 The setup wizard picks your variant, configures your LLM provider, installs Python and Node dependencies, and pulls Ollama models. Luna opens on **http://localhost:8899** in about two minutes.
@@ -66,7 +66,7 @@ The setup wizard picks your variant, configures your LLM provider, installs Pyth
 - [Variants](#variants)
 - [Features](#features)
 - [Any Model](#any-model)
-- [Skills — extend without code](#skills--extend-without-code)
+- [Skills - extend without code](#skills--extend-without-code)
 - [Health Platforms](#health-platforms)
 - [Desktop install](#desktop-install)
 - [Docker](#docker)
@@ -86,13 +86,13 @@ The setup wizard picks your variant, configures your LLM provider, installs Pyth
 
 Luna is the engine underneath. It handles:
 
-- **LLM routing** — one config line switches between 8 providers. Ollama by default, any OpenAI-compatible endpoint, or every major cloud model.
-- **Memory** — facts, personality, and conversation summaries persist in local SQLite + ChromaDB. Luna remembers across sessions.
-- **Skill system** — extend the engine by dropping a folder into `skills/`. No Python, no restarts, no wiring — just a `skill.json` and a plain-text `SKILL.md`. Skills are loaded per-request at runtime.
-- **Health data engine** — 7 platforms, 23 metric types, normalized and stored locally. Add a new platform by writing one Python file.
-- **Voice + vision pipeline** — wake-word detection, faster-whisper STT, edge-tts TTS, and moondream camera analysis running fully on-device.
-- **Tool layer** — web search, page fetch, Spotify, calendar, desktop automation, workspace file ops, 3D scene generation. Every tool goes through an audit log and permission system.
-- **Streaming first** — all responses stream over SSE. Commands embedded in the stream trigger widgets, maps, Spotify controls, 3D scenes in the UI.
+- **LLM routing** - one config line switches between 8 providers. Ollama by default, any OpenAI-compatible endpoint, or every major cloud model.
+- **Memory** - facts, personality, and conversation summaries persist in local SQLite + ChromaDB. Luna remembers across sessions.
+- **Skill system** - extend the engine by dropping a folder into `skills/`. No Python, no restarts, no wiring - just a `skill.json` and a plain-text `SKILL.md`. Skills are loaded per-request at runtime.
+- **Health data engine** - 7 platforms, 23 metric types, normalized and stored locally. Add a new platform by writing one Python file.
+- **Voice + vision pipeline** - wake-word detection, faster-whisper STT, edge-tts TTS, and moondream camera analysis running fully on-device.
+- **Tool layer** - web search, page fetch, Spotify, calendar, desktop automation, workspace file ops, 3D scene generation. Every tool goes through an audit log and permission system.
+- **Streaming first** - all responses stream over SSE. Commands embedded in the stream trigger widgets, maps, Spotify controls, 3D scenes in the UI.
 
 ---
 
@@ -103,10 +103,10 @@ Luna is the engine underneath. It handles:
 | **Best for** | Individual daily use | Teams and companies |
 | **Auth** | None required | Multi-user JWT |
 | **Rate limiting** | Off | Sliding-window, configurable |
-| **Messaging channels** | — | Telegram, Discord, Slack, webhook |
-| **Voice + vision** | ✓ | — |
+| **Messaging channels** | - | Telegram, Discord, Slack, webhook |
+| **Voice + vision** | ✓ | - |
 | **Health platforms** | ✓ | ✓ |
-| **Spotify + app launcher** | ✓ | — |
+| **Spotify + app launcher** | ✓ | - |
 | **Calendar + web search** | ✓ | ✓ |
 | **Docker** | `luna docker` | `luna docker:business` |
 
@@ -118,26 +118,26 @@ Switch at any time: change `luna_variant=personal` or `luna_variant=business` in
 
 | Capability | Personal | Business |
 |---|---|---|
-| 🎙 **Voice** — wake-word, push-to-talk, faster-whisper STT, edge-tts / pyttsx3 TTS | ✓ | — |
-| 🧠 **Memory** — persistent facts, personality state, conversation summaries (SQLite + ChromaDB) | ✓ | ✓ |
-| 👁 **Vision** — screen and camera awareness via moondream, no raw frames stored | ✓ | — |
-| ⚡ **Automation** — app launcher, Spotify control, audio device switcher | ✓ | — |
-| 📅 **Calendar + Tasks** — create, list, update tasks with proactive reminders | ✓ | ✓ |
-| 📊 **Dashboard** — live news, weather, markets, and maps widget layer | ✓ | ✓ |
-| 🌐 **Web Tools** — DuckDuckGo search and page fetch | ✓ | ✓ |
-| 🧩 **Dynamic Widgets** — steps, timelines, code blocks, 3D scenes (Three.js) | ✓ | ✓ |
-| 💓 **Health Platforms** — Fitbit, Google Fit, Oura, Withings, Garmin, Apple Health, Samsung | ✓ | ✓ |
-| 🧠 **Skills** — plain-text agent skills, auto-loaded at runtime, no restart needed | ✓ | ✓ |
-| ✈️ **Messaging Channels** — Telegram, Discord, Slack, generic webhook | — | ✓ |
-| 🔐 **JWT Auth** — multi-user tokens, admin user management API | — | ✓ |
-| 🚦 **Rate Limiting** — sliding-window per-IP, configurable burst | — | ✓ |
-| 🔒 **Private** — inference runs locally via Ollama by default, zero telemetry | ✓ | ✓ |
+| 🎙 **Voice** - wake-word, push-to-talk, faster-whisper STT, edge-tts / pyttsx3 TTS | ✓ | - |
+| 🧠 **Memory** - persistent facts, personality state, conversation summaries (SQLite + ChromaDB) | ✓ | ✓ |
+| 👁 **Vision** - screen and camera awareness via moondream, no raw frames stored | ✓ | - |
+| ⚡ **Automation** - app launcher, Spotify control, audio device switcher | ✓ | - |
+| 📅 **Calendar + Tasks** - create, list, update tasks with proactive reminders | ✓ | ✓ |
+| 📊 **Dashboard** - live news, weather, markets, and maps widget layer | ✓ | ✓ |
+| 🌐 **Web Tools** - DuckDuckGo search and page fetch | ✓ | ✓ |
+| 🧩 **Dynamic Widgets** - steps, timelines, code blocks, 3D scenes (Three.js) | ✓ | ✓ |
+| 💓 **Health Platforms** - Fitbit, Google Fit, Oura, Withings, Garmin, Apple Health, Samsung | ✓ | ✓ |
+| 🧠 **Skills** - plain-text agent skills, auto-loaded at runtime, no restart needed | ✓ | ✓ |
+| ✈️ **Messaging Channels** - Telegram, Discord, Slack, generic webhook | - | ✓ |
+| 🔐 **JWT Auth** - multi-user tokens, admin user management API | - | ✓ |
+| 🚦 **Rate Limiting** - sliding-window per-IP, configurable burst | - | ✓ |
+| 🔒 **Private** - inference runs locally via Ollama by default, zero telemetry | ✓ | ✓ |
 
 ---
 
 ## Any Model
 
-One line in `.env` switches the provider — no code changes, no restart of anything else.
+One line in `.env` switches the provider - no code changes, no restart of anything else.
 
 | Provider | `llm_provider` | Key needed |
 |---|---|---|
@@ -150,7 +150,7 @@ One line in `.env` switches the provider — no code changes, no restart of anyt
 | **Mistral AI** | `mistral` | `mistral_api_key` |
 | **OpenAI / OpenRouter / LM Studio / llama.cpp** | `openai-compatible` | `openai_api_key` (optional for local) |
 
-**OpenRouter** — one key, every major model, pay-as-you-go:
+**OpenRouter** - one key, every major model, pay-as-you-go:
 
 ```env
 llm_provider=openai-compatible
@@ -161,9 +161,9 @@ openai_model=anthropic/claude-opus-4
 
 ---
 
-## Skills — extend without code
+## Skills - extend without code
 
-Skills teach Luna new behaviors. Drop a folder into `skills/` and it's live on the next request — no Python, no restarts, no wiring.
+Skills teach Luna new behaviors. Drop a folder into `skills/` and it's live on the next request - no Python, no restarts, no wiring.
 
 ```
 skills/
@@ -184,7 +184,7 @@ skills/
 | [`file-builder/`](skills/file-builder/) | Create and convert files of any format in the workspace |
 | [`job-application-assistant/`](skills/job-application-assistant/) | Tailor resumes, draft cover letters, prep for interviews |
 | [`resume-checker/`](skills/resume-checker/) | Review, score, and rewrite resumes against a job post |
-| [`workspace-suite/`](skills/workspace-suite/) | Gmail, Calendar, Drive, Outlook, OneDrive, Teams — all in one |
+| [`workspace-suite/`](skills/workspace-suite/) | Gmail, Calendar, Drive, Outlook, OneDrive, Teams - all in one |
 
 See [`skills/README.md`](skills/README.md) for a full contributor guide and [`skills/_template/`](skills/_template/) for a ready-to-copy starter.
 
@@ -196,12 +196,12 @@ See [`skills/README.md`](skills/README.md) for a full contributor guide and [`sk
   <img src="docs-site/public/images/health-platforms.svg" width="100%" alt="Health platform integrations" />
 </div>
 
-Luna connects to 7 health platforms and normalizes everything into 23 metric types stored locally in SQLite. Adding a new platform takes one Python file — no changes to the router, sync dispatcher, or frontend.
+Luna connects to 7 health platforms and normalizes everything into 23 metric types stored locally in SQLite. Adding a new platform takes one Python file - no changes to the router, sync dispatcher, or frontend.
 
 | Platform | Auth | Key Metrics |
 |---|---|---|
 | **Fitbit** | OAuth2 | Steps, HR, HRV, sleep stages, SpO2, skin temp, weight, breathing rate |
-| **Google Fit** | OAuth2 | Steps, calories, HR, weight, body fat, SpO2, sleep — all Android wearables |
+| **Google Fit** | OAuth2 | Steps, calories, HR, weight, body fat, SpO2, sleep - all Android wearables |
 | **Oura Ring** | API token | Sleep stages, HRV, resting HR, readiness score, stress, respiratory rate |
 | **Withings** | OAuth2 | Weight, BMI, body fat, blood pressure, HR, sleep |
 | **Garmin Connect** | Credentials | VO2 Max, Body Battery, stress, GPS workouts, sleep, SpO2 |
@@ -225,7 +225,7 @@ curl -X POST http://localhost:8899/api/health/sync
 **Prerequisites:** Node.js 18+, Python 3.10+, [Ollama](https://ollama.com/) installed and running.
 
 ```bash
-git clone https://github.com/Sehastrajit/Luna.git && cd Luna && npm install && npm run luna -- setup
+git clone https://github.com/Sehastrajit-S/Luna.git && cd Luna && npm install && npm run luna -- setup
 ```
 
 Then start Luna:
@@ -236,7 +236,7 @@ luna web        # FastAPI + browser UI, no Electron
 luna backend    # FastAPI only
 ```
 
-Run `luna doctor` if something doesn't start — it checks Node, Python, Ollama, and Docker in one shot.
+Run `luna doctor` if something doesn't start - it checks Node, Python, Ollama, and Docker in one shot.
 
 **Windows installer:**
 
@@ -263,7 +263,7 @@ The CLI auto-detects the right compose file from your `.env`:
 # NVIDIA GPU
 luna docker:gpu
 
-# Cloud LLM — set llm_provider in .env first
+# Cloud LLM - set llm_provider in .env first
 luna docker:cloud
 
 # Business
@@ -322,9 +322,9 @@ Data persists in named Docker volumes (`luna_data`, `ollama_data`).
 
 Three layers:
 
-1. **Electron** — starts the desktop shell, launches the FastAPI backend, hosts the React renderer.
-2. **React** — renders chat, voice controls, dashboard, maps, dynamic widgets, and 3D scenes.
-3. **FastAPI** — owns chat streaming, voice, memory, vision, tool execution, live data, Spotify, scheduling, messaging channels, auth, rate limiting, and all LLM calls.
+1. **Electron** - starts the desktop shell, launches the FastAPI backend, hosts the React renderer.
+2. **React** - renders chat, voice controls, dashboard, maps, dynamic widgets, and 3D scenes.
+3. **FastAPI** - owns chat streaming, voice, memory, vision, tool execution, live data, Spotify, scheduling, messaging channels, auth, rate limiting, and all LLM calls.
 
 ```
 User input (browser · Electron · Telegram · Discord · Slack · webhook)
@@ -363,28 +363,28 @@ luna_variant=personal          # personal | business
 # Identity
 user_name=friend
 
-# LLM — Ollama (default, runs locally)
+# LLM - Ollama (default, runs locally)
 llm_provider=ollama
 ollama_base_url=http://localhost:11434
 ollama_model=qwen2.5:7b
 
-# LLM — Anthropic Claude
+# LLM - Anthropic Claude
 # llm_provider=anthropic
 # anthropic_api_key=sk-ant-...
 # anthropic_model=claude-sonnet-4-5
 
-# LLM — any OpenAI-compatible endpoint
+# LLM - any OpenAI-compatible endpoint
 # llm_provider=openai-compatible
 # openai_base_url=https://openrouter.ai/api/v1
 # openai_api_key=sk-or-...
 # openai_model=anthropic/claude-opus-4
 
-# LLM — NVIDIA NIM
+# LLM - NVIDIA NIM
 # llm_provider=nvidia-nim
 # nvidia_nim_api_key=nvapi-...
 # nvidia_nim_model=meta/llama-3.1-8b-instruct
 
-# Business — auth and rate limiting
+# Business - auth and rate limiting
 # jwt_secret=change-me
 # rate_limit_enabled=true
 # rate_limit_per_minute=60
@@ -434,16 +434,16 @@ Open `http://YOUR-LAN-IP:5173` on any phone, tablet, or second computer. Voice, 
 
 ```
 Luna/
-├── backend/             # FastAPI server — chat, voice, memory, tools, integrations
-│   ├── routers/         # Thin API layer — logic lives in services/
+├── backend/             # FastAPI server - chat, voice, memory, tools, integrations
+│   ├── routers/         # Thin API layer - logic lives in services/
 │   ├── services/        # LLM, memory, personality, vision, health platforms, dashboard
-│   └── processes/       # Background jobs — memory maintenance, reminders, voice runtime
+│   └── processes/       # Background jobs - memory maintenance, reminders, voice runtime
 ├── frontend/            # React + Vite UI
 │   └── src/components/  # Chat, voice, dashboard, widgets, maps, settings
-├── electron/            # Desktop shell — window management, tray, preload
+├── electron/            # Desktop shell - window management, tray, preload
 ├── skills/              # Built-in agent skills (plain-text, auto-loaded at runtime)
 │   └── _template/       # Copy this to create a new skill
-├── integrations/        # Platform add-ons — Google Workspace, Office, VS Code extension
+├── integrations/        # Platform add-ons - Google Workspace, Office, VS Code extension
 ├── cli/                 # luna CLI entrypoint and command handlers
 ├── docs-site/           # Next.js documentation site
 ├── utilities/           # Scripts, tests, architecture diagrams
@@ -462,7 +462,7 @@ npm run test:tools   # tool-only suite
 npm run build        # frontend type check + bundle
 ```
 
-Smoke tests are non-destructive — they do not launch apps, type, lock the screen, switch audio devices, or start playback.
+Smoke tests are non-destructive - they do not launch apps, type, lock the screen, switch audio devices, or start playback.
 
 ---
 
@@ -473,15 +473,15 @@ Smoke tests are non-destructive — they do not launch apps, type, lock the scre
 3. Run `npm run test:smoke` (backend/CLI changes) or `npm run build` (frontend changes).
 4. Open a pull request with a clear description of what changed and why.
 
-**Adding a skill** — the easiest contribution. Copy [`skills/_template/`](skills/_template/), fill in `skill.json` and `SKILL.md`, and open a PR. No Python knowledge needed. See [`skills/README.md`](skills/README.md).
+**Adding a skill** - the easiest contribution. Copy [`skills/_template/`](skills/_template/), fill in `skill.json` and `SKILL.md`, and open a PR. No Python knowledge needed. See [`skills/README.md`](skills/README.md).
 
-**Adding a health integration** — copy [`backend/services/health_integrations/_template.py`](backend/services/health_integrations/_template.py), subclass `HealthIntegration`, fill in the `manifest` and `sync()` method. Auto-discovered on restart, zero other changes needed. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+**Adding a health integration** - copy [`backend/services/health_integrations/_template.py`](backend/services/health_integrations/_template.py), subclass `HealthIntegration`, fill in the `manifest` and `sync()` method. Auto-discovered on restart, zero other changes needed. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ---
 
 ## Privacy
 
-- Chat inference runs through local Ollama — no tokens leave your machine by default.
+- Chat inference runs through local Ollama - no tokens leave your machine by default.
 - Memory, facts, and personality state are stored in local SQLite and ChromaDB.
 - Vision summaries are generated locally by moondream; no raw frames are stored or transmitted.
 - External APIs (news, weather, markets, Spotify) are only contacted when configured and used.
@@ -491,7 +491,7 @@ Smoke tests are non-destructive — they do not launch apps, type, lock the scre
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT - see [LICENSE](LICENSE).
 
 ---
 
