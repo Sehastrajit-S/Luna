@@ -70,7 +70,7 @@ async def _embed_batch(texts: list[str]) -> list[list[float]] | None:
     try:
         async with httpx.AsyncClient(timeout=httpx.Timeout(120.0, connect=5.0)) as client:
             r = await client.post(
-                f"{settings.ollama_base_url}/api/embed",
+                f"{settings.ollama_embed_base_url or settings.ollama_base_url}/api/embed",
                 json={"model": settings.ollama_embed_model, "input": texts},
             )
             r.raise_for_status()

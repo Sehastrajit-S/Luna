@@ -114,17 +114,19 @@ async def chat_step(
     on_token: Callable[[str], Awaitable[None]] | None = None,
 ) -> AssistantTurn:
     """One model call with tools. Streams text tokens to `on_token` as they arrive."""
+    from backend.services.llm import selector
+    think, predict = selector.ollama_think_options(settings.ollama_model, settings.llm_max_output_tokens)
     payload = {
         "model": settings.ollama_model,
         "messages": messages,
         "stream": True,
-        "think": False,
+        "think": think,
         "options": {
             "temperature": temperature,
             "top_p": 0.9,
             "repeat_penalty": 1.1,
             "num_ctx": settings.llm_context_window,
-            "num_predict": settings.llm_max_output_tokens,
+            "num_predict": predict,
         },
     }
     if tools:
@@ -132,34 +134,40 @@ async def chat_step(
 
     turn = AssistantTurn()
     parts: list[str] = []
-    async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-        async with client.stream("POST", f"{settings.ollama_base_url}/api/chat", json=payload) as response:
-            if response.status_code >= 400:
-                body = (await response.aread()).decode("utf-8", "replace")[:300]
-                raise RuntimeError(f"Ollama returned {response.status_code}: {body}")
-            async for line in response.aiter_lines():
-                if not line:
-                    continue
-                try:
-                    data = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                if data.get("error"):
-                    raise RuntimeError(f"Ollama error: {data['error']}")
-                message = data.get("message") or {}
-                token = message.get("content") or ""
-                if token:
-                    parts.append(token)
-                    if on_token:
-                        await on_token(token)
-                for raw in message.get("tool_calls") or []:
-                    fn = raw.get("function") or {}
-                    name = str(fn.get("name") or "")
-                    if name:
-                        turn.tool_calls.append(ToolCall(raw.get("id") or _new_id(), name, _parse_arguments(fn.get("arguments"))))
-                if data.get("done"):
-                    turn.prompt_tokens = int(data.get("prompt_eval_count") or 0)
-                    break
+    try:
+        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
+            async with client.stream("POST", f"{settings.ollama_base_url}/api/chat", json=payload) as response:
+                if response.status_code >= 400:
+                    body = (await response.aread()).decode("utf-8", "replace")[:300]
+                    if selector.is_model_missing(response.status_code, body):
+                        selector.on_connect_error()
+                    raise RuntimeError(f"Ollama returned {response.status_code}: {body}")
+                async for line in response.aiter_lines():
+                    if not line:
+                        continue
+                    try:
+                        data = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if data.get("error"):
+                        raise RuntimeError(f"Ollama error: {data['error']}")
+                    message = data.get("message") or {}
+                    token = message.get("content") or ""
+                    if token:
+                        parts.append(token)
+                        if on_token:
+                            await on_token(token)
+                    for raw in message.get("tool_calls") or []:
+                        fn = raw.get("function") or {}
+                        name = str(fn.get("name") or "")
+                        if name:
+                            turn.tool_calls.append(ToolCall(raw.get("id") or _new_id(), name, _parse_arguments(fn.get("arguments"))))
+                    if data.get("done"):
+                        turn.prompt_tokens = int(data.get("prompt_eval_count") or 0)
+                        break
+    except (httpx.ConnectError, httpx.ConnectTimeout):
+        selector.on_connect_error()
+        raise
 
     turn.content = "".join(parts)
     if not turn.tool_calls and tools:

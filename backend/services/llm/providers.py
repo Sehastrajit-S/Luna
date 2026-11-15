@@ -17,6 +17,12 @@ def _openai_headers(api_key: str) -> dict[str, str]:
     return h
 
 
+def _ollama_unreachable() -> None:
+    """Let the model selector re-probe right away when the chosen Ollama server stops answering."""
+    from backend.services.llm import selector
+    selector.on_connect_error()
+
+
 def _provider() -> str:
     return settings.llm_provider.strip().lower()
 
@@ -36,6 +42,8 @@ async def _stream_ollama(
     # already fitted (the chat pipeline) pass through unchanged.
     ctx = num_ctx or settings.llm_context_window
     max_output = num_predict or settings.llm_max_output_tokens
+    from backend.services.llm import selector
+    think, predict = selector.ollama_think_options(settings.ollama_model, max_output)
     fitted = fit_context(system_prompt, messages, context_window=ctx, max_output_tokens=max_output)
     full_messages = [{"role": "system", "content": fitted.system_prompt}] + fitted.messages
     options = {
@@ -43,33 +51,39 @@ async def _stream_ollama(
         "top_p": 0.9,
         "repeat_penalty": 1.1,
         "num_ctx": ctx,
-        "num_predict": max_output,
+        "num_predict": predict,
     }
-    async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-        async with client.stream(
-            "POST",
-            f"{settings.ollama_base_url}/api/chat",
-            json={
-                "model": settings.ollama_model,
-                "messages": full_messages,
-                "stream": True,
-                "think": False,
-                "options": options,
-            },
-        ) as response:
-            response.raise_for_status()
-            async for line in response.aiter_lines():
-                if not line:
-                    continue
-                try:
-                    data = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                content = data.get("message", {}).get("content", "")
-                if content:
-                    yield content
-                if data.get("done"):
-                    break
+    try:
+        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
+            async with client.stream(
+                "POST",
+                f"{settings.ollama_base_url}/api/chat",
+                json={
+                    "model": settings.ollama_model,
+                    "messages": full_messages,
+                    "stream": True,
+                    "think": think,
+                    "options": options,
+                },
+            ) as response:
+                if selector.is_model_missing(response.status_code):
+                    _ollama_unreachable()
+                response.raise_for_status()
+                async for line in response.aiter_lines():
+                    if not line:
+                        continue
+                    try:
+                        data = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    content = data.get("message", {}).get("content", "")
+                    if content:
+                        yield content
+                    if data.get("done"):
+                        break
+    except (httpx.ConnectError, httpx.ConnectTimeout):
+        _ollama_unreachable()
+        raise
 
 
 async def _stream_openai_compatible(
@@ -298,19 +312,27 @@ async def _complete_ollama(prompt: str, system: str, temperature: float) -> str:
     if system:
         messages.append({"role": "system", "content": system})
     messages.append({"role": "user", "content": _clip_middle(prompt, max(512, room))})
-    async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-        r = await client.post(
-            f"{settings.ollama_base_url}/api/chat",
-            json={
-                "model": settings.ollama_model,
-                "messages": messages,
-                "stream": False,
-                "think": False,
-                "options": {"temperature": temperature, "num_ctx": ctx, "num_predict": max_output},
-            },
-        )
-        r.raise_for_status()
-        return r.json().get("message", {}).get("content", "")
+    from backend.services.llm import selector
+    think, predict = selector.ollama_think_options(settings.ollama_model, max_output)
+    try:
+        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
+            r = await client.post(
+                f"{settings.ollama_base_url}/api/chat",
+                json={
+                    "model": settings.ollama_model,
+                    "messages": messages,
+                    "stream": False,
+                    "think": think,
+                    "options": {"temperature": temperature, "num_ctx": ctx, "num_predict": predict},
+                },
+            )
+            if selector.is_model_missing(r.status_code):
+                _ollama_unreachable()
+            r.raise_for_status()
+            return r.json().get("message", {}).get("content", "")
+    except (httpx.ConnectError, httpx.ConnectTimeout):
+        _ollama_unreachable()
+        raise
 
 
 async def _complete_openai(

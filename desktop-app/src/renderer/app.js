@@ -558,19 +558,175 @@ const PROVIDER_LABELS = {
   mistral: 'Mistral',
 }
 
-fetch(`${API_BASE}/api/system/health`)
-  .then(response => response.ok ? response.json() : Promise.reject(new Error('health check failed')))
-  .then(status => {
-    const modelLabel = document.getElementById('model-label')
-    if (!modelLabel) return
-    const provider = String(status.llm_provider || 'ollama').toLowerCase()
-    modelLabel.textContent = PROVIDER_LABELS[provider] || status.llm_provider
-    if (status.model) modelLabel.parentElement.title = status.model
+// ── Model picker (bottom-right pill) ────────────────────────────────────────
+// With llm_auto_select on, the backend picks the best Ollama model and only
+// falls back to the cloud provider when none is available. The menu shows that
+// choice and lets the user pin a specific model (or the cloud fallback) instead.
+const modelPicker = (() => {
+  const button = document.querySelector('.model-select')
+  const label = document.getElementById('model-label')
+  let selection = null
+  let menu = null
+
+  const shortModel = model => String(model || '').replace(/:latest$/, '')
+
+  function render(status) {
+    if (!label) return
+    const provider = String(status.llm_provider || status.provider || 'ollama').toLowerCase()
+    let text = PROVIDER_LABELS[provider] || provider
+    let title = status.model || ''
+    if (selection?.auto_select) {
+      const usingFallback = selection.provider !== 'ollama'
+      const where = usingFallback ? selection.fallback.label : shortModel(selection.model)
+      text = `${selection.mode === 'auto' ? 'Auto' : 'Manual'} · ${where || text}`
+      title = usingFallback
+        ? `${selection.fallback.label} (${selection.fallback.model})`
+        : `${selection.model} on ${serverLabel(selection.server)}`
+    }
+    label.textContent = text
+    if (button) button.title = title ? `${title} — click to choose a model` : 'Choose a model'
+  }
+
+  function serverLabel(url) {
+    return selection?.servers?.find(s => s.url === url)?.label || url
+  }
+
+  async function refresh() {
+    try {
+      const [health, sel] = await Promise.all([
+        fetch(`${API_BASE}/api/system/health`).then(r => r.ok ? r.json() : Promise.reject(new Error('health'))),
+        fetch(`${API_BASE}/api/system/llm-selection`).then(r => r.ok ? r.json() : null).catch(() => null),
+      ])
+      selection = sel
+      render(health)
+    } catch {
+      if (label) label.textContent = 'Ollama'
+    }
+  }
+
+  async function choose(body) {
+    if (label) label.textContent = 'Switching…'
+    const post = token => fetch(`${API_BASE}/api/system/llm-selection`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Luna-Token': token },
+      body: JSON.stringify(body),
+    })
+    let response = await post((await window.electronAPI?.getLocalToken?.()) || '')
+    if (response.status === 403 && window.electronAPI?.requestLocalToken) {
+      const token = await window.electronAPI.requestLocalToken()
+      if (token) response = await post(token)
+    }
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok) { await refresh(); throw new Error(data.detail || `Could not switch model (${response.status})`) }
+    closeMenu()
+    await refresh()
+  }
+
+  function item({ title, sub, active, disabled, onClick }) {
+    const el = document.createElement('button')
+    el.type = 'button'
+    el.className = 'model-menu-item' + (active ? ' is-active' : '')
+    el.disabled = !!disabled
+    el.innerHTML = '<span class="model-menu-check"></span><span class="model-menu-text"><b></b><small></small></span>'
+    el.querySelector('b').textContent = title
+    el.querySelector('small').textContent = sub || ''
+    if (active) el.querySelector('.model-menu-check').textContent = '✓'
+    el.addEventListener('click', async () => {
+      el.disabled = true
+      try { await onClick() } catch (error) { showError(error.message); el.disabled = false }
+    })
+    return el
+  }
+
+  function heading(text) {
+    const el = document.createElement('div')
+    el.className = 'model-menu-heading'
+    el.textContent = text
+    return el
+  }
+
+  function showError(message) {
+    if (!menu) return
+    let el = menu.querySelector('.model-menu-error')
+    if (!el) { el = document.createElement('div'); el.className = 'model-menu-error'; menu.append(el) }
+    el.textContent = message
+  }
+
+  function buildMenu() {
+    const el = document.createElement('div')
+    el.className = 'model-menu'
+    el.setAttribute('role', 'menu')
+    const sel = selection
+    const manual = sel.override
+    const autoPick = sel.provider === 'ollama' ? `${shortModel(sel.model)} on ${serverLabel(sel.server)}` : sel.fallback.label
+    el.append(item({
+      title: 'Auto (best available)',
+      sub: sel.mode === 'auto' ? `Now: ${autoPick}` : 'Best Ollama model, cloud only if none is up',
+      active: sel.mode === 'auto',
+      onClick: () => choose({ mode: 'auto' }),
+    }))
+
+    el.append(heading('Ollama'))
+    for (const server of sel.servers || []) {
+      const models = (sel.candidates || []).filter(c => c.server === server.url)
+      if (!server.online || !models.length) {
+        el.append(item({ title: server.label, sub: server.online ? 'No chat models' : 'Offline', disabled: true }))
+        continue
+      }
+      for (const c of models) {
+        const facts = [c.params_b ? `${c.params_b}B` : '', c.tools ? 'tools' : 'no tools'].filter(Boolean).join(' · ')
+        el.append(item({
+          title: shortModel(c.model),
+          sub: `${server.label} · ${facts}`,
+          active: manual?.mode === 'ollama' && manual.server === c.server && manual.model === c.model,
+          onClick: () => choose({ mode: 'ollama', server: c.server, model: c.model }),
+        }))
+      }
+    }
+
+    el.append(heading('Cloud'))
+    el.append(item({
+      title: sel.fallback.label,
+      sub: sel.fallback.ready ? `${sel.fallback.model} · no agent tools` : 'Not configured (no API key)',
+      active: manual?.mode === 'fallback',
+      disabled: !sel.fallback.ready,
+      onClick: () => choose({ mode: 'fallback' }),
+    }))
+    return el
+  }
+
+  function closeMenu() {
+    menu?.remove()
+    menu = null
+    button?.setAttribute('aria-expanded', 'false')
+  }
+
+  async function openMenu() {
+    await refresh()
+    if (!selection?.auto_select) return
+    menu = buildMenu()
+    document.body.append(menu)
+    const rect = button.getBoundingClientRect()
+    const width = Math.min(300, window.innerWidth - 16)
+    menu.style.width = `${width}px`
+    menu.style.left = `${Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8))}px`
+    menu.style.bottom = `${window.innerHeight - rect.top + 8}px`
+    button.setAttribute('aria-expanded', 'true')
+  }
+
+  button?.setAttribute('aria-haspopup', 'menu')
+  button?.addEventListener('click', event => {
+    event.stopPropagation()
+    if (menu) closeMenu(); else openMenu()
   })
-  .catch(() => {
-    const modelLabel = document.getElementById('model-label')
-    if (modelLabel) modelLabel.textContent = 'Ollama'
-  })
+  document.addEventListener('click', event => { if (menu && !menu.contains(event.target)) closeMenu() })
+  document.addEventListener('keydown', event => { if (event.key === 'Escape') closeMenu() })
+  window.addEventListener('resize', closeMenu)
+
+  refresh()
+  setInterval(() => { if (!menu && !document.hidden) refresh() }, 60000)
+  return { refresh }
+})()
 
 function formatMessageTime(date) {
   if (Number.isNaN(date.getTime())) date = new Date()

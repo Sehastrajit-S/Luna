@@ -44,7 +44,15 @@ async def lifespan(app: FastAPI):
     if jobs:
         luna_scheduler.start()
         start_lifecycle_processes()
+    selector_task = None
+    if settings.llm_auto_select:
+        import asyncio
+        from backend.services.llm import selector
+        await selector.select_now()
+        selector_task = asyncio.create_task(selector.run_forever())
     yield
+    if selector_task is not None:
+        selector_task.cancel()
     await tracer.flush()
     if jobs:
         luna_scheduler.stop()

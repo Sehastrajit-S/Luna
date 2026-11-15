@@ -949,3 +949,32 @@ select.settings-input { cursor: pointer; }
 .bubble .agent-confirm-btn:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
 .bubble .agent-confirm.is-approved .agent-confirm-text::after { content: " · approved"; color: #16a34a; }
 .bubble .agent-confirm.is-denied .agent-confirm-text::after { content: " · denied"; color: var(--ink-faint); }
+
+/* ── Model picker menu (opens above the bottom-right model pill) ── */
+.model-menu {
+  position: fixed; z-index: 1000;
+  max-height: min(420px, 70vh); overflow-y: auto;
+  padding: 6px;
+  background: var(--bg-card); color: var(--ink);
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.14);
+}
+.model-menu-heading {
+  padding: 10px 10px 4px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.model-menu-item {
+  display: flex; align-items: flex-start; gap: 8px; width: 100%;
+  padding: 8px 10px; border-radius: 10px;
+  text-align: left; background: none; color: inherit; font: inherit;
+}
+.model-menu-item:hover:not(:disabled) { background: #f2f2f3; }
+.model-menu-item:disabled { opacity: 0.45; cursor: default; }
+.model-menu-item.is-active { background: #f2f2f3; }
+.model-menu-check { width: 14px; flex-shrink: 0; font-weight: 700; }
+.model-menu-text { display: flex; flex-direction: column; min-width: 0; }
+.model-menu-text b { font-size: 13px; font-weight: 600; }
+.model-menu-text small { font-size: 11.5px; color: var(--ink-soft); overflow-wrap: anywhere; }
+.model-menu-error { padding: 8px 10px; font-size: 12px; color: #c0392b; }
