@@ -177,7 +177,7 @@ class LLMClient:
 
         async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
             r = await client.post(
-                f"{settings.ollama_base_url}/api/embed",
+                f"{settings.ollama_embed_base_url or settings.ollama_base_url}/api/embed",
                 json={"model": settings.ollama_embed_model, "input": text},
             )
             if r.status_code == 200:

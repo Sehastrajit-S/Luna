@@ -70,6 +70,17 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://127.0.0.1:11434"
     ollama_model: str = "qwen2.5:7b"
     ollama_embed_model: str = "nomic-embed-text"
+    # Ollama server for embeddings when it differs from the chat server (blank = ollama_base_url).
+    ollama_embed_base_url: str = ""
+
+    # Priority-based model selection (opt-in, services/llm/selector.py): probe
+    # llm_ollama_servers, use the best chat model any of them serves, and switch
+    # to llm_fallback_provider only when no Ollama model is available.
+    llm_auto_select: bool = False
+    llm_ollama_servers: str = ""        # comma-separated base URLs; earlier wins ties (blank = ollama_base_url)
+    llm_model_preference: str = ""      # comma-separated Ollama model names, best first (unlisted: by size)
+    llm_fallback_provider: str = "openai-compatible"
+    llm_select_interval: int = 60       # seconds between probes
 
     # Context window (tokens) for chat requests. Requests are fitted to it
     # explicitly (services/llm/context_window.py) instead of letting the model

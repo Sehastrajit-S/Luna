@@ -291,3 +291,10 @@ async def health():
         "ollama": available,
         "model": ollama.model,
     }
+
+
+@router.get("/llm-selection")
+async def llm_selection():
+    """Which model the priority-based selector picked, and every candidate it saw."""
+    from backend.services.llm import selector
+    return selector.status()
