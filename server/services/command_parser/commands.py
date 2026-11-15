@@ -1,7 +1,7 @@
 """Bracket command parsing and execution."""
 import re
 from sqlalchemy.orm import Session
-from backend.services.command_parser.away import user_is_leaving, response_is_farewell
+from server.services.command_parser.away import user_is_leaving, response_is_farewell
 
 _BROWSE_BLOCK = re.compile(
     r"(weather\.com|wttr\.in|open-meteo|wunderground|weather\.gov"
@@ -21,7 +21,7 @@ def parse_commands(response: str, user_message: str = "") -> list[dict]:
         is_bedtime = any(w in msg.lower() for w in _bedtime_words) or response_is_farewell(resp)
         commands.append({"type": "away", "action": "on", "label": "bedtime" if is_bedtime else "away"})
 
-    from backend.config import settings as _cfg
+    from server.config import settings as _cfg
     if _cfg.luna_variant == "personal":
         has_away_bracket = bool(re.search(r'\[AWAY\]', response))
         has_away_literal = bool(re.search(r'(?<!\[)\bAWAY\b(?!\s*])', response))
@@ -92,7 +92,7 @@ def parse_commands(response: str, user_message: str = "") -> list[dict]:
 def _parse_local(value: str | None):
     """The model writes wall-clock local times; the database stores UTC."""
     from datetime import datetime
-    from backend.services.time_utils import to_utc_naive
+    from server.services.time_utils import to_utc_naive
 
     if not value:
         return None
@@ -123,14 +123,14 @@ def _same_title(a: str, b: str) -> bool:
 
 
 def find_open_task(db: Session, title: str):
-    from backend.models.database import Task
+    from server.models.database import Task
     tasks = db.query(Task).filter(Task.completed == False).order_by(Task.created_at.desc()).all()  # noqa: E712
     return next((t for t in tasks if _same_title(t.title, title)), None)
 
 
 def find_upcoming_event(db: Session, title: str):
     from datetime import datetime
-    from backend.models.database import CalendarEvent
+    from server.models.database import CalendarEvent
     events = (
         db.query(CalendarEvent)
         .filter(CalendarEvent.start_datetime >= datetime.utcnow())
@@ -143,7 +143,7 @@ def find_upcoming_event(db: Session, title: str):
 def save_task(db: Session, title: str, due: str | None, priority: str | None = None) -> tuple[str, object]:
     """Create or update (same title, still open) a task. Local wall-clock due → UTC.
     Shared by [TASK:…] commands and the create_task tool so both behave the same."""
-    from backend.models.database import Task
+    from server.models.database import Task
 
     due_utc = _parse_local(due)
     existing = find_open_task(db, title)
@@ -160,7 +160,7 @@ def save_task(db: Session, title: str, due: str | None, priority: str | None = N
 def save_event(db: Session, title: str, start: str | None, duration: int | str | None = 60) -> tuple[str, object] | None:
     """Create or move (same title, upcoming) an event. Local wall-clock start → UTC."""
     from datetime import timedelta
-    from backend.models.database import CalendarEvent
+    from server.models.database import CalendarEvent
 
     start_utc = _parse_local(start)
     if start_utc is None:
@@ -183,8 +183,8 @@ def save_event(db: Session, title: str, start: str | None, duration: int | str |
 def save_and_verify(db: Session, cmd: dict) -> str:
     """Save one task/event command, read it back from the database, and describe
     what is actually stored — the confirmation comes from the row, not the model."""
-    from backend.models.database import CalendarEvent, Task
-    from backend.services.time_utils import describe_local
+    from server.models.database import CalendarEvent, Task
+    from server.services.time_utils import describe_local
 
     title = (cmd.get("title") or "").strip()
     try:
@@ -211,7 +211,7 @@ def save_and_verify(db: Session, cmd: dict) -> str:
 
 def describe_commands(commands: list[dict], db: Session) -> str:
     """One line per task/event command, for replies that were only a tag."""
-    from backend.services.time_utils import describe_local
+    from server.services.time_utils import describe_local
 
     lines = []
     for cmd in commands:
@@ -232,13 +232,13 @@ def execute_commands(commands: list[dict], db: Session, conversation_id: int) ->
     """Execute parsed bracket action commands."""
     import os
     from datetime import timedelta
-    from backend.services.app_launcher import launch_app
-    from backend.models.database import Task, CalendarEvent
+    from server.services.app_launcher import launch_app
+    from server.models.database import Task, CalendarEvent
 
     for cmd in commands:
         try:
             if cmd["type"] == "away":
-                from backend.services.away_state import set_away
+                from server.services.away_state import set_away
                 set_away(True, label=cmd.get("label", "away"))
 
             elif cmd["type"] == "browse":
@@ -250,11 +250,11 @@ def execute_commands(commands: list[dict], db: Session, conversation_id: int) ->
                 pass
 
             elif cmd["type"] == "spotify":
-                from backend.services.spotify import spotify_service
+                from server.services.spotify import spotify_service
                 spotify_service.play(cmd.get("query") or None)
 
             elif cmd["type"] == "spotify_queue":
-                from backend.services.spotify import spotify_service
+                from server.services.spotify import spotify_service
                 spotify_service.queue(cmd.get("query") or "")
 
             elif cmd["type"] == "launch":

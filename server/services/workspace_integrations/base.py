@@ -8,7 +8,7 @@ from typing import Any
 
 import httpx
 
-from backend.config import settings
+from server.config import settings
 
 
 class WorkspaceIntegrationError(RuntimeError):

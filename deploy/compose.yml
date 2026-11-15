@@ -6,10 +6,10 @@
 #   open http://localhost:8899
 #
 # With NVIDIA GPU:
-#   docker compose -f compose.yml -f compose.gpu.yml up -d
+#   docker compose -f deploy/compose.yml -f deploy/compose.gpu.yml up -d
 #
 # With cloud LLM (no Ollama):
-#   docker compose -f compose.cloud.yml up -d
+#   docker compose -f deploy/compose.cloud.yml up -d
 
 services:
 
@@ -31,16 +31,16 @@ services:
   # ── Luna backend + frontend ────────────────────────────────────────────────
   luna:
     build:
-      context: .
+      context: ..
       dockerfile: Dockerfile
     # Uncomment once published to GHCR:
     # image: ghcr.io/sehastrajit/luna:latest
     ports:
       - "8899:8899"
     env_file:
-      - path: .env
+      - path: ../.env
         required: true
-      - path: .env.personal
+      - path: ../.env.personal
         required: false
     environment:
       # Override host and Ollama URL for Docker networking

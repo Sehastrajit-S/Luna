@@ -21,14 +21,14 @@ import re
 from dataclasses import dataclass, field
 from typing import AsyncGenerator, Optional
 
-from backend.services.llm import ollama
-from backend.services.agents.events import CrewEvent, CrewEventType
-from backend.services.agents.roles import (
+from server.services.llm import ollama
+from server.services.agents.events import CrewEvent, CrewEventType
+from server.services.agents.roles import (
     AgentRole,
     ROLE_DEFINITIONS,
     RoleAgent,
 )
-from backend.services.agents.scratchpad import Scratchpad
+from server.services.agents.scratchpad import Scratchpad
 
 logger = logging.getLogger(__name__)
 

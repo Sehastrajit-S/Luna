@@ -7,9 +7,9 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from backend.config import settings
-from backend.services.health_integrations.db import _update_sync, persist
-from backend.services.health_integrations.models import (
+from server.config import settings
+from server.services.health_integrations.db import _update_sync, persist
+from server.services.health_integrations.models import (
     BLOOD_OXYGEN, CALORIES, DISTANCE_KM, HRV, READINESS_SCORE,
     RESTING_HR, SLEEP_AWAKE, SLEEP_DEEP, SLEEP_DURATION, SLEEP_LIGHT,
     SLEEP_REM, STEPS, STRESS_SCORE,
@@ -83,7 +83,7 @@ async def garmin_sync(db: Session, target_date: Optional[str] = None) -> list[He
 
 # ── Integration class (auto-discovered by sync.py) ────────────────────────────
 
-from backend.services.health_integrations.base import EnvField, HealthIntegration, IntegrationManifest  # noqa: E402
+from server.services.health_integrations.base import EnvField, HealthIntegration, IntegrationManifest  # noqa: E402
 
 
 class GarminIntegration(HealthIntegration):

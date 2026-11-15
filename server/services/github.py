@@ -4,7 +4,7 @@ import subprocess
 
 import httpx
 
-from backend.config import reload_settings, settings
+from server.config import reload_settings, settings
 
 _BASE = "https://api.github.com"
 _HEADERS = {

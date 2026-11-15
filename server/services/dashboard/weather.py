@@ -4,8 +4,8 @@ from urllib.parse import quote
 
 import httpx
 
-from backend.config import settings
-from backend.services.dashboard.common import log
+from server.config import settings
+from server.services.dashboard.common import log
 
 WEATHER_TTL = 600
 WMO_DESCRIPTIONS = {

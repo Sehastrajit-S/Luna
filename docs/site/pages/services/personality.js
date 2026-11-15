@@ -84,8 +84,8 @@ export default function PersonalityService() {
         </ol>
 
         <CodeFile label="example.py">
-          <pre><code>{`from backend.services.personality import PersonalityEngine
-from backend.models.database import SessionLocal
+          <pre><code>{`from server.services.personality import PersonalityEngine
+from server.models.database import SessionLocal
 
 db = SessionLocal()
 engine = PersonalityEngine(db)
@@ -110,7 +110,7 @@ db.close()`}</code></pre>
           <pre><code>{`def assess_user_sentiment(text: str) -> float  # -1.0 to +1.0`}</code></pre>
         </CodeFile>
         <CodeFile label="example.py">
-          <pre><code>{`from backend.services.personality import assess_user_sentiment
+          <pre><code>{`from server.services.personality import assess_user_sentiment
 
 print(assess_user_sentiment("I love this so much"))      # 0.67
 print(assess_user_sentiment("I'm not happy about this")) # -0.33
@@ -210,7 +210,7 @@ engine.apply_rl_reward(reward, features, conversation_id=conv_id)`}</code></pre>
 ) -> str  # "neutral" | "excited" | "sad" | "angry" | "calm"`}</code></pre>
         </CodeFile>
         <CodeFile label="example.py">
-          <pre><code>{`from backend.services.personality import classify_voice_emotion
+          <pre><code>{`from server.services.personality import classify_voice_emotion
 
 emotion = classify_voice_emotion(
     pitch_hz=230,     # high pitch
@@ -240,7 +240,7 @@ engine.daily_decay()`}</code></pre>
         <h2 id="constants">Constants and label maps</h2>
         <p>Import directly from the constants module for your own prompt builders:</p>
         <CodeFile label="example.py">
-          <pre><code>{`from backend.services.personality import (
+          <pre><code>{`from server.services.personality import (
     MOODS,            # dict: mood_name → description string
     MOOD_EXPRESSION,  # dict: mood_name → expression guideline
     VERBOSITY_LABELS, # dict: (lo, hi) tuple → label string

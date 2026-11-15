@@ -12,10 +12,10 @@ async def execute_tool_call(tc: dict, db: Session, conversation_id: int) -> str:
     tool_name = tc.get("tool", "")
     args = tc.get("args", {})
 
-    from backend.services.app_launcher import launch_app, close_app, list_known_apps
-    from backend.services.spotify import spotify_service
-    from backend.services.screen_perception import execute_screen_tool
-    from backend.models.database import Task, CalendarEvent
+    from server.services.app_launcher import launch_app, close_app, list_known_apps
+    from server.services.spotify import spotify_service
+    from server.services.screen_perception import execute_screen_tool
+    from server.models.database import Task, CalendarEvent
 
     try:
         if tool_name == "launch_app":
@@ -32,8 +32,8 @@ async def execute_tool_call(tc: dict, db: Session, conversation_id: int) -> str:
 
         elif tool_name == "save_memory":
             # Read back from the database: the reply says what is stored, not what was meant.
-            from backend.models.database import Fact
-            from backend.services.memory_manager import MemoryManager
+            from server.models.database import Fact
+            from server.services.memory_manager import MemoryManager
             fact = " ".join(str(args.get("fact", "")).split())
             if len(fact) < 4:
                 return "Error: nothing to remember — give the fact as a sentence."
@@ -44,7 +44,7 @@ async def execute_tool_call(tc: dict, db: Session, conversation_id: int) -> str:
             return f"Saved to memory: {stored.content}" if stored else "Error: the memory didn't save."
 
         elif tool_name == "forget_memory":
-            from backend.services.memory_manager import MemoryManager
+            from server.services.memory_manager import MemoryManager
             about = str(args.get("about", "")).strip()
             forgotten = MemoryManager(db).forget(about)
             if not forgotten:
@@ -52,11 +52,11 @@ async def execute_tool_call(tc: dict, db: Session, conversation_id: int) -> str:
             return f"Forgot {len(forgotten)} memor{'y' if len(forgotten) == 1 else 'ies'}: " + "; ".join(forgotten)
 
         elif tool_name == "daily_news":
-            from backend.services.dashboard.news import daily_news
+            from server.services.dashboard.news import daily_news
             return await daily_news(str(args.get("topic") or ""), args.get("limit") or 8)
 
         elif tool_name == "calculate":
-            from backend.services.calculator import calculate
+            from server.services.calculator import calculate
             return calculate(str(args.get("expression", "")))
 
         elif tool_name == "spotify_play":
@@ -90,7 +90,7 @@ async def execute_tool_call(tc: dict, db: Session, conversation_id: int) -> str:
             return "queued" if ok else "couldn't queue"
 
         elif tool_name == "switch_audio":
-            from backend.services.audio_switcher import list_output_devices, set_default_device
+            from server.services.audio_switcher import list_output_devices, set_default_device
             wanted = (args.get("device_name") or "").lower().strip()
             _aliases = {
                 "pc": "realtek", "computer": "realtek",
@@ -117,7 +117,7 @@ async def execute_tool_call(tc: dict, db: Session, conversation_id: int) -> str:
         elif tool_name in ("create_task", "create_event"):
             # Same save path as [TASK:…]/[EVENT:…]: local time → UTC, same title
             # updates, and the confirmation is read back from the database.
-            from backend.services.command_parser.commands import save_and_verify
+            from server.services.command_parser.commands import save_and_verify
             if tool_name == "create_task":
                 cmd = {"type": "task", "title": str(args.get("title") or "task"),
                        "due": args.get("due"), "priority": args.get("priority")}
@@ -133,87 +133,87 @@ async def execute_tool_call(tc: dict, db: Session, conversation_id: int) -> str:
             return json.dumps(result)[:200]
 
         elif tool_name == "web_search":
-            from backend.services.web_tools import web_search
+            from server.services.web_tools import web_search
             return await web_search(args.get("query", ""))
 
         elif tool_name == "use_skill":
-            # Generic: runs whichever skills/<id> is named (or best matches).
-            from backend.services.skill_runtime import get_search_skill, pick_search_skill, run_search_skill, run_web_search
+            # Generic: runs whichever server/skills/<id> is named (or best matches).
+            from server.services.skill_runtime import get_search_skill, pick_search_skill, run_search_skill, run_web_search
             request = str(args.get("request") or args.get("query") or "")
             skill = get_search_skill(str(args.get("skill", ""))) or pick_search_skill(request)
             run = await (run_search_skill(skill, request) if skill else run_web_search(request))
             return run.answer
 
         elif tool_name == "web_research":
-            from backend.services.web_tools import web_research
+            from server.services.web_tools import web_research
             return await web_research(args.get("query", ""))
 
         elif tool_name == "dataset_search":
-            from backend.services.web_tools import dataset_search
+            from server.services.web_tools import dataset_search
             return await dataset_search(args.get("query", ""))
 
         elif tool_name == "web_fetch":
-            from backend.services.web_tools import web_fetch
+            from server.services.web_tools import web_fetch
             return await web_fetch(args.get("url", ""))
 
         elif tool_name == "web_download_file":
-            from backend.services.web_tools import web_download_file
+            from server.services.web_tools import web_download_file
             result = await web_download_file(args.get("url", ""), args.get("path", ""))
             return json.dumps(result)[:4000]
 
         elif tool_name == "browser_open":
-            from backend.services.audit_log import record_audit
-            from backend.services.browser_automation import browser_open
+            from server.services.audit_log import record_audit
+            from server.services.browser_automation import browser_open
             result = browser_open(args.get("url", ""))
             record_audit("tool_call", tool=tool_name, args=args, result=json.dumps(result)[:500], conversation_id=conversation_id)
             return f"opened {result.get('url')}"
 
         elif tool_name == "browser_read":
-            from backend.services.audit_log import record_audit
-            from backend.services.browser_automation import browser_read
+            from server.services.audit_log import record_audit
+            from server.services.browser_automation import browser_read
             result = await browser_read(args.get("url", ""))
             record_audit("tool_call", tool=tool_name, args=args, result=json.dumps(result)[:500], conversation_id=conversation_id)
             return json.dumps(result)[:4000]
 
         elif tool_name == "workspace_read":
-            from backend.services.audit_log import record_audit
-            from backend.services.workspace import read_workspace_file
+            from server.services.audit_log import record_audit
+            from server.services.workspace import read_workspace_file
             content = read_workspace_file(args.get("path", ""))
             record_audit("tool_call", tool=tool_name, args=args, result=f"{len(content)} chars", conversation_id=conversation_id)
             return content[:4000]
 
         elif tool_name == "workspace_read_base64":
-            from backend.services.audit_log import record_audit
-            from backend.services.workspace import read_workspace_file_base64
+            from server.services.audit_log import record_audit
+            from server.services.workspace import read_workspace_file_base64
             result = read_workspace_file_base64(args.get("path", ""))
             record_audit("tool_call", tool=tool_name, args=args, result=f"{result['size']} bytes", conversation_id=conversation_id)
             return json.dumps(result)[:4000]
 
         elif tool_name == "workspace_write":
-            from backend.services.audit_log import record_audit
-            from backend.services.workspace import write_workspace_file
+            from server.services.audit_log import record_audit
+            from server.services.workspace import write_workspace_file
             result = write_workspace_file(args.get("path", ""), args.get("content", ""))
             record_audit("tool_call", tool=tool_name, args=args, result=json.dumps(result), conversation_id=conversation_id)
             return f"workspace file written: {result['path']}"
 
         elif tool_name == "workspace_write_base64":
-            from backend.services.audit_log import record_audit
-            from backend.services.workspace import write_workspace_file_base64
+            from server.services.audit_log import record_audit
+            from server.services.workspace import write_workspace_file_base64
             result = write_workspace_file_base64(args.get("path", ""), args.get("content_base64", ""))
             record_audit("tool_call", tool=tool_name, args={"path": args.get("path", "")}, result=json.dumps(result), conversation_id=conversation_id)
             return f"workspace binary file written: {result['path']}"
 
         elif tool_name == "search_conversation":
-            from backend.services.session_state import search_conversation
+            from server.services.session_state import search_conversation
             return search_conversation(db, conversation_id, str(args.get("query", "")))
 
         elif tool_name == "list_skills":
-            from backend.services.skill_manager import list_skills
+            from server.services.skill_manager import list_skills
             return json.dumps(list_skills())[:4000]
 
         elif tool_name == "create_agent_task":
-            from backend.services.agent_tasks import create_agent_task
-            from backend.services.audit_log import record_audit
+            from server.services.agent_tasks import create_agent_task
+            from server.services.audit_log import record_audit
             task = create_agent_task(args.get("description", ""))
             record_audit("tool_call", tool=tool_name, args=args, result=task["id"], conversation_id=conversation_id)
             return f"agent task created: {task['id']}"
@@ -224,7 +224,7 @@ async def execute_tool_call(tc: dict, db: Session, conversation_id: int) -> str:
             "turn_off_display", "sleep_system", "get_clipboard",
             "set_clipboard", "get_system_info",
         ):
-            from backend.services import system_controls
+            from server.services import system_controls
             dispatch = {
                 "get_volume":       lambda: system_controls.get_volume(),
                 "set_volume":       lambda: system_controls.set_volume(int(args.get("level", 50))),
@@ -249,7 +249,7 @@ async def execute_tool_call(tc: dict, db: Session, conversation_id: int) -> str:
             return json.dumps(result)[:4000] if isinstance(result, (dict, list)) else str(result)
 
         elif tool_name.startswith("github_"):
-            from backend.services import github
+            from server.services import github
             try:
                 if tool_name == "github_list_repos":
                     return json.dumps(await github.list_repos())[:4000]
@@ -286,7 +286,7 @@ async def execute_tool_call(tc: dict, db: Session, conversation_id: int) -> str:
                 return f"GitHub error: {exc}"
 
         elif tool_name.startswith("slack_"):
-            from backend.services import slack
+            from server.services import slack
             if tool_name == "slack_search_messages":
                 return json.dumps(await slack.search_messages(
                     args.get("query", ""),
@@ -300,7 +300,7 @@ async def execute_tool_call(tc: dict, db: Session, conversation_id: int) -> str:
                 ))[:4000]
 
         elif tool_name.startswith("jira_"):
-            from backend.services import jira
+            from server.services import jira
             if tool_name == "jira_search_issues":
                 return json.dumps(await jira.search_issues(
                     args.get("jql", ""),
@@ -310,7 +310,7 @@ async def execute_tool_call(tc: dict, db: Session, conversation_id: int) -> str:
                 return json.dumps(await jira.get_issue(args.get("issue_key", "")))[:4000]
 
         elif tool_name == "enterprise_bugfix_workflow":
-            from backend.services.enterprise_workflow import run_enterprise_bugfix_workflow
+            from server.services.enterprise_workflow import run_enterprise_bugfix_workflow
             result = await run_enterprise_bugfix_workflow(args)
             return json.dumps(result.as_dict())[:8000]
 
@@ -318,8 +318,8 @@ async def execute_tool_call(tc: dict, db: Session, conversation_id: int) -> str:
             "code_read_file", "code_write_file", "code_list_files", "code_search", "code_run_shell",
             "code_edit_file", "code_delete_file", "code_rename_file", "code_web_search", "code_web_fetch",
         ):
-            from backend.services.coding_agent import execute_coding_tool
-            from backend.services.audit_log import record_audit
+            from server.services.coding_agent import execute_coding_tool
+            from server.services.audit_log import record_audit
             result, needs_confirm = await execute_coding_tool(tool_name, args)
             if needs_confirm:
                 record_audit("tool_call", tool=tool_name, args=args, result="confirmation_required", conversation_id=conversation_id)
@@ -328,7 +328,7 @@ async def execute_tool_call(tc: dict, db: Session, conversation_id: int) -> str:
             return result[:4000]
 
         elif tool_name in ("google_workspace", "microsoft_workspace"):
-            from backend.services.workspace_integrations import google_workspace, microsoft_workspace
+            from server.services.workspace_integrations import google_workspace, microsoft_workspace
             provider_call = google_workspace if tool_name == "google_workspace" else microsoft_workspace
             result = await provider_call(args.get("service", ""), args.get("action", ""), args.get("args", {}))
             return json.dumps(result.as_dict())[:4000]

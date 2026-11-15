@@ -21,11 +21,11 @@ class ProcessDef:
 
 
 PROCESS_MODULES = [
-    "backend.processes.calendar_reminders.process",
-    "backend.processes.memory_maintenance.process",
-    "backend.processes.proactive_followups.process",
-    "backend.processes.voice_runtime.process",
-    "backend.processes.spotify_activity.process",
+    "server.processes.calendar_reminders.process",
+    "server.processes.memory_maintenance.process",
+    "server.processes.proactive_followups.process",
+    "server.processes.voice_runtime.process",
+    "server.processes.spotify_activity.process",
 ]
 
 

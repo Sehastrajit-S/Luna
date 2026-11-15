@@ -7,11 +7,11 @@ from typing import Optional
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from backend.models.database import StateEvent
-from backend.services.state_engine.states import (
+from server.models.database import StateEvent
+from server.services.state_engine.states import (
     UserState, STATE_POLICIES, _FOCUS_APPS, _WORK_WORDS,
 )
-from backend.services.state_engine.pc import get_pc_idle_seconds, get_active_app
+from server.services.state_engine.pc import get_pc_idle_seconds, get_active_app
 
 
 class StateEngine:
@@ -154,7 +154,7 @@ class StateEngine:
                     self._was_last_state(db, UserState.SLEEPING)):
                 return UserState.JUST_WOKE_UP
 
-        from backend.config import settings as _cfg
+        from server.config import settings as _cfg
         if _cfg.luna_variant == "personal" and self._last_seen:
             gone_min = (now - self._last_seen).total_seconds() / 60
             if gone_min > self.AWAY_THRESHOLD_MIN and idle_seconds < 3600:

@@ -14,7 +14,7 @@ def _ctx(message, reply="Sure.", route="agent_loop", tools=(), errors=0):
 class DecisionLogTests(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
-        from backend.services import decision_log
+        from server.services import decision_log
         self.log = decision_log
         self.patch = mock.patch.object(decision_log, "DATA_DIR", Path(self.tmp.name))
         self.patch.start()
@@ -48,7 +48,7 @@ class DecisionLogTests(unittest.TestCase):
         self.assertFalse(signals["crew_explicit"])
 
     def test_can_be_turned_off(self) -> None:
-        from backend.config import settings
+        from server.config import settings
         with mock.patch.object(settings, "decision_log_enabled", False):
             self.log.record_turn(_ctx("hello"), turn=1)
         self.assertEqual(self._rows(), [])

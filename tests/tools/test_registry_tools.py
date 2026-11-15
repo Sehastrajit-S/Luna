@@ -8,8 +8,8 @@ from tests.tools import _bootstrap  # noqa: F401
 
 class RegistryToolTests(unittest.TestCase):
     def test_every_registered_tool_has_a_dispatch_handler(self) -> None:
-        from backend.services.tool_runner import execute_tool_call
-        from backend.services.tool_registry import TOOL_REGISTRY
+        from server.services.tool_runner import execute_tool_call
+        from server.services.tool_registry import TOOL_REGISTRY
 
         source = inspect.getsource(execute_tool_call)
         missing = [
@@ -21,7 +21,7 @@ class RegistryToolTests(unittest.TestCase):
         self.assertEqual(missing, [])
 
     def test_every_registered_tool_has_a_dedicated_tester_or_skip_reason(self) -> None:
-        from backend.services.tool_registry import TOOL_REGISTRY
+        from server.services.tool_registry import TOOL_REGISTRY
 
         covered = {
             "launch_app", "close_app", "list_apps",

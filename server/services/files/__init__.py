@@ -1,6 +1,6 @@
 """Chat file attachments: upload, extraction, retrieval, and per-turn context."""
-from backend.services.files.extract import MAX_UPLOAD_BYTES, SUPPORTED_EXT, UnsupportedFile
-from backend.services.files.service import (
+from server.services.files.extract import MAX_UPLOAD_BYTES, SUPPORTED_EXT, UnsupportedFile
+from server.services.files.service import (
     build_attachment_context,
     delete_attachment_files,
     link_to_message,

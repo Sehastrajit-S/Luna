@@ -18,8 +18,8 @@ from pathlib import Path
 
 import httpx
 
-from backend.config import BASE_DIR, settings
-from backend.services import github
+from server.config import BASE_DIR, settings
+from server.services import github
 
 logger = logging.getLogger(__name__)
 

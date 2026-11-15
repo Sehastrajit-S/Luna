@@ -13,7 +13,7 @@ except ImportError:
     subprocess.check_call([sys.executable, "-m", "pip", "install", "Pillow"])
     from PIL import Image, ImageDraw, ImageFilter
 
-OUT = Path("electron/assets")
+OUT = Path(__file__).resolve().parents[1] / "interfaces" / "desktop" / "resources"
 OUT.mkdir(parents=True, exist_ok=True)
 
 SIZE = 512

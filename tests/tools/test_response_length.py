@@ -15,14 +15,14 @@ LONG_REVIEW = "\n\n".join([
 
 class ResponseLengthTests(unittest.TestCase):
     def test_formatter_never_drops_paragraphs(self) -> None:
-        from backend.services.response_formatter import format_luna_response
+        from server.services.response_formatter import format_luna_response
 
         out = format_luna_response(LONG_REVIEW)
         for paragraph in LONG_REVIEW.split("\n\n"):
             self.assertIn(paragraph, out)
 
     def test_long_unbroken_reply_keeps_every_sentence(self) -> None:
-        from backend.services.response_formatter import format_luna_response
+        from server.services.response_formatter import format_luna_response
 
         text = " ".join(f"Sentence number {i} has a few words in it." for i in range(12))
         out = format_luna_response(text)
@@ -30,7 +30,7 @@ class ResponseLengthTests(unittest.TestCase):
         self.assertIn("Sentence number 11", out)
 
     def test_text_chat_streams_the_whole_answer(self) -> None:
-        from backend.services.chat_pipeline.stages import _build_visible_response_events
+        from server.services.chat_pipeline.stages import _build_visible_response_events
 
         ctx = SimpleNamespace(full_response=LONG_REVIEW, cli=False, had_tool_call=False, voice=False)
         rendered = "".join(_build_visible_response_events(ctx))
@@ -38,7 +38,7 @@ class ResponseLengthTests(unittest.TestCase):
         self.assertIn("Top fixes", rendered)
 
     def test_voice_replies_stay_short(self) -> None:
-        from backend.services.chat_pipeline.stages import _build_visible_response_events
+        from server.services.chat_pipeline.stages import _build_visible_response_events
 
         ctx = SimpleNamespace(full_response=LONG_REVIEW, cli=False, had_tool_call=False, voice=True)
         rendered = "".join(_build_visible_response_events(ctx))

@@ -52,7 +52,7 @@ export default function CommandParserService() {
 ) -> list[dict]`}</code></pre>
         </CodeFile>
         <CodeFile label="example.py">
-          <pre><code>{`from backend.services.command_parser import parse_commands
+          <pre><code>{`from server.services.command_parser import parse_commands
 
 response = "Sure! [LAUNCH:spotify] [TASK:Buy milk|2025-06-01|low]"
 cmds = parse_commands(response)
@@ -78,8 +78,8 @@ cmds = parse_commands(response)
 ) -> None`}</code></pre>
         </CodeFile>
         <CodeFile label="example.py">
-          <pre><code>{`from backend.services.command_parser import parse_commands, execute_commands
-from backend.models.database import SessionLocal
+          <pre><code>{`from server.services.command_parser import parse_commands, execute_commands
+from server.models.database import SessionLocal
 
 db = SessionLocal()
 cmds = parse_commands(luna_response, user_message)
@@ -203,7 +203,7 @@ def parse_user_spotify_request(message: str) -> dict | None
 # Returns {"action": "play"|"pause"|"next"|"prev", "query": str | None} or None`}</code></pre>
         </CodeFile>
         <CodeFile label="example.py">
-          <pre><code>{`from backend.services.command_parser import (
+          <pre><code>{`from server.services.command_parser import (
     parse_user_launch_request,
     parse_user_map_request,
     parse_user_spotify_request,
@@ -241,7 +241,7 @@ def extract_direct_dataset_query(message: str) -> str | None
           coding agent rather than the general chat pipeline.
         </p>
         <CodeFile label="example.py">
-          <pre><code>{`from backend.services.command_parser import is_coding_request
+          <pre><code>{`from server.services.command_parser import is_coding_request
 
 is_coding_request("write a Python function to parse JSON")  # True
 is_coding_request("what should I have for lunch?")          # False`}</code></pre>

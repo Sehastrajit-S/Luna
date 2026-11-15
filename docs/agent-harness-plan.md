@@ -14,7 +14,7 @@ As of 2026-09-23 (updated after phases 0–1 shipped, then after the session-sta
 | 3. Permissions, confirmations, hooks | Partly | Loop pauses for approval (120 s) with Approve/Deny in the desktop app; no modes, patterns or hooks yet |
 | 4. Context for long runs | **Mostly done** | Conversation working state (facts, code artifacts, files) pinned every turn; `search_conversation`; long pastes condensed by relevance; reliable rolling summary. Left: `LUNA.md` |
 | 5. Subagents, MCP client, background | Not started | |
-| 6. Evaluation harness | **Done (v1)** | `python -m utilities.evals.run`: 20-scenario suite, deep-thread (32 turns) and long-context suites on an isolated backend. Left: per-model tracking |
+| 6. Evaluation harness | **Done (v1)** | `python -m tests.evals.run`: 20-scenario suite, deep-thread (32 turns) and long-context suites on an isolated backend. Left: per-model tracking |
 | 7. Remove workarounds | Not started | Guards still run as a safety net; the promised-save guard now ignores code and long answers |
 | 8. Learned router (Laya) | **Shadow mode** | Probe beats the rules on coding_agent (0.75 vs 0.17 F1) and save_request (0.82 vs 0.70) on 80 held-out messages; runs beside the rules on real turns and logs disagreements. Next: more labels, then switch those two |
 
@@ -76,12 +76,12 @@ flowchart LR
 | **Project instructions** | CLAUDE.md (user, project, folder) | AGENTS.md | Luna's own system prompt + personality; no per-project file for the agent | Small |
 | **Context management** | Auto-compaction, clears old tool results; state re-read from files/git | Auto-compaction | `fit_context` + rolling summary (16k window); append-only facts + code artifacts pinned every turn; `search_conversation` over the whole chat; long pastes condensed by relevance; tool results clipped in the loop | Small: no mid-run compaction |
 | **Memory** | CLAUDE.md + auto memory files | AGENTS.md, some memory | `memory_manager`, `memory_graph`, fact extraction, MCP memory server | **Luna ahead** |
-| **Skills** | Skills (SKILL.md), slash commands, plugins | Prompts / skills | `skills/*` + `skill.json` + `skill_runtime`, `use_skill` tool | Even |
-| **MCP** | Client: uses any MCP server | Client | **Server only**: exposes six MCP servers, can't consume others ([backend/mcp/](../backend/mcp/)) | Medium |
+| **Skills** | Skills (SKILL.md), slash commands, plugins | Prompts / skills | `server/skills/*` + `skill.json` + `skill_runtime`, `use_skill` tool | Even |
+| **MCP** | Client: uses any MCP server | Client | **Server only**: exposes six MCP servers, can't consume others ([server/mcp/](../backend/mcp/)) | Medium |
 | **Subagents** | Task/Agent tool: separate context, returns a summary | Limited | `agents/crew.py` (planner/critic/writer roles, parallel), separate from chat | Medium: exists, not a tool |
 | **Background / long tasks** | Background shells, background agents | Cloud tasks in containers | Scheduler jobs; nothing for long agent runs | Medium |
 | **Checkpoints / undo** | Rewind file edits and conversation | Git-based | Enterprise workflow uses a git branch; no undo for workspace edits | Medium |
-| **Headless / SDK** | `claude -p`, Agent SDK | `codex exec` | REST + SSE API, CLI (`cli/luna.mjs`) | Even |
+| **Headless / SDK** | `claude -p`, Agent SDK | `codex exec` | REST + SSE API, CLI (`interfaces/cli/luna.mjs`) | Even |
 | **Verification of actions** | Model reads tool output and self-corrects | Same | Model reads tool output in the loop, **plus** read-back for tasks/events on all three save paths (tool calls, `[TASK]`/`[EVENT]` tags, background fact extractor); link grounding against tool results | Luna: harness-level checks, good for small models |
 | **Evaluation harness** | Internal evals | Internal evals | Unit tests with fake models; `benchmark.py` (latency / success) | **Large**: no scenario evals |
 | **Model** | Frontier cloud model | Frontier cloud model | Local `qwen2.5:7b` on a 12 GB RTX 3060 (cloud providers optional) | Structural: plan must fit a 7–14B model |
@@ -122,7 +122,7 @@ Every tool has a JSON Schema that both the model and the harness use.
 Built:
 - [tool_schemas.py](../backend/services/tool_schemas.py): a schema for each of the 70 tools (types, required fields, enums, ranges, descriptions) and a `READ_ONLY_TOOLS` set used for parallel runs.
 - [tool_registry.py](../backend/services/tool_registry.py): `ToolDef` gains `input_schema` and `read_only`; `model_tool_spec()` gives the function-calling format; `validate_tool_args()` checks calls with `jsonschema`, converts `"60"` to `60` and `"true"` to `true`, drops unknown keys and empty optional values, and returns readable errors.
-- `jsonschema==4.26.0` pinned in `backend/requirements.txt`.
+- `jsonschema==4.26.0` pinned in `server/requirements.txt`.
 
 Not done from the original plan (moved to phase 2):
 - A typed `ToolResult {ok, content, data, error_kind}` from every tool. The loop still judges success from the result text (`Error:` / `failed:` prefixes). System controls now return `Error: ...` on failure instead of a `(False, msg)` tuple.
@@ -148,7 +148,7 @@ Built:
 - System prompt: native mode says *when* to use tools (`get_tool_rules_for_prompt`), not a JSON syntax. Task/event and audio instructions name the tools.
 - Desktop ([agent-steps.js](../desktop-app/src/renderer/agent-steps.js)): live step rows ("Searching the web", "Adding a task") that collapse to "Used N tools", and Approve/Deny cards for risky tools.
 - The background fact extractor now saves through the same `save_task` / `save_event` path (UTC, reworded titles match). It was a third save path creating duplicates in local time.
-- Tests: [test_agent_loop.py](../utilities/tests/tools/test_agent_loop.py) has 16 tests (schemas, validation, text-call recovery, multi-step, parallel timing and order, invalid args, repeats, step budget, nudge, declined confirmation, `tool_search`, routing). `test_reminders.py` covers the extractor path.
+- Tests: [test_agent_loop.py](../tests/tools/test_agent_loop.py) has 16 tests (schemas, validation, text-call recovery, multi-step, parallel timing and order, invalid args, repeats, step budget, nudge, declined confirmation, `tool_search`, routing). `test_reminders.py` covers the extractor path.
 
 Not done from the original plan:
 - Anthropic / OpenAI native tool calling (those providers use the old text path).
@@ -227,13 +227,13 @@ Done when: a synthetic 40-step run stays under the window, and the final answer 
 - **MCP client**: connect to any MCP server listed in config and expose its tools in the registry. Luna's own servers, and third-party ones like Jira or Notion, then work without custom connectors.
 - **Background runs**: long loops run as jobs that survive the chat stream closing. Progress goes to the desktop UI; the result is saved to the conversation.
 - **Checkpoints**: snapshot files before edits; `/undo` restores them.
-- Re-express `enterprise_workflow.py` as a skill (`skills/bugfix-workflow/SKILL.md`) that the loop follows, with the fixed steps kept as a checklist.
+- Re-express `enterprise_workflow.py` as a skill (`server/skills/bugfix-workflow/SKILL.md`) that the loop follows, with the fixed steps kept as a checklist.
 
 Done when: the CLAUDE.md target workflow (bug → Jira → PR → Slack → fix → tests → PR) runs from one message, with each step visible and write steps confirmed.
 
 ### Phase 6: evaluation harness (started)
 
-Built: [utilities/evals/](../utilities/evals/). `python -m utilities.evals.run [--suite deep|long]` snapshots the data, starts an **isolated backend** (port 8898, own data dir, no background jobs, own shared-conversation state), runs the suites and prints a scorecard.
+Built: [tests/evals/](../tests/evals/). `python -m tests.evals.run [--suite deep|long]` snapshots the data, starts an **isolated backend** (port 8898, own data dir, no background jobs, own shared-conversation state), runs the suites and prints a scorecard.
 - `deep_thread.py`: 32-turn architecture + coding thread (URL shortener "Snip"); probes decisions at turns 9/24/32, the turn-5 function name at 16, and the turn-6 recommendation at 32; flags empty replies, refusals, off-stack answers, crew/coding-agent routing.
 - `long_context.py`: facts planted at turn 1 and probed after 8/18/28 filler turns, a recall-the-2nd-topic probe, a late tool call, needle-in-a-haystack at ~8k and ~20k tokens.
 
@@ -263,7 +263,7 @@ What the runs uncovered, in order:
 
 Still to do:
 
-- `utilities/evals/`: YAML scenarios with a user message (or several turns) plus checks, e.g. DB state, tool calls made, tool calls *not* made, reply contains or omits certain text.
+- `tests/evals/`: YAML scenarios with a user message (or several turns) plus checks, e.g. DB state, tool calls made, tool calls *not* made, reply contains or omits certain text.
 - Runs against the live backend and real model. Outputs a pass/fail report plus tool-call traces. Run it before every model or prompt change.
 - Seed it with the bugs from this project: reminder at 6 PM, reworded duplicate titles, "tonight" saved as tomorrow, device questions answered from memory, multi-step requests taken by shortcuts, fake links, "Sure, let's check" with no search, date questions, `/research` gating, file Q&A, new-chat isolation.
 - Start from the live-test driver used for phase 1: send messages to a fresh conversation, print tool calls and results, check the database.

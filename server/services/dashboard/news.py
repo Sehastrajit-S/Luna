@@ -5,8 +5,8 @@ import xml.etree.ElementTree as ET
 
 import httpx
 
-from backend.config import settings
-from backend.services.dashboard.common import HEADERS, log
+from server.config import settings
+from server.services.dashboard.common import HEADERS, log
 
 FEEDS = [
     ("BBC World", "https://feeds.bbci.co.uk/news/world/rss.xml"),

@@ -23,7 +23,7 @@ export default function LLMService() {
       <section>
         <h2 id="overview">Overview</h2>
         <p>
-          <code>backend/services/llm/</code> is Luna's unified LLM abstraction layer. It exposes a
+          <code>server/services/llm/</code> is Luna's unified LLM abstraction layer. It exposes a
           single <code>LLMClient</code> class whose methods (<code>stream_chat</code>, <code>complete</code>,
           <code>embed</code>) route to whichever provider is configured in <code>.env</code> — your
           calling code never changes when you swap providers.
@@ -120,7 +120,7 @@ OPENAI_EMBED_MODEL=text-embedding-3-small`}</code></pre>
         <h3>Usage</h3>
         <CodeFile label="example.py">
           <pre><code>{`import asyncio
-from backend.services.llm import ollama
+from server.services.llm import ollama
 
 async def main():
     messages = [
@@ -166,7 +166,7 @@ while True:
         <h3>Usage</h3>
         <CodeFile label="example.py">
           <pre><code>{`import asyncio
-from backend.services.llm import ollama
+from server.services.llm import ollama
 
 result = asyncio.run(
     ollama.complete(
@@ -237,7 +237,7 @@ print(len(vector))  # 768 for nomic-embed-text, 1536 for text-embedding-3-small`
       <section>
         <h2 id="singleton">The <code>ollama</code> singleton</h2>
         <p>
-          <code>from backend.services.llm import ollama</code> gives you a pre-created
+          <code>from server.services.llm import ollama</code> gives you a pre-created
           <code>LLMClient()</code> instance. This is a convenience — it reads the provider
           from settings at <em>call time</em>, not at import time, so changing <code>.env</code>
           and restarting is all that's needed to swap providers.
@@ -247,7 +247,7 @@ print(len(vector))  # 768 for nomic-embed-text, 1536 for text-embedding-3-small`
           It is now a fully multi-provider client regardless of its name.
         </p>
         <CodeFile label="example.py">
-          <pre><code>{`from backend.services.llm import ollama, LLMClient
+          <pre><code>{`from server.services.llm import ollama, LLMClient
 
 # Using the shared singleton (recommended)
 await ollama.complete("Hello")

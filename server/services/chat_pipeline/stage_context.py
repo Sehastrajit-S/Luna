@@ -3,21 +3,21 @@ context stage — Assemble memory, personality, state, and system prompt.
 """
 import logging
 
-from backend.config import settings
-from backend.services.memory_manager import MemoryManager
-from backend.services.personality import PersonalityEngine
-from backend.services.activity_tracker import ActivityTracker
-from backend.services.media_context import get_watching_context
-from backend.services.state_engine import state_engine
-from backend.services.scheduler import proactive_queue
-from backend.services.prompt_builder import (
+from server.config import settings
+from server.services.memory_manager import MemoryManager
+from server.services.personality import PersonalityEngine
+from server.services.activity_tracker import ActivityTracker
+from server.services.media_context import get_watching_context
+from server.services.state_engine import state_engine
+from server.services.scheduler import proactive_queue
+from server.services.prompt_builder import (
     build_system_prompt,
     build_cli_system_prompt,
     build_business_system_prompt,
     get_live_data_section,
 )
-from backend.services.contradiction_store import pop as _pop_contradiction_notes
-from backend.services.chat_pipeline.context import ChatContext
+from server.services.contradiction_store import pop as _pop_contradiction_notes
+from server.services.chat_pipeline.context import ChatContext
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +88,7 @@ async def build_context(ctx: ChatContext) -> None:
             live_data=get_live_data_section(),
         )
     else:
-        from backend.services.spotify import spotify_service
+        from server.services.spotify import spotify_service
         spotify_track = None if ctx.cli else spotify_service.get_current()
         ctx.system_prompt = build_system_prompt(
             memory, personality, activity_tracker, ctx.relevant_memories,
@@ -100,7 +100,7 @@ async def build_context(ctx: ChatContext) -> None:
     # Working state (code written, files attached) re-read every turn, so it
     # survives context fitting and summaries.
     try:
-        from backend.services.session_state import session_state_block
+        from server.services.session_state import session_state_block
         _state = session_state_block(ctx.db, ctx.conv.id, ctx.user_message)
         if _state:
             ctx.system_prompt += "\n\n" + _state

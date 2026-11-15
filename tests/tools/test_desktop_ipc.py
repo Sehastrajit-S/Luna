@@ -4,8 +4,8 @@ import subprocess
 import unittest
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[3]
-DESKTOP = ROOT / "desktop-app" / "src"
+ROOT = Path(__file__).resolve().parents[2]
+DESKTOP = ROOT / "interfaces" / "desktop" / "src"
 
 # Evaluates each preload with a stub `require` that only allows 'electron' —
 # exactly what Electron's sandbox permits — and returns the channel map it built.

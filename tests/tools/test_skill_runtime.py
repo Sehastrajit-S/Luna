@@ -1,4 +1,4 @@
-"""The skill runtime is generic; use cases live in skills/*. These tests cover
+"""The skill runtime is generic; use cases live in server/skills/*. These tests cover
 both halves: the engine (with made-up skills) and the shipped skill folders."""
 import asyncio
 import re
@@ -8,7 +8,7 @@ from unittest import mock
 
 
 def _skill(**overrides):
-    from backend.services.skill_runtime.registry import SearchSkill
+    from server.services.skill_runtime.registry import SearchSkill
     base = dict(id="thing-search", name="Thing Search", description="Find things.",
                 slots={"things": "things to find", "place": "where"}, fan_out="things", grounded=["place"],
                 queries=["{item} {place} site:things.example"], max_items=2)
@@ -20,7 +20,7 @@ class ShippedSkillsTests(unittest.TestCase):
     """Every skill folder must be valid data the engine can run."""
 
     def test_all_skills_load_and_are_well_formed(self) -> None:
-        from backend.services.skill_runtime import load_search_skills
+        from server.services.skill_runtime import load_search_skills
 
         skills = {s.id: s for s in load_search_skills()}
         for expected in ("job-search", "paper-search", "product-search", "local-search", "news-search", "docs-search"):
@@ -37,8 +37,8 @@ class ShippedSkillsTests(unittest.TestCase):
                     self.assertTrue(skill.ask, "a skill that can refuse must say what it needs")
 
     def test_routing_picks_the_right_skill_and_leaves_chat_alone(self) -> None:
-        from backend.services.command_parser.research import is_search_request, refers_to_own_content
-        from backend.services.skill_runtime import pick_search_skill
+        from server.services.command_parser.research import is_search_request, refers_to_own_content
+        from server.services.skill_runtime import pick_search_skill
 
         def route(text):
             explicit = is_search_request(text)
@@ -68,62 +68,62 @@ class ShippedSkillsTests(unittest.TestCase):
 
 class SlotTests(unittest.TestCase):
     def test_grounded_slots_must_be_typed_by_the_user(self) -> None:
-        from backend.services.skill_runtime import runner
+        from server.services.skill_runtime import runner
 
         async def fake(prompt, system="", temperature=0.0):
             return '{"things": ["red widgets", "notes.pdf"], "place": "Arizona State University"}'
 
-        with mock.patch("backend.services.llm.ollama.complete", side_effect=fake):
+        with mock.patch("server.services.llm.ollama.complete", side_effect=fake):
             slots = asyncio.run(runner.extract_slots(_skill(), "find me red widgets", [], documents="ASU"))
         self.assertEqual(slots["things"], ["red widgets"])        # file names dropped
         self.assertEqual(slots["place"], "")                      # never typed → dropped
 
     def test_items_echoing_the_slot_description_are_dropped(self) -> None:
-        from backend.services.skill_runtime import runner
+        from server.services.skill_runtime import runner
 
         async def fake(prompt, system="", temperature=0.0):
             return '{"things": ["company"], "place": ""}'      # model echoed the description
 
-        with mock.patch("backend.services.llm.ollama.complete", side_effect=fake):
+        with mock.patch("server.services.llm.ollama.complete", side_effect=fake):
             slots = asyncio.run(runner.extract_slots(_skill(), "latest news on Nvidia", [], ""))
         self.assertEqual(slots["things"], [])
         queries = runner.build_queries(_skill(queries=["{item}"]), "latest news on Nvidia", slots)
         self.assertEqual(queries, ["latest news on Nvidia"])           # falls back to the user's words
 
     def test_model_picks_a_skill_when_no_pattern_matches(self) -> None:
-        from backend.services.skill_runtime import registry
+        from server.services.skill_runtime import registry
 
         async def fake(prompt, system="", temperature=0.0):
             self.assertIn("local-search:", prompt)                      # skills offered by description
             return "local-search"
 
-        with mock.patch("backend.services.llm.ollama.complete", side_effect=fake):
+        with mock.patch("server.services.llm.ollama.complete", side_effect=fake):
             skill = asyncio.run(registry.choose_skill_with_model("find me good ramen"))
         self.assertEqual(skill.id, "local-search")
-        with mock.patch("backend.services.llm.ollama.complete", new=mock.AsyncMock(return_value="none")):
+        with mock.patch("server.services.llm.ollama.complete", new=mock.AsyncMock(return_value="none")):
             self.assertIsNone(asyncio.run(registry.choose_skill_with_model("find me a lasagna recipe")))
 
     def test_near_me_uses_the_home_city(self) -> None:
-        from backend.services.skill_runtime import runner
+        from server.services.skill_runtime import runner
 
         async def fake(prompt, system="", temperature=0.0):
             return '{"things": ["tacos"], "location": ""}'
 
         skill = _skill(slots={"things": "x", "location": "y"}, grounded=["location"])
-        with mock.patch("backend.services.llm.ollama.complete", side_effect=fake), \
+        with mock.patch("server.services.llm.ollama.complete", side_effect=fake), \
              mock.patch.object(runner.settings, "weather_city", "Tempe"):
             slots = asyncio.run(runner.extract_slots(skill, "tacos near me", [], ""))
         self.assertEqual(slots["location"], "Tempe")
 
     def test_queries_fan_out_per_item_and_drop_empty_slots(self) -> None:
-        from backend.services.skill_runtime.runner import build_queries
+        from server.services.skill_runtime.runner import build_queries
 
         skill = _skill(queries=['"{item}" {place} site:a.example', "{item} review"])
         queries = build_queries(skill, "req", {"things": ["alpha", "beta", "gamma"], "place": ""})
         self.assertEqual(queries, ['"alpha" site:a.example', "alpha review", '"beta" site:a.example', "beta review"])
 
     def test_missing_requirements_ask_instead_of_searching(self) -> None:
-        from backend.services.skill_runtime import runner
+        from server.services.skill_runtime import runner
 
         skill = _skill(requires={"any": ["slot:place", "documents"], "ask": "Where should I look?"})
         with mock.patch.object(runner, "extract_slots", new=mock.AsyncMock(return_value={"things": ["x"], "place": ""})), \
@@ -137,7 +137,7 @@ class SlotTests(unittest.TestCase):
 class LinkCheckTests(unittest.TestCase):
     def test_generic_and_skill_supplied_liveness_checks(self) -> None:
         import httpx
-        from backend.services.skill_runtime import sources
+        from server.services.skill_runtime import sources
 
         calls = {}
 
@@ -179,7 +179,7 @@ class LinkCheckTests(unittest.TestCase):
         self.assertEqual(calls["https://api.example/lists/beta"], 1)          # list fetched once, shared
 
     def test_rewrites_filters_and_labels_come_from_the_skill(self) -> None:
-        from backend.services.skill_runtime import sources
+        from server.services.skill_runtime import sources
 
         results = [sources.Result("q", "A", "s", "https://x.example/org1/item/9/confirmation"),
                    sources.Result("q", "B", "s", "https://x.example/search?q=a"),
@@ -195,7 +195,7 @@ class LinkCheckTests(unittest.TestCase):
 
 class RunnerEndToEndTests(unittest.TestCase):
     def test_skill_run_searches_filters_and_links_every_item(self) -> None:
-        from backend.services.skill_runtime import runner, sources
+        from server.services.skill_runtime import runner, sources
 
         skill = _skill(keep_urls=[r"things\.example/item/"], guidelines="List things with links.")
         fake_results = [sources.Result("red widgets site:things.example", "Red Widget Pro", "great", "https://things.example/item/1"),
@@ -208,7 +208,7 @@ class RunnerEndToEndTests(unittest.TestCase):
 
         with mock.patch.object(runner, "extract_slots", new=mock.AsyncMock(return_value={"things": ["red widgets"], "place": ""})), \
              mock.patch.object(runner.sources, "run_searches", new=mock.AsyncMock(return_value=fake_results)), \
-             mock.patch("backend.services.tool_runner.verify_tool_result", side_effect=fake_verify):
+             mock.patch("server.services.tool_runner.verify_tool_result", side_effect=fake_verify):
             run = asyncio.run(runner.run_search_skill(skill, "find me red widgets", []))
         self.assertIn("[Red Widget Pro](https://things.example/item/1)", run.answer)
         self.assertNotIn("invented.example", run.answer)
@@ -217,7 +217,7 @@ class RunnerEndToEndTests(unittest.TestCase):
 
 class CardTests(unittest.TestCase):
     def test_page_meta_from_structured_data_open_graph_and_skill_patterns(self) -> None:
-        from backend.services.skill_runtime.sources import extract_page_meta
+        from server.services.skill_runtime.sources import extract_page_meta
 
         ld = ('<script type="application/ld+json">{"@context":"https://schema.org","@type":"Product",'
               '"name":"Soundcore Space Q45","image":["https://img.example/q45.jpg"],'
@@ -241,7 +241,7 @@ class CardTests(unittest.TestCase):
 
     def test_cards_skip_pages_without_images_and_duplicates(self) -> None:
         import httpx
-        from backend.services.skill_runtime import sources
+        from server.services.skill_runtime import sources
 
         pages = {
             "https://shop.example/p/1": '<meta property="og:title" content="Alpha Headphones"><meta property="og:image" content="https://i.example/a.jpg"><meta property="product:price:amount" content="79.5">',
@@ -261,19 +261,19 @@ class CardTests(unittest.TestCase):
         self.assertEqual((cards[0]["price"], cards[0]["currency"]), ("79.50", "USD"))
 
     def test_named_items_must_come_from_the_results(self) -> None:
-        from backend.services.skill_runtime import runner
+        from server.services.skill_runtime import runner
 
         results_text = "[1] Best budget ANC\nSnippet: The Anker Soundcore Space Q45 and Sony WH-CH720N lead.\nURL: https://r.example/1"
 
         async def fake(prompt, system="", temperature=0.0):
             return "1. Anker Soundcore Space Q45\n2. Sony WH-CH720N\n3. Bose QuietComfort Ultra\n"   # #3 not in results
 
-        with mock.patch("backend.services.llm.ollama.complete", side_effect=fake):
+        with mock.patch("server.services.llm.ollama.complete", side_effect=fake):
             names = asyncio.run(runner.extract_item_names("best anc under $200", results_text, "products", 5))
         self.assertEqual(names, ["Anker Soundcore Space Q45", "Sony WH-CH720N"])
 
     def test_lookup_mode_cards_each_named_item_from_its_own_search(self) -> None:
-        from backend.services.skill_runtime import runner, sources
+        from server.services.skill_runtime import runner, sources
 
         spec = {"lookup": '"{name}" site:shop.example', "keep_urls": [r"shop\.example/p/"], "max": 5}
         found = [sources.Result('"Alpha" site:shop.example', "Alpha", "s", "https://shop.example/c/category"),
@@ -291,7 +291,7 @@ class CardTests(unittest.TestCase):
         self.assertEqual([c["url"] for c in cards], ["https://shop.example/p/alpha", "https://shop.example/p/beta"])
 
     def test_store_branding_is_removed_from_titles(self) -> None:
-        from backend.services.skill_runtime.sources import extract_page_meta
+        from server.services.skill_runtime.sources import extract_page_meta
 
         for raw, clean in (("Amazon.com: Soundcore Space Q45 Headphones", "Soundcore Space Q45 Headphones"),
                            ("Soundcore Space Q45 : Target", "Soundcore Space Q45"),
@@ -300,8 +300,8 @@ class CardTests(unittest.TestCase):
             self.assertEqual(extract_page_meta(html, "https://a.b/")["title"], clean)
 
     def test_cards_ride_along_in_the_reply_and_are_stripped_for_text_surfaces(self) -> None:
-        from backend.services.response_formatter import strip_cards
-        from backend.services.skill_runtime.runner import embed_cards
+        from server.services.response_formatter import strip_cards
+        from server.services.skill_runtime.runner import embed_cards
 
         cards = [{"title": "A -- B", "url": "https://x.example/p/1", "image": "https://i.example/1.jpg"}]
         reply = embed_cards("Here are options.", cards)
@@ -327,7 +327,7 @@ class PendingRequestTests(unittest.TestCase):
     """Generic across use cases: "I'll send it later", clarifying answers, own-file questions."""
 
     def test_upload_later_waits_for_any_kind_of_file(self) -> None:
-        from backend.services.chat_pipeline import stage_dispatch as d
+        from server.services.chat_pipeline import stage_dispatch as d
 
         for message, noun in (("great, ill upload my resume find me some jobs", "your resume"),
                               ("let me attach the contract, then summarize it", "your contract"),
@@ -340,7 +340,7 @@ class PendingRequestTests(unittest.TestCase):
                 run.assert_not_called()
 
     def test_file_arrival_completes_the_pending_request(self) -> None:
-        from backend.services.chat_pipeline import stage_dispatch as d
+        from server.services.chat_pipeline import stage_dispatch as d
 
         history = [{"role": "user", "content": "great, ill upload my resume find me some jobs"},
                    {"role": "assistant", "content": d.wait_for_upload_reply("my resume")}]
@@ -356,7 +356,7 @@ class PendingRequestTests(unittest.TestCase):
         self.assertIn("find me some jobs", ctx.messages[-1]["content"])          # model sees the full request too
 
     def test_non_search_pending_request_reaches_the_model_complete(self) -> None:
-        from backend.services.chat_pipeline import stage_dispatch as d
+        from server.services.chat_pipeline import stage_dispatch as d
 
         history = [{"role": "user", "content": "let me attach the contract, then tell me the notice period"},
                    {"role": "assistant", "content": d.wait_for_upload_reply("contract")}]
@@ -369,7 +369,7 @@ class PendingRequestTests(unittest.TestCase):
         self.assertIn("notice period", ctx.user_message)
 
     def test_a_new_instruction_is_not_merged(self) -> None:
-        from backend.services.chat_pipeline import stage_dispatch as d
+        from server.services.chat_pipeline import stage_dispatch as d
 
         history = [{"role": "user", "content": "ill upload my resume, find me jobs"},
                    {"role": "assistant", "content": d.wait_for_upload_reply("resume")}]
@@ -378,15 +378,15 @@ class PendingRequestTests(unittest.TestCase):
         self.assertEqual(d._carried_request("ok", done, has_files=False), "ok")
 
     def test_skill_question_then_answer(self) -> None:
-        from backend.services.chat_pipeline import stage_dispatch as d
-        from backend.services.skill_runtime import get_search_skill
+        from server.services.chat_pipeline import stage_dispatch as d
+        from server.services.skill_runtime import get_search_skill
 
         ask = get_search_skill("local-search").ask
         history = [{"role": "user", "content": "find me good ramen"}, {"role": "assistant", "content": ask}]
         self.assertEqual(d._carried_request("in Tempe", history, has_files=False), "find me good ramen in Tempe")
 
     def test_questions_about_an_attached_file_never_hit_the_web(self) -> None:
-        from backend.services.chat_pipeline import stage_dispatch as d
+        from server.services.chat_pipeline import stage_dispatch as d
 
         ctx = _ctx("what are the key findings of this paper", attachment_ids=["c" * 32])
         with mock.patch.object(d, "run_search_skill") as run, mock.patch.object(d, "run_web_search") as web:

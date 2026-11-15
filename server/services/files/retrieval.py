@@ -18,8 +18,8 @@ from pathlib import Path
 import httpx
 import numpy as np
 
-from backend.config import settings
-from backend.services.files.extract import ExtractedFile
+from server.config import settings
+from server.services.files.extract import ExtractedFile
 
 logger = logging.getLogger(__name__)
 

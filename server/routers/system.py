@@ -1,12 +1,12 @@
 import json
 import re
 from fastapi import APIRouter, Body, Header, HTTPException, Request
-from backend.models.schemas import AppLaunchRequest, StatusResponse
-from backend.services.app_launcher import launch_app, close_app, list_app_profiles, list_known_apps
-from backend.services.media_context import get_watching_context
-from backend.services.scheduler import proactive_queue
-from backend.services import system_controls as sc
-from backend.config import reload_settings
+from server.models.schemas import AppLaunchRequest, StatusResponse
+from server.services.app_launcher import launch_app, close_app, list_app_profiles, list_known_apps
+from server.services.media_context import get_watching_context
+from server.services.scheduler import proactive_queue
+from server.services import system_controls as sc
+from server.config import reload_settings
 
 router = APIRouter(prefix="/api/system", tags=["system"])
 
@@ -43,7 +43,7 @@ def get_app_profiles():
 @router.get("/github/repos")
 async def github_repositories():
     """List repositories for the Capabilities panel."""
-    from backend.services import github
+    from server.services import github
     try:
         return {"repos": await github.list_repos()}
     except Exception as exc:
@@ -53,14 +53,14 @@ async def github_repositories():
 @router.get("/dev-dashboard")
 async def dev_dashboard(refresh: bool = False):
     """Local checkout status + GitHub repo pulse for the dashboard (cached ~3 min)."""
-    from backend.services.dev_dashboard import dashboard
+    from server.services.dev_dashboard import dashboard
     return await dashboard(force=refresh)
 
 
 @router.get("/github/activity")
 async def github_activity():
     """Return contribution, PR, and comment-review data for the home widget."""
-    from backend.services import github
+    from server.services import github
     try:
         repo = github.default_repo()
         prs = await github.list_prs(repo, state="open", limit=10)
@@ -93,7 +93,7 @@ def get_proactive_messages():
 
 @router.get("/audio-devices")
 def get_audio_devices():
-    from backend.services.audio_switcher import list_output_devices, get_default_device_id
+    from server.services.audio_switcher import list_output_devices, get_default_device_id
     try:
         devices = list_output_devices()
         current = get_default_device_id()
@@ -104,7 +104,7 @@ def get_audio_devices():
 
 @router.post("/audio-device")
 async def set_audio_device(request: Request):
-    from backend.services.audio_switcher import set_default_device
+    from server.services.audio_switcher import set_default_device
     body = await request.json()
     device_id = body.get("device_id", "")
     if not device_id:
@@ -194,7 +194,7 @@ async def generate_scene(topic: str = ""):
     """Generate a holographic 3D scene spec for a given topic using the LLM."""
     if not topic.strip():
         return {"error": "topic required"}
-    from backend.services.llm import ollama
+    from server.services.llm import ollama
     prompt = _SCENE_PROMPT.format(topic=topic)
     try:
         raw = await ollama.complete(prompt, system=_SCENE_SYSTEM, temperature=0.3)
@@ -282,7 +282,7 @@ def system_info():
 
 @router.get("/health")
 async def health():
-    from backend.services.llm import ollama
+    from server.services.llm import ollama
     available = await ollama.is_available()
     return {
         "status": "ok",
@@ -296,7 +296,7 @@ async def health():
 @router.get("/llm-selection")
 async def llm_selection():
     """Which model the priority-based selector picked, and every candidate it saw."""
-    from backend.services.llm import selector
+    from server.services.llm import selector
     return selector.status()
 
 
@@ -306,8 +306,8 @@ async def set_llm_selection(
     x_luna_token: str | None = Header(default=None),
 ):
     """Manual model choice from the chat box: {"mode": "auto"} | {"mode": "ollama", "server", "model"} | {"mode": "fallback"}."""
-    from backend.services.llm import selector
-    from backend.services.settings_store import token_ok
+    from server.services.llm import selector
+    from server.services.settings_store import token_ok
     if not token_ok(x_luna_token):
         raise HTTPException(status_code=403, detail="Missing or invalid local access token.")
     if not selector.enabled():

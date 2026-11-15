@@ -4,8 +4,8 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from backend.config import settings
-from backend.services.workspace_integrations.base import (
+from server.config import settings
+from server.services.workspace_integrations.base import (
     GOOGLE_BASES,
     WorkspaceIntegrationError,
     WorkspaceResponse,

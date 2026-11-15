@@ -1,7 +1,7 @@
 """Brightness and display controls."""
 import shutil
 
-from backend.services.system_controls.helpers import IS_MAC, IS_WINDOWS, IS_LINUX, _run, _osascript, _ps
+from server.services.system_controls.helpers import IS_MAC, IS_WINDOWS, IS_LINUX, _run, _osascript, _ps
 
 
 def get_brightness() -> tuple[bool, int | str]:

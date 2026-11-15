@@ -3,7 +3,7 @@ import re
 import shutil
 from pathlib import Path
 
-from backend.services.system_controls.helpers import IS_MAC, IS_WINDOWS, IS_LINUX, PLATFORM, _run
+from server.services.system_controls.helpers import IS_MAC, IS_WINDOWS, IS_LINUX, PLATFORM, _run
 
 
 def _cpu_name() -> str:

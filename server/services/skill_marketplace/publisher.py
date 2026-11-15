@@ -18,7 +18,7 @@ import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from backend.services.skill_marketplace.manifest import (
+from server.services.skill_marketplace.manifest import (
     ManifestError,
     SkillManifest,
     load_manifest,

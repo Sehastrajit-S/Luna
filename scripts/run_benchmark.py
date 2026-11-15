@@ -71,10 +71,10 @@ if _known.model and _known.provider:
 if _known.api_key and _known.provider:
     _os.environ[f"{_known.provider.upper().replace('-','_')}_API_KEY"] = _known.api_key
 
-from backend.config import settings
-from backend.models.database import init_db, SessionLocal
-from backend.services.llm import LLMClient
-from backend.services.memory_manager import MemoryManager
+from server.config import settings
+from server.models.database import init_db, SessionLocal
+from server.services.llm import LLMClient
+from server.services.memory_manager import MemoryManager
 
 
 # ── Statistics ────────────────────────────────────────────────────────────────
@@ -553,7 +553,7 @@ async def bench_memory(db, runs: int = 3) -> dict:
 # ── Suite: tools ──────────────────────────────────────────────────────────────
 
 def _tool_probes() -> list[tuple[str, Any, bool]]:
-    from backend.services import workspace, web_tools
+    from server.services import workspace, web_tools
     return [
         ("workspace_list", lambda: workspace.list_workspace(""),           False),
         ("web_search",     lambda: web_tools.web_search("Luna AI engine"), True),
@@ -605,7 +605,7 @@ async def bench_agent(llm: LLMClient, runs: int = 2) -> dict:
 
     Uses the real TOOL_REGISTRY so the available tool list stays in sync with Luna.
     """
-    from backend.services.tool_registry import TOOL_REGISTRY
+    from server.services.tool_registry import TOOL_REGISTRY
     tool_names = list(TOOL_REGISTRY.keys())
 
     print(f"  Tools available: {len(tool_names)}")

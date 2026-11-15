@@ -6,7 +6,7 @@ Set-Location $PSScriptRoot\..
 $repoRoot = (Get-Location).Path
 $desktop = [Environment]::GetFolderPath("Desktop")
 $shortcutPath = Join-Path $desktop "Luna.lnk"
-$iconPath = Join-Path $repoRoot "electron\assets\icon.ico"
+$iconPath = Join-Path $repoRoot "interfaces\desktop\resources\icon.ico"
 
 $installedCandidates = @(
   (Join-Path $env:LOCALAPPDATA "Programs\Luna\Luna.exe"),

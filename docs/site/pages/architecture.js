@@ -46,17 +46,17 @@ export default function Architecture() {
 
         <h3>React / Vite frontend</h3>
         <p>
-          <code>frontend/src/App.tsx</code> is the root. The app renders in one of three view modes —
+          <code>interfaces/web/src/App.tsx</code> is the root. The app renders in one of three view modes —
           <code>dev</code> (sidebar + content), <code>user</code> (voice-focused), and <code>luna</code>
-          (full-screen HUD). State is managed by a single Zustand store at <code>frontend/src/store/index.ts</code>.
-          Feature components live in <code>frontend/src/components/</code> grouped by domain.
+          (full-screen HUD). State is managed by a single Zustand store at <code>interfaces/web/src/store/index.ts</code>.
+          Feature components live in <code>interfaces/web/src/components/</code> grouped by domain.
         </p>
 
         <h3>FastAPI backend</h3>
         <p>
-          <code>backend/main.py</code> bootstraps the FastAPI app, registers CORS middleware, mounts all
-          routers, and starts background processes. Routers in <code>backend/routers/</code> are intentionally
-          thin — they validate requests and delegate all logic to <code>backend/services/</code>.
+          <code>server/main.py</code> bootstraps the FastAPI app, registers CORS middleware, mounts all
+          routers, and starts background processes. Routers in <code>server/routers/</code> are intentionally
+          thin — they validate requests and delegate all logic to <code>server/services/</code>.
         </p>
       </section>
 
@@ -95,7 +95,7 @@ export default function Architecture() {
         </table>
 
         <Callout type="info" title="Handling the stream in the frontend">
-          <p><code>frontend/src/api/chat.ts</code> wraps the SSE connection. The Zustand store dispatches
+          <p><code>interfaces/web/src/api/chat.ts</code> wraps the SSE connection. The Zustand store dispatches
           each event type to the correct reducer — tokens go to <code>streamMessage</code>, commands open
           widgets via <code>setDynamicWidget</code>, and confirmation events set <code>pendingConfirmation</code>.</p>
         </Callout>
@@ -150,7 +150,7 @@ export default function Architecture() {
 
         <h3>Personality engine</h3>
         <p>
-          <code>backend/services/personality.py</code> maintains a floating-point state vector with dimensions
+          <code>server/services/personality/</code> maintains a floating-point state vector with dimensions
           for mood, energy level, formality preference, humor level, and emotional support need.
           These values drift based on conversation sentiment and update Luna's system-prompt tone in real time.
         </p>
@@ -164,7 +164,7 @@ export default function Architecture() {
       <section>
         <h2 id="processes">Background processes</h2>
         <p>
-          The backend registers long-running coroutines via <code>backend/processes/registry.py</code>.
+          The backend registers long-running coroutines via <code>server/processes/registry.py</code>.
           Each process runs on its own schedule:
         </p>
 
@@ -189,12 +189,12 @@ export default function Architecture() {
         <table>
           <thead><tr><th>What you're changing</th><th>Where it lives</th></tr></thead>
           <tbody>
-            <tr><td>API endpoint logic</td><td><code>backend/services/</code> — not in routers</td></tr>
-            <tr><td>New background job</td><td><code>backend/processes/</code> — registered in <code>registry.py</code></td></tr>
-            <tr><td>UI component or view</td><td><code>frontend/src/components/&lt;Feature&gt;/</code></td></tr>
-            <tr><td>Global client state</td><td><code>frontend/src/store/index.ts</code></td></tr>
+            <tr><td>API endpoint logic</td><td><code>server/services/</code> — not in routers</td></tr>
+            <tr><td>New background job</td><td><code>server/processes/</code> — registered in <code>registry.py</code></td></tr>
+            <tr><td>UI component or view</td><td><code>interfaces/web/src/components/&lt;Feature&gt;/</code></td></tr>
+            <tr><td>Global client state</td><td><code>interfaces/web/src/store/index.ts</code></td></tr>
             <tr><td>Desktop/native behaviour</td><td><code>electron/main.js</code> or <code>electron/preload.js</code></td></tr>
-            <tr><td>New tool or skill</td><td><code>backend/services/tool_registry.py</code> + <code>skills/</code></td></tr>
+            <tr><td>New tool or skill</td><td><code>server/services/tool_registry.py</code> + <code>server/skills/</code></td></tr>
           </tbody>
         </table>
       </section>

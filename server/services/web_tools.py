@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 
 import httpx
 
-from backend.services.workspace import write_workspace_file, write_workspace_file_base64
+from server.services.workspace import write_workspace_file, write_workspace_file_base64
 
 _UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36"
 _TIMEOUT = 12.0
@@ -56,7 +56,7 @@ async def multi_web_search(queries: list[str], max_results_each: int = 4, check_
     """Run one or more searches, drop results whose pages are gone, and merge
     them with one continuous numbering grouped by query. Domain-free: skills
     add site-specific checks through the skill runtime."""
-    from backend.services.skill_runtime import sources
+    from server.services.skill_runtime import sources
 
     per_query = max_results_each if len(queries) > 1 else 6
     collected: list = []

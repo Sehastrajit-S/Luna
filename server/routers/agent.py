@@ -3,27 +3,27 @@ from fastapi.responses import JSONResponse, StreamingResponse
 
 import json
 
-from backend.services.agent_tasks import create_agent_task, list_agent_tasks, update_agent_task
-from backend.services.agents import (
+from server.services.agent_tasks import create_agent_task, list_agent_tasks, update_agent_task
+from server.services.agents import (
     AgentRole,
     ROLE_DEFINITIONS,
     is_crew_request,
     run_crew,
 )
-from backend.services.audit_log import list_audit, record_audit
-from backend.services.browser_automation import browser_open, browser_read, playwright_status
-from backend.services.permission_manager import permission_manager
-from backend.services.skill_manager import list_skills
-from backend.services.task_planner import generate_plan
-from backend.services.enterprise_workflow import run_enterprise_bugfix_workflow
-from backend.services.workspace import (
+from server.services.audit_log import list_audit, record_audit
+from server.services.browser_automation import browser_open, browser_read, playwright_status
+from server.services.permission_manager import permission_manager
+from server.services.skill_manager import list_skills
+from server.services.task_planner import generate_plan
+from server.services.enterprise_workflow import run_enterprise_bugfix_workflow
+from server.services.workspace import (
     list_workspace,
     read_workspace_file,
     read_workspace_file_base64,
     write_workspace_file,
     write_workspace_file_base64,
 )
-from backend.processes.registry import list_processes
+from server.processes.registry import list_processes
 
 router = APIRouter(prefix="/api/agent", tags=["agent"])
 

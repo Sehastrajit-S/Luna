@@ -20,7 +20,7 @@ import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
-from backend.config import DATA_DIR, settings
+from server.config import DATA_DIR, settings
 
 logger = logging.getLogger(__name__)
 
@@ -56,12 +56,12 @@ def _append(record: dict) -> None:
 
 def signals_for(user_message: str, reply: str) -> dict:
     """What each hand-written rule decides for this turn (the labels to learn)."""
-    from backend.services.agent_loop.routing import is_multi_step
-    from backend.services.agents import is_crew_request
-    from backend.services.chat_pipeline.stage_generate import _WORKSPACE_WORK_RE
-    from backend.services.chat_pipeline.stage_tools import _promises_lookup
-    from backend.services.command_parser import is_coding_request
-    from backend.services.command_parser.schedule import ADD_REQUEST_RE, MAX_REQUEST_CHARS, claims_saved
+    from server.services.agent_loop.routing import is_multi_step
+    from server.services.agents import is_crew_request
+    from server.services.chat_pipeline.stage_generate import _WORKSPACE_WORK_RE
+    from server.services.chat_pipeline.stage_tools import _promises_lookup
+    from server.services.command_parser import is_coding_request
+    from server.services.command_parser.schedule import ADD_REQUEST_RE, MAX_REQUEST_CHARS, claims_saved
 
     text = user_message or ""
     return {
@@ -90,7 +90,7 @@ def record_turn(ctx, turn: int, previous_user_message: str | None = None) -> Non
     if not settings.decision_log_enabled:
         return
     try:
-        from backend.core.logging import request_id_var
+        from server.core.logging import request_id_var
         request_id = request_id_var.get("")
     except Exception:
         request_id = ""

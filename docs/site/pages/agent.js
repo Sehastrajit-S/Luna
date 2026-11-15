@@ -37,7 +37,7 @@ export default function Agent() {
           A skill is a package that extends Luna with new capabilities. Skills live in two locations:
         </p>
         <ul>
-          <li><code>skills/</code> — skills shipped with the repo (version-controlled).</li>
+          <li><code>server/skills/</code> — skills shipped with the repo (version-controlled).</li>
           <li><code>data/workspace/skills/</code> — user-created or agent-created skills (gitignored).</li>
         </ul>
 
@@ -61,7 +61,7 @@ export default function Agent() {
         <h2 id="create-skill">Create a skill</h2>
         <p>Skills follow a simple two-file structure. Here is a minimal example:</p>
 
-        <CodeFile label="skills/my-skill/skill.json">
+        <CodeFile label="server/skills/my-skill/skill.json">
           <pre><code>{`{
   "name": "my-skill",
   "version": "1.0.0",
@@ -78,7 +78,7 @@ export default function Agent() {
 }`}</code></pre>
         </CodeFile>
 
-        <CodeFile label="skills/my-skill/SKILL.md">
+        <CodeFile label="server/skills/my-skill/SKILL.md">
           <pre><code>{`# My Skill
 
 This skill enables Luna to do the thing.
@@ -93,7 +93,7 @@ Call \`do_thing\` when the user asks to process something.
 
         <Callout type="note" title="Command implementation">
           <p>Commands declared in <code>skill.json</code> must be registered in
-          <code>backend/services/tool_registry.py</code> with matching names and handler functions.
+          <code>server/services/tool_registry.py</code> with matching names and handler functions.
           The manifest describes the schema; the registry provides the implementation.</p>
         </Callout>
 

@@ -5,7 +5,7 @@ import json
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
-from backend.services import proactive_bus
+from server.services import proactive_bus
 
 router = APIRouter(prefix="/api/proactive", tags=["proactive"])
 

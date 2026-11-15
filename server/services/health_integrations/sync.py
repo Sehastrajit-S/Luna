@@ -12,9 +12,9 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from backend.services.health_integrations.base import HealthIntegration
-from backend.services.health_integrations.db import _update_sync, get_sync_status
-from backend.services.health_integrations.models import HealthIntegrationError
+from server.services.health_integrations.base import HealthIntegration
+from server.services.health_integrations.db import _update_sync, get_sync_status
+from server.services.health_integrations.models import HealthIntegrationError
 
 log = logging.getLogger(__name__)
 
@@ -22,13 +22,13 @@ _SKIP = {"base", "models", "db", "oauth", "sync", "webhooks"}
 
 
 def _discover() -> dict[str, HealthIntegration]:
-    import backend.services.health_integrations as _pkg
+    import server.services.health_integrations as _pkg
     platforms: dict[str, HealthIntegration] = {}
     for _, name, _ in pkgutil.iter_modules(_pkg.__path__):
         if name.startswith("_") or name in _SKIP:
             continue
         try:
-            mod = importlib.import_module(f"backend.services.health_integrations.{name}")
+            mod = importlib.import_module(f"server.services.health_integrations.{name}")
         except Exception as e:
             log.warning("Health integration module %s failed to import: %s", name, e)
             continue

@@ -1,7 +1,7 @@
 """
 Chat router — thin HTTP layer that delegates to the chat pipeline.
 
-The actual business logic lives in backend.services.chat_pipeline.
+The actual business logic lives in server.services.chat_pipeline.
 This router only handles HTTP concerns: request parsing, SSE framing, and response.
 """
 import logging
@@ -10,15 +10,15 @@ from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException, Request
 from fastapi.responses import StreamingResponse, JSONResponse
 from sqlalchemy.orm import Session
 
-from backend.config import settings
-from backend.models.database import (
+from server.config import settings
+from server.models.database import (
     get_db, Attachment, Conversation, ConversationArtifact, Episode, Fact, FeedbackLog, PlanRecord, Trace,
 )
-from backend.models.schemas import ChatRequest, ConversationOut, ConversationDetail, StatusResponse
-from backend.services.permission_manager import permission_manager
-from backend.services.shared_context import get_active_conversation_id, set_active_conversation_id
-from backend.services.chat_pipeline import ChatContext, run_pipeline
-from backend.services.files import delete_attachment_files
+from server.models.schemas import ChatRequest, ConversationOut, ConversationDetail, StatusResponse
+from server.services.permission_manager import permission_manager
+from server.services.shared_context import get_active_conversation_id, set_active_conversation_id
+from server.services.chat_pipeline import ChatContext, run_pipeline
+from server.services.files import delete_attachment_files
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +85,7 @@ async def chat_stream(
 def chat_activity(year: int | None = None, month: int | None = None, db: Session = Depends(get_db)):
     """Messages per local day for the dashboard heatmap, with each day's chat topics."""
     from datetime import datetime as _dt
-    from backend.services.activity_calendar import month_activity
+    from server.services.activity_calendar import month_activity
 
     now = _dt.now()
     year, month = year or now.year, month or now.month

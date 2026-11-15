@@ -6,16 +6,16 @@ Only runs if ctx.dispatched is False (no fast-path command handled the request).
 import logging
 import re
 
-from backend.config import settings
-from backend.services.llm import ollama
-from backend.services.llm.context_window import fit_context
-from backend.services.files import build_attachment_context
-from backend.services.command_parser import is_coding_request
-from backend.services.coding_agent import stream_coding_agent
-from backend.services.task_planner import is_complex_task, generate_plan, TaskPlan
-from backend.services.response_formatter import format_luna_response
-from backend.services.agents import is_crew_request, run_crew, CrewEventType
-from backend.services.chat_pipeline.context import ChatContext
+from server.config import settings
+from server.services.llm import ollama
+from server.services.llm.context_window import fit_context
+from server.services.files import build_attachment_context
+from server.services.command_parser import is_coding_request
+from server.services.coding_agent import stream_coding_agent
+from server.services.task_planner import is_complex_task, generate_plan, TaskPlan
+from server.services.response_formatter import format_luna_response
+from server.services.agents import is_crew_request, run_crew, CrewEventType
+from server.services.chat_pipeline.context import ChatContext
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ async def generate(ctx: ChatContext) -> None:
     conv_id = ctx.conv.id
 
     # ── Crew Mode (multi-agent orchestration) fast-path ───────────────────────
-    from backend.services.llm.tool_calling import native_tools_supported
+    from server.services.llm.tool_calling import native_tools_supported
     explicit_only = native_tools_supported()      # with the agent loop, only an explicit ask
     if is_crew_request(ctx.user_message, explicit_only=explicit_only) and not ctx.is_business and not ctx.attachment_ids:
         ctx.voice_streamed = True
@@ -176,7 +176,7 @@ def uses_special_agent(ctx: ChatContext) -> bool:
     """
     if ctx.is_business or ctx.attachment_ids:
         return False
-    from backend.services.llm.tool_calling import native_tools_supported
+    from server.services.llm.tool_calling import native_tools_supported
     if native_tools_supported():
         return (is_crew_request(ctx.user_message, explicit_only=True)
                 or (is_coding_request(ctx.user_message) and bool(_WORKSPACE_WORK_RE.search(ctx.user_message))))

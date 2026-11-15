@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from backend.config import DATA_DIR
+from server.config import DATA_DIR
 
 AUDIT_PATH = DATA_DIR / "audit.log"
 AUDIT_PATH.parent.mkdir(parents=True, exist_ok=True)

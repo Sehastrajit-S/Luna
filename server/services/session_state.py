@@ -21,7 +21,7 @@ from collections import Counter
 
 from sqlalchemy.orm import Session
 
-from backend.models.database import Attachment, ConversationArtifact, Message
+from server.models.database import Attachment, ConversationArtifact, Message
 
 _CODE_BLOCK_RE = re.compile(r"```([\w+#.-]*)[^\n]*\n(.*?)```", re.DOTALL)
 _NAME_RES = (
@@ -124,7 +124,7 @@ def _earlier_requests(db: Session, conversation_id: int) -> list[str]:
     Built straight from the stored messages (no model), so "what was the second
     thing I asked?" is a lookup — a rewritten summary kept only recent topics.
     """
-    from backend.config import settings
+    from server.config import settings
 
     users = (db.query(Message.content).filter(Message.conversation_id == conversation_id, Message.role == "user")
              .order_by(Message.id).all())

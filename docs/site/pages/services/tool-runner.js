@@ -50,7 +50,7 @@ export default function ToolRunnerService() {
           <pre><code>{`def parse_tool_call_json(text: str) -> dict | None`}</code></pre>
         </CodeFile>
         <CodeFile label="example.py">
-          <pre><code>{`from backend.services.tool_runner import parse_tool_call_json, strip_tool_call_json
+          <pre><code>{`from server.services.tool_runner import parse_tool_call_json, strip_tool_call_json
 
 raw = 'Let me check that. {"tool": "web_search", "args": {"query": "Python 3.13 features"}}'
 tc = parse_tool_call_json(raw)
@@ -78,8 +78,8 @@ display_text = strip_tool_call_json(raw)
         </CodeFile>
         <CodeFile label="example.py">
           <pre><code>{`import asyncio
-from backend.services.tool_runner import execute_tool_call
-from backend.models.database import SessionLocal
+from server.services.tool_runner import execute_tool_call
+from server.models.database import SessionLocal
 
 db = SessionLocal()
 result = asyncio.run(execute_tool_call(
@@ -145,7 +145,7 @@ db.close()`}</code></pre>
 
       <section>
         <h2 id="system">System controls</h2>
-        <p>The following tools map to <code>backend/services/system_controls.py</code>:</p>
+        <p>The following tools map to <code>server/services/system_controls/</code>:</p>
         <table>
           <thead><tr><th>Tool</th><th>Args</th></tr></thead>
           <tbody>

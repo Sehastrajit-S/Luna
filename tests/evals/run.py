@@ -1,7 +1,7 @@
 """Run Luna's conversation evals against an isolated backend.
 
-    python -m utilities.evals.run                     # all suites
-    python -m utilities.evals.run --suite scenarios   # or: deep, long
+    python -m tests.evals.run                     # all suites
+    python -m tests.evals.run --suite scenarios   # or: deep, long
 
 Snapshots the real data (SQLite backup API + Chroma copy) into
 .tmp/luna-eval-data, starts a second backend on port 8898 with that copy,
@@ -51,7 +51,7 @@ def start_backend() -> subprocess.Popen:
     env = {**os.environ, "LUNA_DATA_DIR": str(EVAL_DATA), "PORT": str(PORT), "BACKGROUND_JOBS_ENABLED": "false",
            "DECISION_LOG_ENABLED": "true"}   # logged in the eval data dir: shows each turn's route
     log = open(RESULTS / "eval-backend.log", "w", encoding="utf-8")
-    proc = subprocess.Popen([sys.executable, str(ROOT / "backend" / "server.py")], cwd=ROOT, env=env,
+    proc = subprocess.Popen([sys.executable, str(ROOT / "server" / "server.py")], cwd=ROOT, env=env,
                             stdout=log, stderr=subprocess.STDOUT)
     for _ in range(120):
         try:

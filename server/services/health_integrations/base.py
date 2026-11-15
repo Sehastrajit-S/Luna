@@ -2,7 +2,7 @@
 
 To add a new platform
 ---------------------
-1. Create ``backend/services/health_integrations/myplatform.py``
+1. Create ``server/services/health_integrations/myplatform.py``
 2. Subclass :class:`HealthIntegration` and implement the three required methods
 3. Restart Luna — the platform is auto-discovered, nothing else needs changing
 
@@ -17,7 +17,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from backend.services.health_integrations.models import HealthMetricPoint
+from server.services.health_integrations.models import HealthMetricPoint
 
 
 @dataclass

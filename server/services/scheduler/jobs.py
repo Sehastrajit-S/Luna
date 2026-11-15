@@ -3,8 +3,8 @@ import re
 import asyncio
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
-from backend.models.database import SessionLocal, CalendarEvent, Task, ProactiveLog, Message
-from backend.services.scheduler.notifications import send_windows_notification, proactive_queue
+from server.models.database import SessionLocal, CalendarEvent, Task, ProactiveLog, Message
+from server.services.scheduler.notifications import send_windows_notification, proactive_queue
 
 _VISION_CHECKIN_SYSTEM = (
     "You are Luna, a quiet and attentive AI companion. "
@@ -97,8 +97,8 @@ def vision_aware_checkin():
                 return
 
         # ── Weather ───────────────────────────────────────────────────────────
-        from backend.services.dashboard import weather as _weather, markets as _markets
-        from backend.services.dashboard import news as _news_mod
+        from server.services.dashboard import weather as _weather, markets as _markets
+        from server.services.dashboard import news as _news_mod
         wx = _weather.get_cached_weather()
         if wx:
             weather_str = (
@@ -170,7 +170,7 @@ def vision_aware_checkin():
 
         try:
             loop = asyncio.new_event_loop()
-            from backend.services.llm import ollama as _ollama
+            from server.services.llm import ollama as _ollama
             reply = loop.run_until_complete(
                 _ollama.complete(prompt, system=_VISION_CHECKIN_SYSTEM, temperature=0.72)
             )
@@ -185,7 +185,7 @@ def vision_aware_checkin():
             return
 
         # Push to real-time SSE bus (appears immediately on dashboard)
-        from backend.services.proactive_bus import push as _bus_push
+        from server.services.proactive_bus import push as _bus_push
         _bus_push(reply)
 
         # Also enqueue for next chat pickup
@@ -276,7 +276,7 @@ def sync_spotify_activity():
     """Reconcile the tracked 'listening' activity with real Spotify playback state."""
     db: Session = SessionLocal()
     try:
-        from backend.services.activity_tracker import ActivityTracker
+        from server.services.activity_tracker import ActivityTracker
         ActivityTracker(db).sync_spotify_activity()
     except Exception as e:
         print(f"[activity] Spotify sync failed: {e}")
@@ -288,7 +288,7 @@ def daily_memory_compaction():
     """Merge redundant/duplicate facts once a day at 3am."""
     db: Session = SessionLocal()
     try:
-        from backend.services.memory_manager import MemoryManager
+        from server.services.memory_manager import MemoryManager
         manager = MemoryManager(db)
         loop = asyncio.new_event_loop()
         removed = loop.run_until_complete(manager.compact_facts())
@@ -305,7 +305,7 @@ def daily_personality_decay():
     """Decay personality preferences slightly toward neutral each day."""
     db: Session = SessionLocal()
     try:
-        from backend.services.personality import PersonalityEngine
+        from server.services.personality import PersonalityEngine
         engine = PersonalityEngine(db)
         engine.daily_decay()
     finally:
@@ -333,7 +333,7 @@ def confidence_decay():
     """
     db: Session = SessionLocal()
     try:
-        from backend.models.database import Fact
+        from server.models.database import Fact
         cutoff = datetime.utcnow() - timedelta(days=30)
         stale = (
             db.query(Fact)
@@ -363,7 +363,7 @@ def state_aware_proactive():
     """
     db: Session = SessionLocal()
     try:
-        from backend.services.state_engine import state_engine
+        from server.services.state_engine import state_engine
         state = state_engine.infer_passive(db)
         now = datetime.utcnow()
 
@@ -486,7 +486,7 @@ def companion_check_in():
 
         try:
             loop = asyncio.new_event_loop()
-            from backend.services.llm import ollama as _ollama
+            from server.services.llm import ollama as _ollama
             msg = loop.run_until_complete(
                 _ollama.complete(
                     prompt,
@@ -531,7 +531,7 @@ def mine_behavioral_patterns():
     """
     db: Session = SessionLocal()
     try:
-        from backend.models.database import StateEvent, Fact
+        from server.models.database import StateEvent, Fact
         from collections import Counter
 
         cutoff = datetime.utcnow() - timedelta(days=30)
@@ -570,8 +570,8 @@ def mine_behavioral_patterns():
 
         mem_db: Session = SessionLocal()
         try:
-            from backend.models.database import Fact
-            from backend.services.memory_manager import MemoryManager
+            from server.models.database import Fact
+            from server.services.memory_manager import MemoryManager
             manager = MemoryManager(mem_db)
             loop = asyncio.new_event_loop()
             saved = 0
@@ -649,7 +649,7 @@ def proactive_commitment_followup():
 
             try:
                 loop = asyncio.new_event_loop()
-                from backend.services.llm import ollama as _ollama
+                from server.services.llm import ollama as _ollama
                 followup = loop.run_until_complete(
                     _ollama.complete(
                         prompt,

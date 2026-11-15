@@ -325,7 +325,7 @@ export const INTEGRATIONS: Integration[] = [
     id: 'vscode', name: 'VS Code', category: 'developer', authType: 'info',
     description: 'Luna AI extension for VS Code',
     logo: <VSCodeLogo />,
-    helpText: 'The Luna VS Code extension brings AI chat, code generation, and Luna context directly into your editor.\n\n1. Open VS Code\n2. Go to Extensions (Ctrl+Shift+X)\n3. Search for "Luna AI"\n4. Click Install\n\nOr install manually from the VSIX file in integrations/vscode/.',
+    helpText: 'The Luna VS Code extension brings AI chat, code generation, and Luna context directly into your editor.\n\n1. Open VS Code\n2. Go to Extensions (Ctrl+Shift+X)\n3. Search for "Luna AI"\n4. Click Install\n\nOr install manually from the VSIX file in interfaces/vscode/.',
     helpUrl: 'https://marketplace.visualstudio.com/vscode',
     fields: [],
   },

@@ -3,7 +3,7 @@
 Use this structure for new runtime/background processes.
 
 ```text
-backend/processes/my_process/
+server/processes/my_process/
   __init__.py
   process.py
   jobs.py
@@ -15,8 +15,8 @@ backend/processes/my_process/
 ```python
 from apscheduler.triggers.interval import IntervalTrigger
 
-from backend.processes.registry import ProcessDef
-from backend.processes.my_process import jobs
+from server.processes.registry import ProcessDef
+from server.processes.my_process import jobs
 
 
 def register_scheduler(scheduler):
@@ -36,14 +36,14 @@ PROCESS = ProcessDef(
 
 ```python
 def run():
-    # Keep job logic here or delegate to backend/services/my_feature.py.
+    # Keep job logic here or delegate to server/services/my_feature.py.
     pass
 ```
 
 For lifecycle-only processes:
 
 ```python
-from backend.processes.registry import ProcessDef
+from server.processes.registry import ProcessDef
 
 
 def start():

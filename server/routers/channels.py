@@ -44,8 +44,8 @@ import time
 from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 
-from backend.config import settings
-from backend.services.channel_bridge import (
+from server.config import settings
+from server.services.channel_bridge import (
     handle_channel_message,
     send_telegram,
     send_discord,

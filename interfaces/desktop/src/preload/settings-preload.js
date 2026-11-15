@@ -10,7 +10,7 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
 // Sandboxed preloads can only require('electron'); names copied from
-// ../shared/ipc-channels.js (kept in sync by utilities/tests/tools/test_desktop_ipc.py).
+// ../shared/ipc-channels.js (kept in sync by tests/tools/test_desktop_ipc.py).
 const IPC = {
   env: {
     get: 'env:get',

@@ -12,7 +12,7 @@ def _resp(status, message="", headers=None):
 
 class GitHubErrorTests(unittest.TestCase):
     def test_errors_are_classified_from_githubs_message(self) -> None:
-        from backend.services.github import github_error
+        from server.services.github import github_error
 
         cases = {
             "suspended": _resp(403, "Sorry. Your account was suspended"),
@@ -32,7 +32,7 @@ class GitHubErrorTests(unittest.TestCase):
 
 class DevDashboardTests(unittest.TestCase):
     def test_unusable_token_falls_back_to_public_data_and_says_why(self) -> None:
-        from backend.services import dev_dashboard
+        from server.services import dev_dashboard
 
         def handler(request: httpx.Request) -> httpx.Response:
             if request.headers.get("authorization"):
@@ -70,8 +70,8 @@ class DevDashboardTests(unittest.TestCase):
         self.assertEqual(len(data["commit_days"]), 30)
 
     def test_rate_limited_results_are_not_cached(self) -> None:
-        from backend.services import dev_dashboard
-        from backend.services.github import GitHubError
+        from server.services import dev_dashboard
+        from server.services.github import GitHubError
 
         dev_dashboard._cache.clear()
         with mock.patch.object(dev_dashboard.github, "default_repo", return_value="o/r"), \
@@ -83,7 +83,7 @@ class DevDashboardTests(unittest.TestCase):
         self.assertNotIn("o/r", dev_dashboard._cache)
 
     def test_local_status_reads_this_checkout(self) -> None:
-        from backend.services.dev_dashboard import local_status
+        from server.services.dev_dashboard import local_status
 
         status = local_status()
         self.assertTrue(status["available"])

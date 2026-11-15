@@ -5,7 +5,7 @@ from unittest import mock
 
 class SearchIntentTests(unittest.TestCase):
     def test_requests_that_need_live_results_trigger_search(self) -> None:
-        from backend.services.command_parser.research import is_search_request
+        from server.services.command_parser.research import is_search_request
 
         for message in (
             "can you search and find me some job postings that is good for my experience",
@@ -20,7 +20,7 @@ class SearchIntentTests(unittest.TestCase):
                 self.assertTrue(is_search_request(message))
 
     def test_own_data_and_documents_are_not_web_searches(self) -> None:
-        from backend.services.command_parser.research import is_search_request
+        from server.services.command_parser.research import is_search_request
 
         for message in (
             "search my inbox for invoices",
@@ -41,26 +41,26 @@ class MultiQueryTests(unittest.TestCase):
     ]
 
     def test_links_for_these_becomes_one_query_per_item(self) -> None:
-        from backend.services import search_query
+        from server.services import search_query
 
         async def fake_complete(prompt, system="", temperature=0.3):
             self.assertIn("Machine Learning Engineer at AWS", prompt)
             return "1. Machine Learning Engineer AWS job posting\n2. AI Systems Engineer Google Cloud careers\n"
 
-        with mock.patch("backend.services.llm.ollama.complete", side_effect=fake_complete):
+        with mock.patch("server.services.llm.ollama.complete", side_effect=fake_complete):
             queries = asyncio.run(search_query.resolve_search_queries("give me links for these", self.HISTORY))
         self.assertEqual(queries, ["Machine Learning Engineer AWS job posting", "AI Systems Engineer Google Cloud careers"])
 
     def test_single_item_requests_stay_single(self) -> None:
-        from backend.services import search_query
+        from server.services import search_query
 
-        with mock.patch("backend.services.llm.ollama.complete") as complete:
+        with mock.patch("server.services.llm.ollama.complete") as complete:
             queries = asyncio.run(search_query.resolve_search_queries("latest qwen3 release notes for tool calling", self.HISTORY))
         self.assertEqual(queries, ["latest qwen3 release notes for tool calling"])
         complete.assert_not_called()
 
     def test_merged_results_are_numbered_continuously(self) -> None:
-        from backend.services import web_tools
+        from server.services import web_tools
 
         async def fake_search(query, max_results=6):
             return (f"[1] {query} A\nSnippet: first\nURL: https://a.example/{len(query)}\n\n"
@@ -75,7 +75,7 @@ class MultiQueryTests(unittest.TestCase):
 
 class CitationLinkTests(unittest.TestCase):
     def test_bracket_citations_become_links(self) -> None:
-        from backend.services.response_formatter import link_citations
+        from server.services.response_formatter import link_citations
 
         result = "References:\n[1] Job A - https://boards.greenhouse.io/a/jobs/1\n[2] Job B - https://jobs.lever.co/b/2"
         out = link_citations("- **[1]** Job A. See [2] and [9].\n\nReferences:\n[1] Job A - x", result)
@@ -94,7 +94,7 @@ class ResultLinkTests(unittest.TestCase):
     )
 
     def test_labels_without_urls_get_the_matching_result_link(self) -> None:
-        from backend.services.response_formatter import attach_result_links
+        from server.services.response_formatter import attach_result_links
 
         answer = ("- **[Machine Learning Engineer — DoorDash]** — 8/10\n"
                   "- **[Machine Learning Engineer II (Underwriting ML) at Affirm]** — 9/10\n"
@@ -105,7 +105,7 @@ class ResultLinkTests(unittest.TestCase):
         self.assertIn("**Quantum Chef at Nowhere Inc**", out)   # no match → plain text, no fake link
 
     def test_bold_titles_and_placeholders_get_their_result_link(self) -> None:
-        from backend.services.response_formatter import attach_result_links
+        from server.services.response_formatter import attach_result_links
 
         result = ("[1] RankRAG: Unifying Context Ranking with Retrieval-Augmented Generation\nSnippet: s\n"
                   "URL: https://arxiv.org/abs/2407.02485\n\n"
@@ -121,7 +121,7 @@ class ResultLinkTests(unittest.TestCase):
         self.assertIn("## RAG Frameworks\n", out)                        # headings untouched
 
     def test_existing_links_are_left_alone(self) -> None:
-        from backend.services.response_formatter import attach_result_links
+        from server.services.response_formatter import attach_result_links
 
         answer = "[Machine Learning Engineer — DoorDash](https://example.com/x)"
         self.assertEqual(attach_result_links(answer, self.RESULT), answer)
@@ -129,7 +129,7 @@ class ResultLinkTests(unittest.TestCase):
 
 class DedupeTests(unittest.TestCase):
     def test_same_posting_listed_twice_is_collapsed(self) -> None:
-        from backend.services.response_formatter import dedupe_linked_items
+        from server.services.response_formatter import dedupe_linked_items
 
         answer = (
             "### AI roles\n"
@@ -148,7 +148,7 @@ class DedupeTests(unittest.TestCase):
 
 class DedupeByTitleTests(unittest.TestCase):
     def test_same_bold_title_listed_twice_is_collapsed(self) -> None:
-        from backend.services.response_formatter import dedupe_linked_items
+        from server.services.response_formatter import dedupe_linked_items
 
         answer = ("- **Anker Soundcore Space Q45 Wireless** — budget pick\n"
                   "- **Sony WH-1000XM6** — premium\n"
@@ -161,7 +161,7 @@ class DedupeByTitleTests(unittest.TestCase):
 
 class UnverifiedLinkTests(unittest.TestCase):
     def test_invented_links_are_removed_and_disclosed(self) -> None:
-        from backend.services.chat_pipeline.stage_tools import strip_unverified_links
+        from server.services.chat_pipeline.stage_tools import strip_unverified_links
 
         reply = ("1. **ML Engineer at AWS** — [Job Posting Link](https://aws.amazon.com/careers/jobsearch-listing/254697/)\n"
                  "2. **Docs** — see https://learn.microsoft.com/en-us/azure/devops/?view=azurermps-2.0\n"
@@ -174,14 +174,14 @@ class UnverifiedLinkTests(unittest.TestCase):
         self.assertIn("I removed 2 links I couldn't verify", out)
 
     def test_links_from_results_or_documents_are_kept(self) -> None:
-        from backend.services.chat_pipeline.stage_tools import strip_unverified_links
+        from server.services.chat_pipeline.stage_tools import strip_unverified_links
 
         known = "URL: https://jobs.example.com/view/123?src=ddg\n"
         reply = "Apply here: [ML Engineer](https://jobs.example.com/view/123?src=ddg)."
         self.assertEqual(strip_unverified_links(reply, known), reply)
 
     def test_text_without_links_is_untouched(self) -> None:
-        from backend.services.chat_pipeline.stage_tools import strip_unverified_links
+        from server.services.chat_pipeline.stage_tools import strip_unverified_links
 
         self.assertEqual(strip_unverified_links("No links here.", ""), "No links here.")
 

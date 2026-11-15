@@ -8,10 +8,10 @@ async def verify_tool_result(tool_name: str, args: dict, result: str, user_messa
 
     context: what the user already shared (recent turns, attached documents) —
     needed for follow-ups like "links for these" or "which fits me best".
-    guidelines: the matching skill's answer instructions (skills/<id>/SKILL.md).
+    guidelines: the matching skill's answer instructions (server/skills/<id>/SKILL.md).
     """
-    from backend.services.llm import ollama
-    from backend.services.response_formatter import ensure_references
+    from server.services.llm import ollama
+    from server.services.response_formatter import ensure_references
 
     if tool_name in ("web_search", "web_research", "web_fetch", "browser_read"):
         query_hint = user_message or args.get("query") or args.get("url", "")

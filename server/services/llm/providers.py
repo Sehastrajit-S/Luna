@@ -4,8 +4,8 @@ from typing import AsyncGenerator
 
 import httpx
 
-from backend.config import settings
-from backend.services.llm.context_window import _clip_middle, estimate_tokens, fit_context
+from server.config import settings
+from server.services.llm.context_window import _clip_middle, estimate_tokens, fit_context
 
 _TIMEOUT = httpx.Timeout(connect=10.0, read=300.0, write=30.0, pool=5.0)
 
@@ -19,7 +19,7 @@ def _openai_headers(api_key: str) -> dict[str, str]:
 
 def _ollama_unreachable() -> None:
     """Let the model selector re-probe right away when the chosen Ollama server stops answering."""
-    from backend.services.llm import selector
+    from server.services.llm import selector
     selector.on_connect_error()
 
 
@@ -42,7 +42,7 @@ async def _stream_ollama(
     # already fitted (the chat pipeline) pass through unchanged.
     ctx = num_ctx or settings.llm_context_window
     max_output = num_predict or settings.llm_max_output_tokens
-    from backend.services.llm import selector
+    from server.services.llm import selector
     think, predict = selector.ollama_think_options(settings.ollama_model, max_output)
     fitted = fit_context(system_prompt, messages, context_window=ctx, max_output_tokens=max_output)
     full_messages = [{"role": "system", "content": fitted.system_prompt}] + fitted.messages
@@ -312,7 +312,7 @@ async def _complete_ollama(prompt: str, system: str, temperature: float) -> str:
     if system:
         messages.append({"role": "system", "content": system})
     messages.append({"role": "user", "content": _clip_middle(prompt, max(512, room))})
-    from backend.services.llm import selector
+    from server.services.llm import selector
     think, predict = selector.ollama_think_options(settings.ollama_model, max_output)
     try:
         async with httpx.AsyncClient(timeout=_TIMEOUT) as client:

@@ -1,10 +1,10 @@
-"""Skill runtime registry: use cases are declared as data in skills/<id>/.
+"""Skill runtime registry: use cases are declared as data in server/skills/<id>/.
 
 The backend stays generic; everything specific to a use case (when it
 applies, what to ask, where to look, how to judge results, how to answer)
 lives in the skill folder.
 
-A search skill is a normal Luna skill folder (skills/<id>/) whose skill.json
+A search skill is a normal Luna skill folder (server/skills/<id>/) whose skill.json
 has a "search" block, e.g.:
 
     "search": {
@@ -77,7 +77,7 @@ class SearchSkill:
 
 
 def _skill_dirs() -> list[Path]:
-    from backend.services.skill_manager import SKILL_DIRS
+    from server.services.skill_manager import SKILL_DIRS
     return SKILL_DIRS
 
 
@@ -181,7 +181,7 @@ async def choose_skill_with_model(request: str, history: list[dict] | None = Non
         "Which skill fits this request best? Answer with the skill id only, or none if no skill clearly fits."
     )
     try:
-        from backend.services.llm import ollama
+        from server.services.llm import ollama
         raw = await asyncio.wait_for(
             ollama.complete(prompt=prompt, system="You route requests to skills. Answer with one id or none.",
                             temperature=0.0),

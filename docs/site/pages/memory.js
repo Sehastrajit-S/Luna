@@ -59,7 +59,7 @@ export default function Memory() {
         <h3>How facts are extracted</h3>
         <p>
           The <code>memory_maintenance</code> background process runs every 5 minutes. It scans recent
-          conversations that haven't been processed yet, sends them to <code>backend/services/fact_extractor.py</code>,
+          conversations that haven't been processed yet, sends them to <code>server/services/fact_extractor.py</code>,
           and stores the results. The extractor uses a lightweight LLM prompt to identify facts.
         </p>
 
@@ -105,7 +105,7 @@ export default function Memory() {
       <section>
         <h2 id="personality">Personality engine</h2>
         <p>
-          <code>backend/services/personality.py</code> maintains a state vector that adapts Luna's
+          <code>server/services/personality/</code> maintains a state vector that adapts Luna's
           response tone in real time. The vector has five dimensions:
         </p>
 
@@ -144,7 +144,7 @@ export default function Memory() {
 
         <Callout type="note" title="Compaction threshold">
           <p>By default, conversations longer than 40 messages trigger compaction. This is configurable
-          in <code>backend/processes/memory_maintenance/</code>.</p>
+          in <code>server/processes/memory_maintenance/</code>.</p>
         </Callout>
       </section>
 

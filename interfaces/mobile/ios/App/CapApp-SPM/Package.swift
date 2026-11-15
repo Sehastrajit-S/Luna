@@ -12,7 +12,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", exact: "8.4.0"),
-        .package(name: "CapacitorPreferences", path: "..\..\..\..\node_modules\@capacitor\preferences")
+        .package(name: "CapacitorPreferences", path: "../../../../../node_modules/@capacitor/preferences")
     ],
     targets: [
         .target(

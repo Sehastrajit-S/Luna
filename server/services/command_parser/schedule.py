@@ -101,7 +101,7 @@ async def extract_item(user_message: str, history: list[dict]) -> dict | None:
         + f"Latest user message: {user_message[:400]}\n\nJSON:"
     )
     try:
-        from backend.services.llm import ollama
+        from server.services.llm import ollama
         raw = await asyncio.wait_for(ollama.complete(prompt=prompt, system=SYSTEM, temperature=0.0), EXTRACT_TIMEOUT_S)
         match = re.search(r"\{.*\}", raw or "", re.DOTALL)
         data = json.loads(match.group(0)) if match else None

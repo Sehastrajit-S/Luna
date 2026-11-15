@@ -116,8 +116,8 @@ export default function StateEngineService() {
 ) -> UserState`}</code></pre>
         </CodeFile>
         <CodeFile label="example.py">
-          <pre><code>{`from backend.services.state_engine import state_engine
-from backend.models.database import SessionLocal
+          <pre><code>{`from server.services.state_engine import state_engine
+from server.models.database import SessionLocal
 
 db = SessionLocal()
 state = state_engine.update(
@@ -217,7 +217,7 @@ print(state_engine.narrative_summary(db))
           created at module import. Import it anywhere in the backend:
         </p>
         <CodeFile label="example.py">
-          <pre><code>{`from backend.services.state_engine import state_engine, UserState
+          <pre><code>{`from server.services.state_engine import state_engine, UserState
 
 # Check current state without a DB call
 print(state_engine.current_state)    # UserState.NORMAL

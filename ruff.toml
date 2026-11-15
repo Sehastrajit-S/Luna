@@ -1,6 +1,6 @@
 # L.U.N.A. — Ruff linter configuration
-# Run: ruff check backend/
-# Fix: ruff check backend/ --fix
+# Run: ruff check server/
+# Fix: ruff check server/ --fix
 
 [lint]
 select = [
@@ -25,13 +25,13 @@ ignore = [
 [lint.per-file-ignores]
 # Allow bare exceptions in these files temporarily while they're migrated.
 # REMOVE files from this list as they are fixed.
-"backend/services/voice/*" = ["BLE001"]
-"backend/services/spotify.py" = ["BLE001"]
-"backend/services/state_engine/*" = ["BLE001"]
-"backend/services/system_controls/*" = ["BLE001"]
-"backend/services/app_launcher/*" = ["BLE001"]
-"backend/services/media_context.py" = ["BLE001"]
-"backend/services/screen_perception.py" = ["BLE001"]
+"server/services/voice/*" = ["BLE001"]
+"server/services/spotify.py" = ["BLE001"]
+"server/services/state_engine/*" = ["BLE001"]
+"server/services/system_controls/*" = ["BLE001"]
+"server/services/app_launcher/*" = ["BLE001"]
+"server/services/media_context.py" = ["BLE001"]
+"server/services/screen_perception.py" = ["BLE001"]
 
 [format]
 quote-style = "double"

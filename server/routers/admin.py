@@ -47,9 +47,9 @@ from typing import Literal
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from sqlalchemy.orm import Session
 
-from backend.config import DATA_DIR, settings
-from backend.models.database import get_db
-import backend.services.db_manager as db_mgr
+from server.config import DATA_DIR, settings
+from server.models.database import get_db
+import server.services.db_manager as db_mgr
 
 logger = logging.getLogger(__name__)
 
@@ -325,7 +325,7 @@ def list_providers(request: Request):
 
 
 def _current_model() -> str:
-    from backend.services.llm import ollama as llm
+    from server.services.llm import ollama as llm
     return llm.model
 
 

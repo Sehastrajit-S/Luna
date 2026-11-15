@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 
-from backend.services.tool_registry import TOOL_REGISTRY
+from server.services.tool_registry import TOOL_REGISTRY
 
 TOOL_SEARCH = "tool_search"
 

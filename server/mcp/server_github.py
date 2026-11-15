@@ -5,11 +5,11 @@ Exposes: list_repos, list_issues, create_issue, list_prs, get_pr, add_comment, c
 Requires: github_token in .env
 
 Run:
-    python -m backend.mcp.server_github
+    python -m server.mcp.server_github
 """
 import json
 from mcp.server.fastmcp import FastMCP
-from backend.services import github as gh
+from server.services import github as gh
 
 mcp = FastMCP("luna-github")
 

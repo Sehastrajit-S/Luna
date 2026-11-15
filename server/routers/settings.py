@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Body, Header, HTTPException
 
-from backend.services.settings_store import SettingsError, read_settings, token_ok, update_settings
+from server.services.settings_store import SettingsError, read_settings, token_ok, update_settings
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 

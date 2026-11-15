@@ -81,17 +81,17 @@ MODE="${MODE:-1}"
 
 case "$MODE" in
   2)
-    COMPOSE_FILES="-f compose.yml -f compose.gpu.yml"
+    COMPOSE_FILES="-f deploy/compose.yml -f deploy/compose.gpu.yml"
     ok "Mode: Local + GPU"
     warn "Requires: NVIDIA driver + nvidia-container-toolkit on host."
     ;;
   3)
-    COMPOSE_FILES="-f compose.cloud.yml"
+    COMPOSE_FILES="-f deploy/compose.cloud.yml"
     ok "Mode: Cloud LLM"
     warn "Set llm_provider, openai_base_url, openai_api_key, and openai_model in .env."
     ;;
   *)
-    COMPOSE_FILES="-f compose.yml"
+    COMPOSE_FILES="-f deploy/compose.yml"
     ok "Mode: Local (CPU Ollama)"
     ;;
 esac

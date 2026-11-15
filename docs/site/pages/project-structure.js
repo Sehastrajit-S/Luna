@@ -34,7 +34,7 @@ const RAW_TREE = {
   desc: 'Repository root. Contains all workspace packages, config files, and Docker Compose definitions.',
   children: [
     {
-      name: 'backend/', type: 'folder',
+      name: 'server/', type: 'folder',
       desc: 'FastAPI Python backend — all server logic, LLM calls, services, routers, and background workers.',
       children: [
         { name: 'main.py', type: 'file', desc: 'FastAPI app bootstrap. Mounts all routers, adds the rate limiting middleware, sets up CORS, and starts background processes on startup. Add new routers here.' },
@@ -114,8 +114,8 @@ const RAW_TREE = {
       ]
     },
     {
-      name: 'frontend/', type: 'folder',
-      desc: 'React + Vite + TypeScript UI. Compiled to frontend/dist/ for production. In dev, proxies /api/* to localhost:8899.',
+      name: 'interfaces/web/', type: 'folder',
+      desc: 'React + Vite + TypeScript UI. Compiled to interfaces/web/dist/ for production. In dev, proxies /api/* to localhost:8899.',
       children: [
         {
           name: 'src/', type: 'folder',
@@ -182,7 +182,7 @@ const RAW_TREE = {
       ]
     },
     {
-      name: 'docs-site/', type: 'folder',
+      name: 'docs/site/', type: 'folder',
       desc: 'This documentation website. Built with Next.js, deployed to Vercel.',
       children: [
         { name: 'pages/', type: 'folder', desc: 'Next.js pages — one file per documentation page. Each page wraps content in DocsLayout which provides the sidebar, TOC panel, and top bar.', children: [] },
@@ -209,7 +209,7 @@ const RAW_TREE = {
     { name: 'compose.gpu.yml', type: 'file', desc: 'GPU overlay. Extends compose.yml to add NVIDIA runtime and GPU device reservations to the Ollama container.' },
     { name: 'compose.cloud.yml', type: 'file', desc: 'Cloud LLM compose file. Starts only the Luna service (no Ollama container). Used when llm_provider is a cloud provider (anthropic, google, groq, etc.).' },
     { name: 'compose.business.yml', type: 'file', desc: 'Business variant compose file. Forces luna_variant=business, host=0.0.0.0, and rate_limit_enabled=true. Includes a commented nginx block for HTTPS/TLS termination.' },
-    { name: 'package.json', type: 'file', desc: 'Root workspace package.json. Defines all npm run scripts (dev, backend, build, docker, etc.) and the luna bin entry for npm link. Lists docs-site as a workspace package.' },
+    { name: 'package.json', type: 'file', desc: 'Root workspace package.json. Defines all npm run scripts (dev, backend, build, docker, etc.) and the luna bin entry for npm link. Lists docs/site as a workspace package.' },
     { name: 'architecture.svg', type: 'file', desc: 'System architecture diagram showing the three-layer structure (Electron → React → FastAPI) and how components connect.' },
   ]
 };
@@ -318,11 +318,11 @@ export default function ProjectStructure() {
   const [selected, setSelected] = useState(null);
   const [expanded, setExpanded] = useState(() => new Set([
     TREE.path,
-    TREE.path + 'backend/',
-    TREE.path + 'backend/routers/',
-    TREE.path + 'backend/services/',
-    TREE.path + 'frontend/',
-    TREE.path + 'frontend/src/',
+    TREE.path + 'server/',
+    TREE.path + 'server/routers/',
+    TREE.path + 'server/services/',
+    TREE.path + 'interfaces/web/',
+    TREE.path + 'interfaces/web/src/',
   ]));
 
   const onSelect = (node) => setSelected(node);
@@ -427,8 +427,8 @@ export default function ProjectStructure() {
         </div>
 
         <p style={{ marginTop: 12, fontSize: 13, opacity: 0.5 }}>
-          Tip: <code>data/</code> is gitignored — never commit it. <code>backend/</code> is Python,
-          <code>frontend/</code> is TypeScript.
+          Tip: <code>data/</code> is gitignored — never commit it. <code>server/</code> is Python,
+          <code>interfaces/web/</code> is TypeScript.
         </p>
       </section>
 
@@ -439,20 +439,20 @@ export default function ProjectStructure() {
         <table>
           <thead><tr><th>File</th><th>What to do here</th></tr></thead>
           <tbody>
-            <tr><td><code>backend/main.py</code></td><td>Mount new FastAPI routers.</td></tr>
-            <tr><td><code>backend/config.py</code></td><td>Add new .env settings as typed fields.</td></tr>
-            <tr><td><code>backend/services/tool_registry.py</code></td><td>Register new tools with a default permission mode.</td></tr>
-            <tr><td><code>backend/services/llm.py</code></td><td>Add a new LLM provider streaming generator.</td></tr>
-            <tr><td><code>backend/processes/registry.py</code></td><td>Register new background workers.</td></tr>
-            <tr><td><code>frontend/src/App.tsx</code></td><td>Add new top-level view modes.</td></tr>
-            <tr><td><code>frontend/src/store/index.ts</code></td><td>Add new global state slices and actions.</td></tr>
+            <tr><td><code>server/main.py</code></td><td>Mount new FastAPI routers.</td></tr>
+            <tr><td><code>server/config.py</code></td><td>Add new .env settings as typed fields.</td></tr>
+            <tr><td><code>server/services/tool_registry.py</code></td><td>Register new tools with a default permission mode.</td></tr>
+            <tr><td><code>server/services/llm/</code></td><td>Add a new LLM provider streaming generator.</td></tr>
+            <tr><td><code>server/processes/registry.py</code></td><td>Register new background workers.</td></tr>
+            <tr><td><code>interfaces/web/src/App.tsx</code></td><td>Add new top-level view modes.</td></tr>
+            <tr><td><code>interfaces/web/src/store/index.ts</code></td><td>Add new global state slices and actions.</td></tr>
             <tr><td><code>electron/main.js</code></td><td>Add native menus, IPC handlers, or OS integrations.</td></tr>
-            <tr><td><code>cli/luna.mjs</code></td><td>Add new developer CLI subcommands.</td></tr>
+            <tr><td><code>interfaces/cli/luna.mjs</code></td><td>Add new developer CLI subcommands.</td></tr>
           </tbody>
         </table>
 
         <Callout type="info" title="Where new code belongs">
-          <p>Routes go in <code>backend/routers/</code>. Business logic goes in <code>backend/services/</code>.
+          <p>Routes go in <code>server/routers/</code>. Business logic goes in <code>server/services/</code>.
           Routers should be thin — validate input, call a service, return the result.
           Never put complex logic directly in a router.</p>
         </Callout>

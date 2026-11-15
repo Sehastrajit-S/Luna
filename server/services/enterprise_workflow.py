@@ -11,10 +11,10 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from backend.config import settings
-from backend.services import github, jira, slack
-from backend.services.audit_log import record_audit
-from backend.services.coding_agent import stream_coding_agent
+from server.config import settings
+from server.services import github, jira, slack
+from server.services.audit_log import record_audit
+from server.services.coding_agent import stream_coding_agent
 
 
 @dataclass
@@ -258,9 +258,9 @@ async def _run_coding_agent(workspace: Path, bug_query: str, context: str) -> Wo
 
 async def _run_test_command(workspace: Path, command: str) -> WorkflowStep:
     env = os.environ.copy()
-    utilities = str((workspace / "utilities").resolve())
+    repo_root = str(workspace.resolve())
     existing = env.get("PYTHONPATH", "")
-    env["PYTHONPATH"] = utilities if not existing else f"{utilities}{os.pathsep}{existing}"
+    env["PYTHONPATH"] = repo_root if not existing else f"{repo_root}{os.pathsep}{existing}"
 
     proc = await asyncio.to_thread(
         subprocess.run,

@@ -10,7 +10,7 @@ class LunaScheduler:
     def start(self):
         if self._running:
             return
-        from backend.processes.registry import iter_processes
+        from server.processes.registry import iter_processes
         for process in iter_processes():
             if process.register_scheduler:
                 process.register_scheduler(self.scheduler)

@@ -1,5 +1,5 @@
 """Health platform integration service."""
-from backend.services.health_integrations.models import (
+from server.services.health_integrations.models import (
     ACTIVE_MINUTES, BLOOD_OXYGEN, BMI, BODY_FAT_PCT, BP_DIASTOLIC,
     BP_SYSTOLIC, CALORIES, DISTANCE_KM, HEART_RATE, HRV, METRIC_UNITS,
     READINESS_SCORE, RESTING_HR, RESPIRATORY_RATE, SKIN_TEMP, SLEEP_AWAKE,
@@ -7,13 +7,13 @@ from backend.services.health_integrations.models import (
     STEPS, STRESS_SCORE, VO2_MAX, WEIGHT_KG, WORKOUT,
     HealthIntegrationError, HealthMetricPoint,
 )
-from backend.services.health_integrations.db import (
+from server.services.health_integrations.db import (
     daily_summary, get_sync_status, persist, query_metrics,
 )
-from backend.services.health_integrations.webhooks import (
+from server.services.health_integrations.webhooks import (
     parse_apple_health_export, parse_samsung_health_export,
 )
-from backend.services.health_integrations.sync import (
+from server.services.health_integrations.sync import (
     PLATFORM_CONFIGURED, PLATFORM_OAUTH, PLATFORM_SYNC,
     integration_status, sync_all,
 )

@@ -5,11 +5,11 @@ Exposes tools for Outlook, Calendar, OneDrive, To Do.
 Requires: microsoft_workspace_access_token in .env
 
 Run:
-    python -m backend.mcp.server_microsoft
+    python -m server.mcp.server_microsoft
 """
 import json
 from mcp.server.fastmcp import FastMCP
-from backend.services.workspace_integrations import microsoft_workspace
+from server.services.workspace_integrations import microsoft_workspace
 
 mcp = FastMCP("luna-microsoft")
 

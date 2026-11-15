@@ -14,4 +14,4 @@ process_id/
 
 `process.py` owns metadata and registration. `jobs.py` owns scheduled/background behavior. Add `types.py` or helper files when the process grows.
 
-Register the process module in `backend/processes/registry.py`.
+Register the process module in `server/processes/registry.py`.

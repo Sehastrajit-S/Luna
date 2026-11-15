@@ -9,25 +9,25 @@ Public API — import from here:
   get_clipboard, set_clipboard
   get_system_info
 """
-from backend.services.system_controls.audio import (
+from server.services.system_controls.audio import (
     get_volume,
     set_volume,
     mute_audio,
     unmute_audio,
 )
-from backend.services.system_controls.display import (
+from server.services.system_controls.display import (
     get_brightness,
     set_brightness,
     turn_off_display,
 )
-from backend.services.system_controls.power import (
+from server.services.system_controls.power import (
     lock_screen,
     sleep_system,
     shutdown_system,
     restart_system,
 )
-from backend.services.system_controls.clipboard import get_clipboard, set_clipboard
-from backend.services.system_controls.info import get_system_info
+from server.services.system_controls.clipboard import get_clipboard, set_clipboard
+from server.services.system_controls.info import get_system_info
 
 __all__ = [
     "get_volume", "set_volume", "mute_audio", "unmute_audio",

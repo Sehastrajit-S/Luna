@@ -3,7 +3,7 @@ import type { CapacitorConfig } from '@capacitor/cli'
 const config: CapacitorConfig = {
   appId: 'com.luna.companion',
   appName: 'Luna',
-  webDir: 'dist',
+  webDir: '../web/dist',
   server: {
     // Use https scheme on Android so fetch() works without mixed-content blocks
     androidScheme: 'https',

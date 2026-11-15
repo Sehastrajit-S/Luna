@@ -12,9 +12,9 @@ from typing import Optional
 
 import httpx
 from sqlalchemy.orm import Session
-from backend.services.llm import ollama
-from backend.services.memory_manager import MemoryManager
-from backend.services.command_parser.commands import find_open_task, find_upcoming_event, save_event, save_task
+from server.services.llm import ollama
+from server.services.memory_manager import MemoryManager
+from server.services.command_parser.commands import find_open_task, find_upcoming_event, save_event, save_task
 
 logger = logging.getLogger(__name__)
 
@@ -181,7 +181,7 @@ async def extract_facts_from_conversation(
     conversation_id: int,
     memory: MemoryManager,
 ) -> list[dict]:
-    from backend.models.database import CalendarEvent, Task
+    from server.models.database import CalendarEvent, Task
     try:
         system = EXTRACTION_SYSTEM.replace(
             "{_extraction_examples}", _build_extraction_examples()
@@ -277,7 +277,7 @@ async def extract_facts_from_conversation(
 
         # Queue proactive notes for auto-created calendar/task items
         if events_created or tasks_created:
-            from backend.services.scheduler import proactive_queue
+            from server.services.scheduler import proactive_queue
             if events_created:
                 for title in events_created:
                     proactive_queue.append(f"Added to your calendar: {title}.")

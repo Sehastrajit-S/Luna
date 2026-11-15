@@ -4,7 +4,7 @@ Exposes: list_facts, search_facts, add_fact
 Resources: memory://facts, memory://personality
 
 Run:
-    python -m backend.mcp.server_memory
+    python -m server.mcp.server_memory
 """
 import json
 from datetime import datetime, timezone
@@ -13,7 +13,7 @@ from mcp.server.fastmcp import FastMCP
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-from backend.config import DATA_DIR, settings
+from server.config import DATA_DIR, settings
 
 mcp = FastMCP("luna-memory")
 

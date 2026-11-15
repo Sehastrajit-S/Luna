@@ -8,12 +8,12 @@ from pathlib import Path
 
 from fastapi import BackgroundTasks
 
-from backend.config import DATA_DIR, settings
-from backend.models.database import Message
-from backend.services.command_parser import parse_commands, execute_commands
-from backend.services.chat_background import post_conversation_processing, track_activity_bg
-from backend.services.chat_pipeline.context import ChatContext
-from backend.services.response_formatter import strip_cards
+from server.config import DATA_DIR, settings
+from server.models.database import Message
+from server.services.command_parser import parse_commands, execute_commands
+from server.services.chat_background import post_conversation_processing, track_activity_bg
+from server.services.chat_pipeline.context import ChatContext
+from server.services.response_formatter import strip_cards
 
 logger = logging.getLogger(__name__)
 
@@ -56,14 +56,14 @@ async def finalize(ctx: ChatContext, background_tasks: BackgroundTasks) -> None:
     # Code Luna wrote becomes part of the conversation's working state.
     if "```" in full_response:
         try:
-            from backend.services.session_state import record_artifacts
+            from server.services.session_state import record_artifacts
             record_artifacts(ctx.db, ctx.conv.id, luna_msg.id, ctx.user_message, full_response)
         except Exception as e:
             logger.warning("Could not record code artifacts: %s", e)
 
     # ── Routing-decision log (training data for a learned router) ──────────
     try:
-        from backend.services.decision_log import record_turn
+        from server.services.decision_log import record_turn
         user_turns = [m.content for m in ctx.db.query(Message.content)
                       .filter(Message.conversation_id == ctx.conv.id, Message.role == "user")
                       .order_by(Message.id)]

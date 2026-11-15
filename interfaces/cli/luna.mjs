@@ -18,7 +18,7 @@ import { stdin as input, stdout as output } from 'node:process'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const root      = resolve(__dirname, '..')
+const root      = resolve(__dirname, '..', '..')
 const isWin     = platform() === 'win32'
 const cliNpmPackage = 'luna-workspace'
 const cliGithubPackage = 'github:Sehastrajit-S/Luna'
@@ -93,12 +93,12 @@ const COMMANDS = {
   backend: {
     group: 'Dev',
     summary: 'Start only the FastAPI backend',
-    run: () => python(['backend/server.py', ...rest]),
+    run: () => python(['server/server.py', ...rest]),
   },
   frontend: {
     group: 'Dev',
     summary: 'Start only the Vite dev server (mobile React UI)',
-    run: () => npm(['run', 'dev', '--workspace=frontend', ...rest]),
+    run: () => npm(['run', 'dev', '--workspace=interfaces/web', ...rest]),
   },
 
   // ── Docker ──
@@ -160,7 +160,7 @@ const COMMANDS = {
     group: 'Diagnostics',
     summary: 'List registered background processes',
     run: () => python(['-c',
-      'from backend.processes.registry import list_processes; import json; print(json.dumps(list_processes(), indent=2))',
+      'from server.processes.registry import list_processes; import json; print(json.dumps(list_processes(), indent=2))',
     ]),
   },
   health: {
@@ -253,7 +253,7 @@ const COMMANDS = {
   docs: {
     group: 'Docs',
     summary: 'Start the docs site (Next.js dev server)',
-    run: () => npm(['--prefix', 'docs-site', 'run', 'dev']),
+    run: () => npm(['--prefix', 'docs/site', 'run', 'dev']),
   },
 
   // ── Utility ──
@@ -325,7 +325,7 @@ function webUi({ lan = false } = {}) {
   console.log(`  ${c.bold}Luna web UI${c.reset}  ${c.cyan}${link}${c.reset}`)
   if (lan) console.log(`  ${c.dim}On other devices: http://<this-pc-ip>:${port}  (saving settings asks for the token)${c.reset}`)
   console.log()
-  python(['backend/server.py', ...rest])
+  python(['server/server.py', ...rest])
 }
 
 // ── Runners ───────────────────────────────────────────────────────────────────
@@ -393,7 +393,7 @@ async function setup() {
   const envPath = join(root, '.env')
   if (!existsSync(envPath)) {
     const templateName = variant === 'business' ? '.env.business.example' : '.env.personal.example'
-    const ex = join(root, templateName)
+    const ex = join(root, 'deploy', templateName)
     const fallback = join(root, '.env.example')
     const src = existsSync(ex) ? ex : fallback
     if (!existsSync(src)) { err('.env example not found.'); rl.close(); process.exit(1) }
@@ -411,7 +411,7 @@ async function setup() {
   // ── Node deps ────────────────────────────────────────────────────────────────
   head('Installing Node dependencies...')
   runSync(isWin ? 'npm.cmd' : 'npm', ['install'])
-  runSync(isWin ? 'npm.cmd' : 'npm', ['install', '--prefix', 'frontend'])
+  runSync(isWin ? 'npm.cmd' : 'npm', ['install'])
   ok('Node dependencies installed')
 
   // ── Python venv ───────────────────────────────────────────────────────────────
@@ -426,7 +426,7 @@ async function setup() {
 
   const venvPython = venvPythonPath()
   runSync(venvPython, ['-m', 'pip', 'install', '--upgrade', 'pip', '--quiet'])
-  runSync(venvPython, ['-m', 'pip', 'install', '-r', 'backend/requirements.txt', '--quiet'])
+  runSync(venvPython, ['-m', 'pip', 'install', '-r', 'server/requirements.txt', '--quiet'])
   ok('Python dependencies installed')
 
   // ── Ollama models (personal only — business typically uses cloud) ─────────────
@@ -478,14 +478,14 @@ async function setup() {
 function install() {
   head('Installing Node dependencies...')
   runSync(isWin ? 'npm.cmd' : 'npm', ['install'])
-  runSync(isWin ? 'npm.cmd' : 'npm', ['install', '--prefix', 'frontend'])
+  runSync(isWin ? 'npm.cmd' : 'npm', ['install'])
   ok('Node done')
 
   const venvPython = venvPythonPath()
 
   if (existsSync(venvPython)) {
     head('Installing Python dependencies...')
-    runSync(venvPython, ['-m', 'pip', 'install', '-r', 'backend/requirements.txt', '--quiet'])
+    runSync(venvPython, ['-m', 'pip', 'install', '-r', 'server/requirements.txt', '--quiet'])
     ok('Python done')
   } else {
     warn('No .venv found — run: luna setup')
@@ -652,7 +652,7 @@ ${c.reset}  Large Unified Nexus Mind AI
   if (!_usingExistingBackend) {
     info('Starting backend...')
     const py = isWin ? 'python' : 'python3'
-    _backendProc = spawn(py, ['backend/server.py'], {
+    _backendProc = spawn(py, ['server/server.py'], {
       cwd: root,
       stdio: ['ignore', 'pipe', 'pipe'],
       shell: false,
@@ -1739,9 +1739,9 @@ function check() {
   const cacheDir = join(tmpdir(), `luna-pycache-${process.pid}`)
   if (existsSync(cacheDir)) rmSync(cacheDir, { recursive: true, force: true })
   const files = [
-    'backend/main.py', 'backend/server.py',
-    'backend/routers/luna.py', 'backend/routers/agent.py',
-    'backend/services/llm.py', 'backend/processes/registry.py',
+    'server/main.py', 'server/server.py',
+    'server/routers/luna.py', 'server/routers/agent.py',
+    'server/services/llm/__init__.py', 'server/processes/registry.py',
   ]
   const child = spawn(isWin ? 'python' : 'python3',
     ['-m', 'py_compile', ...files],
@@ -1763,7 +1763,7 @@ function check() {
 
 // ── Clean ─────────────────────────────────────────────────────────────────────
 function clean() {
-  const targets = ['data', 'dist', 'dist-electron', 'frontend/dist', '.pytest_cache']
+  const targets = ['data', 'dist', 'dist-electron', 'interfaces/web/dist', '.pytest_cache']
   const files   = ['.env', 'run.log', 'run_err.log', 'server.log', 'server_err.log', 'cloudflared.exe']
   for (const t of [...targets, ...files]) {
     const p = join(root, t)

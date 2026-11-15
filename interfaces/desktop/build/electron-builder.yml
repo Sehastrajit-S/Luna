@@ -3,17 +3,17 @@ productName: Luna
 copyright: Copyright (c) 2026 L.U.N.A. contributors
 directories:
   buildResources: ../resources
-  output: ../../dist-electron
+  output: ../../../dist-electron
 npmRebuild: false
 files:
   - src/**/*
   - ../resources/**
 extraResources:
-  - from: ../../frontend/dist
-    to: frontend/dist
+  - from: ../../../interfaces/web/dist
+    to: interfaces/web/dist
     filter: ["**/*"]
-  - from: ../../backend
-    to: backend
+  - from: ../../../server
+    to: server
     filter: ["**/*", "!__pycache__/**", "!*.pyc"]
 win:
   artifactName: Luna-Setup-${version}.${ext}

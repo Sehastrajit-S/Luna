@@ -8,9 +8,9 @@ import logging
 import re
 from dataclasses import dataclass, field
 
-from backend.config import settings
-from backend.services.skill_runtime.registry import SearchSkill
-from backend.services.skill_runtime import sources
+from server.config import settings
+from server.services.skill_runtime.registry import SearchSkill
+from server.services.skill_runtime import sources
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +69,7 @@ async def extract_slots(skill: SearchSkill, request: str, history: list[dict], d
     )
     raw = ""
     try:
-        from backend.services.llm import ollama
+        from server.services.llm import ollama
         raw = await asyncio.wait_for(
             ollama.complete(prompt=prompt, system="You extract search parameters. Output only valid JSON.",
                             temperature=0.0),
@@ -163,9 +163,9 @@ def build_queries(skill: SearchSkill, request: str, slots: dict) -> list[str]:
 
 
 async def _answer(request: str, queries: list[str], results_text: str, context: str, guidelines: str) -> str:
-    from backend.services.chat_pipeline.stage_tools import strip_unverified_links
-    from backend.services.response_formatter import attach_result_links, dedupe_linked_items, link_citations
-    from backend.services.tool_runner import verify_tool_result
+    from server.services.chat_pipeline.stage_tools import strip_unverified_links
+    from server.services.response_formatter import attach_result_links, dedupe_linked_items, link_citations
+    from server.services.tool_runner import verify_tool_result
 
     answer = await verify_tool_result(
         "web_search", {"query": queries[0] if queries else request, "queries": queries}, results_text, request,
@@ -241,7 +241,7 @@ async def extract_item_names(request: str, results_text: str, what: str, limit: 
         "the results, most relevant first, one per line, no numbering."
     )
     try:
-        from backend.services.llm import ollama
+        from server.services.llm import ollama
         raw = await asyncio.wait_for(ollama.complete(prompt=prompt, system=NAMES_SYSTEM, temperature=0.0),
                                      timeout=EXTRACT_TIMEOUT_S)
     except Exception as e:
@@ -291,7 +291,7 @@ async def run_web_search(request: str, history: list[dict] | None = None, contex
                          candidate: str | None = None) -> SkillRun:
     """No skill applies: resolve the request into standalone queries (one per
     item for "links for these"), search, drop dead links, answer from results."""
-    from backend.services.search_query import resolve_search_queries
+    from server.services.search_query import resolve_search_queries
 
     history = history or []
     queries = await resolve_search_queries(request, history, candidate=candidate)

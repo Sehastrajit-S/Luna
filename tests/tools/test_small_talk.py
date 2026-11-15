@@ -4,7 +4,7 @@ from datetime import datetime
 
 class SmallTalkClassifierTests(unittest.TestCase):
     def test_pure_small_talk_is_detected(self) -> None:
-        from backend.services.command_parser.small_talk import classify_small_talk
+        from server.services.command_parser.small_talk import classify_small_talk
 
         cases = {
             "Hi": "greeting",
@@ -34,7 +34,7 @@ class SmallTalkClassifierTests(unittest.TestCase):
                 self.assertEqual(classify_small_talk(message, user_name="Sehas"), expected)
 
     def test_real_requests_still_go_to_the_model(self) -> None:
-        from backend.services.command_parser.small_talk import classify_small_talk
+        from server.services.command_parser.small_talk import classify_small_talk
 
         for message in (
             "hi, can you check my email",
@@ -53,7 +53,7 @@ class SmallTalkClassifierTests(unittest.TestCase):
                 self.assertIsNone(classify_small_talk(message))
 
     def test_ack_after_a_question_is_an_answer_not_small_talk(self) -> None:
-        from backend.services.command_parser.small_talk import classify_small_talk
+        from server.services.command_parser.small_talk import classify_small_talk
 
         self.assertIsNone(classify_small_talk("cool", prev_assistant="Want me to open it in your browser?"))
         self.assertEqual(classify_small_talk("cool", prev_assistant="Opened it in your browser."), "ack")
@@ -61,7 +61,7 @@ class SmallTalkClassifierTests(unittest.TestCase):
         self.assertEqual(classify_small_talk("thanks", prev_assistant="Anything else?"), "thanks")
 
     def test_replies_are_time_aware_and_personal(self) -> None:
-        from backend.services.command_parser.small_talk import small_talk_reply
+        from server.services.command_parser.small_talk import small_talk_reply
 
         morning = small_talk_reply("greeting", "Sehas", now=datetime(2026, 9, 23, 8, 0))
         late = small_talk_reply("greeting", "Sehas", now=datetime(2026, 9, 23, 1, 30))
@@ -77,14 +77,14 @@ class SmallTalkPipelineTests(unittest.TestCase):
     def test_fast_path_sets_response_without_llm(self) -> None:
         from types import SimpleNamespace
         from unittest import mock
-        from backend.services.chat_pipeline import stage_small_talk
+        from server.services.chat_pipeline import stage_small_talk
 
         ctx = SimpleNamespace(user_message="good morning", conv=SimpleNamespace(id=1), db=None,
                               small_talk=False, dispatched=False, direct_command_type=None,
                               prev_luna=None, full_response="", full_response_parts=[], attachment_ids=[])
         with mock.patch.object(stage_small_talk, "_previous_assistant_message", return_value="Hi!"), \
-             mock.patch("backend.services.llm.ollama.stream_chat") as stream, \
-             mock.patch("backend.services.llm.ollama.complete") as complete:
+             mock.patch("server.services.llm.ollama.stream_chat") as stream, \
+             mock.patch("server.services.llm.ollama.complete") as complete:
             handled = stage_small_talk.answer_small_talk(ctx)
         self.assertTrue(handled)
         self.assertTrue(ctx.small_talk and ctx.dispatched)
@@ -96,7 +96,7 @@ class SmallTalkPipelineTests(unittest.TestCase):
     def test_small_talk_with_a_file_goes_to_the_model(self) -> None:
         from types import SimpleNamespace
         from unittest import mock
-        from backend.services.chat_pipeline import stage_small_talk
+        from server.services.chat_pipeline import stage_small_talk
 
         ctx = SimpleNamespace(user_message="thanks", conv=SimpleNamespace(id=1), db=None,
                               small_talk=False, dispatched=False, attachment_ids=["a" * 32])

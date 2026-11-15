@@ -40,7 +40,7 @@ git remote add upstream https://github.com/Sehastrajit-S/Luna.git`}</code></pre>
             <CodeFile label="terminal">
               <pre><code>{`npm install
 cd frontend && npm install && cd ..
-pip install -r backend/requirements.txt`}</code></pre>
+pip install -r server/requirements.txt`}</code></pre>
             </CodeFile>
           </Step>
 
@@ -88,9 +88,9 @@ git checkout -b feature/my-feature upstream/main`}</code></pre>
 
         <h3>Backend (Python)</h3>
         <ul>
-          <li>Routers in <code>backend/routers/</code> must be <strong>thin</strong> — validate the request, call a service, return the result. No business logic in routers.</li>
-          <li>All business logic goes in <code>backend/services/</code>. Service functions should be importable and testable in isolation.</li>
-          <li>Background jobs belong in <code>backend/processes/</code> and must register themselves in <code>registry.py</code>.</li>
+          <li>Routers in <code>server/routers/</code> must be <strong>thin</strong> — validate the request, call a service, return the result. No business logic in routers.</li>
+          <li>All business logic goes in <code>server/services/</code>. Service functions should be importable and testable in isolation.</li>
+          <li>Background jobs belong in <code>server/processes/</code> and must register themselves in <code>registry.py</code>.</li>
           <li>Use type hints on all function signatures.</li>
           <li>Never use <code>print()</code> for logging — use the Python <code>logging</code> module.</li>
           <li>Avoid non-ASCII characters in log messages — causes <code>UnicodeEncodeError</code> on Windows cp1252.</li>
@@ -98,10 +98,10 @@ git checkout -b feature/my-feature upstream/main`}</code></pre>
 
         <h3>Frontend (TypeScript / React)</h3>
         <ul>
-          <li>Components live in <code>frontend/src/components/&lt;Feature&gt;/</code> — group by domain, not by type.</li>
-          <li>All backend communication goes through typed wrappers in <code>frontend/src/api/</code>. No raw <code>fetch</code> calls in components.</li>
-          <li>Global state mutations go in <code>frontend/src/store/index.ts</code> via Zustand actions.</li>
-          <li>New reusable hooks go in <code>frontend/src/hooks/</code>.</li>
+          <li>Components live in <code>interfaces/web/src/components/&lt;Feature&gt;/</code> — group by domain, not by type.</li>
+          <li>All backend communication goes through typed wrappers in <code>interfaces/web/src/api/</code>. No raw <code>fetch</code> calls in components.</li>
+          <li>Global state mutations go in <code>interfaces/web/src/store/index.ts</code> via Zustand actions.</li>
+          <li>New reusable hooks go in <code>interfaces/web/src/hooks/</code>.</li>
           <li>Use TypeScript strictly — no <code>any</code> unless unavoidable, and document why.</li>
         </ul>
 

@@ -5,7 +5,7 @@ Chat with Luna, explain and fix code, and run web searches directly from VS Code
 ## Requirements
 
 Luna backend must be running (port 8899 by default).  
-Start it with the Luna desktop app or: `python backend/server.py`
+Start it with the Luna desktop app or: `python server/server.py`
 
 ## Install (Manual)
 

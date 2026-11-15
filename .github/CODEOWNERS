@@ -2,8 +2,8 @@
 # Uncomment and replace these examples after publishing the repository.
 #
 # * @your-org/maintainers
-# /backend/ @your-org/backend-maintainers
-# /frontend/ @your-org/frontend-maintainers
+# /server/ @your-org/server-maintainers
+# /interfaces/ @your-org/interface-maintainers
 # /electron/ @your-org/desktop-maintainers
 # /skills/ @your-org/skills-maintainers
 # /docs/ @your-org/docs-maintainers

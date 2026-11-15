@@ -1,9 +1,9 @@
 from datetime import datetime
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from backend.services.time_utils import to_utc_naive
-from backend.models.database import get_db, Task, CalendarEvent
-from backend.models.schemas import (
+from server.services.time_utils import to_utc_naive
+from server.models.database import get_db, Task, CalendarEvent
+from server.models.schemas import (
     TaskOut, TaskCreate, EventOut, EventCreate, StatusResponse
 )
 

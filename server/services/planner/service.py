@@ -10,14 +10,14 @@ from typing import Any, AsyncGenerator, Callable, Coroutine, Optional
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from backend.services.planner.models import (
+from server.services.planner.models import (
     CritiqueResult,
     Plan,
     PlanStatus,
     Step,
     StepStatus,
 )
-from backend.services.planner.prompts import _CRITIC_SCHEMA, _PLAN_SCHEMA
+from server.services.planner.prompts import _CRITIC_SCHEMA, _PLAN_SCHEMA
 
 ToolExecutorT = Callable[[str, dict], Coroutine[Any, Any, str]]
 LLMCompleteT  = Callable[[list[dict], float], Coroutine[Any, Any, str]]

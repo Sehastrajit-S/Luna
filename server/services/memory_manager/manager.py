@@ -10,9 +10,9 @@ import chromadb
 from chromadb.config import Settings as ChromaSettings
 from sqlalchemy.orm import Session
 
-from backend.config import settings
-from backend.models.database import Conversation, Fact, Message
-from backend.services.llm import ollama
+from server.config import settings
+from server.models.database import Conversation, Fact, Message
+from server.services.llm import ollama
 
 logger = logging.getLogger(__name__)
 
@@ -157,8 +157,8 @@ class MemoryManager:
         category: str,
         conversation_id,
     ):
-        from backend.models.database import FactRelationship, SessionLocal
-        from backend.services.contradiction_store import add as _store_note
+        from server.models.database import FactRelationship, SessionLocal
+        from server.services.contradiction_store import add as _store_note
 
         db = SessionLocal()
         try:
@@ -530,7 +530,7 @@ class MemoryManager:
         return q.order_by(Fact.updated_at.desc()).all()
 
     def get_upcoming_agenda(self) -> str:
-        from backend.models.database import CalendarEvent, Task
+        from server.models.database import CalendarEvent, Task
         now      = datetime.utcnow()
         tomorrow = now + timedelta(days=1)
 

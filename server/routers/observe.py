@@ -19,12 +19,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from backend.models.database import SessionLocal, get_db
-from backend.services.telemetry import get_metrics, get_traces, tracer
-from backend.services.memory_graph import MemoryGraph
-from backend.services.benchmark import BenchmarkRunner
-from backend.services.llm import LLMClient
-from backend.services.tool_registry import TOOL_REGISTRY
+from server.models.database import SessionLocal, get_db
+from server.services.telemetry import get_metrics, get_traces, tracer
+from server.services.memory_graph import MemoryGraph
+from server.services.benchmark import BenchmarkRunner
+from server.services.llm import LLMClient
+from server.services.tool_registry import TOOL_REGISTRY
 
 router = APIRouter(prefix="/api/observe", tags=["observe"])
 
@@ -44,7 +44,7 @@ async def _tool_executor(tool_name: str, args: dict) -> str:
     if tool_name not in SAFE_TOOLS:
         return f"[skipped — tool {tool_name!r} not in safe set]"
 
-    from backend.services import workspace, web_tools
+    from server.services import workspace, web_tools
     if tool_name == "workspace_list":
         items = workspace.list_workspace(args.get("path", ""))
         return str(items)
@@ -160,7 +160,7 @@ async def run_benchmark(
     Trigger a benchmark run.  Returns results immediately.
     Heavy suites (llm, planner) can take 10–60 seconds.
     """
-    from backend.services.memory_manager import MemoryManager
+    from server.services.memory_manager import MemoryManager
 
     llm     = _get_llm()
     memory  = MemoryManager(db)

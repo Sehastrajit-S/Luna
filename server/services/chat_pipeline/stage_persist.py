@@ -4,12 +4,12 @@ persist stage — Save the user message and resolve the conversation object.
 import logging
 from datetime import datetime
 
-from backend.config import settings
-from backend.models.database import Conversation, Message
-from backend.services.personality import assess_user_sentiment
-from backend.services.shared_context import get_active_conversation_id, set_active_conversation_id
-from backend.services.chat_pipeline.context import ChatContext
-from backend.services.files import link_to_message
+from server.config import settings
+from server.models.database import Conversation, Message
+from server.services.personality import assess_user_sentiment
+from server.services.shared_context import get_active_conversation_id, set_active_conversation_id
+from server.services.chat_pipeline.context import ChatContext
+from server.services.files import link_to_message
 
 logger = logging.getLogger(__name__)
 

@@ -10,7 +10,7 @@ from tests.tools import _bootstrap  # noqa: F401
 
 class EnterpriseWorkflowToolTests(unittest.IsolatedAsyncioTestCase):
     async def test_enterprise_workflow_requires_bug_query(self) -> None:
-        from backend.services.enterprise_workflow import run_enterprise_bugfix_workflow
+        from server.services.enterprise_workflow import run_enterprise_bugfix_workflow
 
         result = await run_enterprise_bugfix_workflow({})
 
@@ -18,7 +18,7 @@ class EnterpriseWorkflowToolTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("bug_query is required", result.summary)
 
     async def test_enterprise_workflow_blocks_dirty_repo_before_llm(self) -> None:
-        from backend.services.enterprise_workflow import run_enterprise_bugfix_workflow
+        from server.services.enterprise_workflow import run_enterprise_bugfix_workflow
 
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
@@ -30,7 +30,7 @@ class EnterpriseWorkflowToolTests(unittest.IsolatedAsyncioTestCase):
             self._git(root, "commit", "-m", "init")
             (root / "dirty.txt").write_text("dirty\n", encoding="utf-8")
 
-            with patch("backend.services.enterprise_workflow.stream_coding_agent", new=AsyncMock()):
+            with patch("server.services.enterprise_workflow.stream_coding_agent", new=AsyncMock()):
                 result = await run_enterprise_bugfix_workflow({
                     "bug_query": "login bug",
                     "workspace_root": str(root),

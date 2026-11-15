@@ -5,8 +5,8 @@ import json
 import uuid
 from typing import Literal
 
-from backend.config import DATA_DIR
-from backend.services.tool_registry import RiskLevel, get_tool
+from server.config import DATA_DIR
+from server.services.tool_registry import RiskLevel, get_tool
 
 Decision = Literal["allow", "confirm", "block"]
 PolicyMode = Literal["allow", "confirm", "block"]
@@ -39,7 +39,7 @@ class PermissionManager:
         return "block"
 
     def list_policy(self) -> dict:
-        from backend.services.tool_registry import TOOL_REGISTRY
+        from server.services.tool_registry import TOOL_REGISTRY
 
         tools = {}
         for name, tool in TOOL_REGISTRY.items():

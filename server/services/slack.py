@@ -6,7 +6,7 @@ from typing import Any
 
 import httpx
 
-from backend.config import reload_settings, settings
+from server.config import reload_settings, settings
 
 
 class SlackNotConfiguredError(RuntimeError):

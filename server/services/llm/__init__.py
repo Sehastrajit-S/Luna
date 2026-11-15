@@ -1,5 +1,5 @@
 """Luna LLM layer: multi-provider streaming + completion client."""
-from backend.services.llm.providers import (
+from server.services.llm.providers import (
     _TIMEOUT,
     _provider,
     _openai_headers,
@@ -15,7 +15,7 @@ from backend.services.llm.providers import (
     _complete_anthropic,
     _complete_google,
 )
-from backend.services.llm.client import LLMClient, ollama
+from server.services.llm.client import LLMClient, ollama
 
 __all__ = [
     "LLMClient",

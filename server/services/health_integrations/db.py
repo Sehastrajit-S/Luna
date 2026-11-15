@@ -8,8 +8,8 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from backend.models.database import HealthMetric, HealthSync
-from backend.services.health_integrations.models import HealthMetricPoint
+from server.models.database import HealthMetric, HealthSync
+from server.services.health_integrations.models import HealthMetricPoint
 
 log = logging.getLogger(__name__)
 

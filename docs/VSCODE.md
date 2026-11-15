@@ -30,7 +30,7 @@ Open the command palette and run `Tasks: Run Task`:
 
 Open the Run and Debug panel:
 
-- `LUNA: Backend`: runs `backend/server.py` under the Python debugger.
+- `LUNA: Backend`: runs `server/server.py` under the Python debugger.
 - `LUNA: CLI Processes`: debugs process registry listing.
 - `LUNA: CLI Doctor`: debugs CLI environment checks.
 

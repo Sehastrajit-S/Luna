@@ -21,14 +21,14 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import AsyncGenerator
 
-from backend.config import settings
-from backend.services.agent_loop.grounding import required_calls
-from backend.services.agent_loop.tool_selection import TOOL_SEARCH, search_tools, select_tools, tool_search_spec
-from backend.services.llm.context_window import estimate_tokens, fit_context
-from backend.services.llm.tool_calling import AssistantTurn, ToolCall, chat_step, tool_result_message
-from backend.services.permission_manager import permission_manager
-from backend.services.response_formatter import format_luna_response, strip_cards
-from backend.services.tool_registry import get_tool, model_tool_spec, validate_tool_args
+from server.config import settings
+from server.services.agent_loop.grounding import required_calls
+from server.services.agent_loop.tool_selection import TOOL_SEARCH, search_tools, select_tools, tool_search_spec
+from server.services.llm.context_window import estimate_tokens, fit_context
+from server.services.llm.tool_calling import AssistantTurn, ToolCall, chat_step, tool_result_message
+from server.services.permission_manager import permission_manager
+from server.services.response_formatter import format_luna_response, strip_cards
+from server.services.tool_registry import get_tool, model_tool_spec, validate_tool_args
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +65,7 @@ def _relevant_cards(comments: list[str], answer: str) -> str:
     A lookup can return cards for things the answer ends up dismissing (a
     search for "Laya" surfaced a massager); showing those is worse than none.
     """
-    from backend.services.skill_runtime.runner import embed_cards
+    from server.services.skill_runtime.runner import embed_cards
 
     answer_words = set(_CARD_WORD_RE.findall((answer or "").lower()))
     kept: list[dict] = []
@@ -87,7 +87,7 @@ _TIMED_TOOLS = {"create_task", "create_event"}
 def _with_skill_ids(spec: dict) -> dict:
     """use_skill may only name an installed lookup skill: list them as an enum
     (with what each is for) so the model can't pick a non-lookup skill."""
-    from backend.services.skill_runtime.registry import load_search_skills
+    from server.services.skill_runtime.registry import load_search_skills
 
     skills = load_search_skills()
     if not skills:
@@ -179,7 +179,7 @@ def _with_saved(text: str, saved: list[str], titles: list[str]) -> str:
     The model wrote "scheduled for next Tuesday" over a row saved on Monday; the
     read-back lines from save_and_verify replace its sentences about the save.
     """
-    from backend.services.command_parser.schedule import CLAIM_RE
+    from server.services.command_parser.schedule import CLAIM_RE
 
     lowered = [t.lower() for t in titles if t]
     kept = []
@@ -250,7 +250,7 @@ class AgentLoop:
             if name in ("use_skill", "web_search"):
                 content = await self._lookup(name, args)
             else:
-                from backend.services.tool_runner import execute_tool_call
+                from server.services.tool_runner import execute_tool_call
                 content = await execute_tool_call({"tool": name, "args": args}, self.ctx.db, self.ctx.conv.id)
         except Exception as e:                   # a tool must never take the loop down
             logger.error("Tool %s failed: %s", name, e, exc_info=True)
@@ -258,15 +258,15 @@ class AgentLoop:
 
         content = str(content if content is not None else "")
         if name == "google_workspace" and args.get("service") == "gmail":
-            from backend.services.chat_pipeline.stage_tools import gmail_widget_from_result
+            from server.services.chat_pipeline.stage_tools import gmail_widget_from_result
             self.ctx.gmail_widget_cmd = gmail_widget_from_result(content) or self.ctx.gmail_widget_cmd
         self.seen[signature] = content
         return ToolOutcome(call, content, _is_error(content))
 
     async def _lookup(self, name: str, args: dict) -> str:
         """Web lookups go through the skill runtime (grounded, link-checked)."""
-        from backend.services.chat_pipeline.stage_dispatch import _search_answer_context
-        from backend.services.skill_runtime import get_search_skill, pick_search_skill, run_search_skill, run_web_search
+        from server.services.chat_pipeline.stage_dispatch import _search_answer_context
+        from server.services.skill_runtime import get_search_skill, pick_search_skill, run_search_skill, run_web_search
 
         request = str(args.get("request") or args.get("query") or "").strip()
         history = getattr(self.ctx, "history", None) or []
@@ -294,7 +294,7 @@ class AgentLoop:
             "type": "confirmation_required", "confirm_id": confirm_id, "message": message,
             "tool": call.name, "args": call.args, "call_id": call.id,
         })
-        from backend.services.chat_pipeline.stage_tools import _wait_for_confirmation
+        from server.services.chat_pipeline.stage_tools import _wait_for_confirmation
         approved = await _wait_for_confirmation(confirm_id, timeout_seconds=settings.agent_confirm_timeout_s)
         await self.events.put({"type": "confirmation_resolved", "confirm_id": confirm_id, "approved": approved})
         return None if approved else "The user declined this action. Don't retry it; tell them it wasn't done."
@@ -316,7 +316,7 @@ class AgentLoop:
             if problem:
                 return ToolOutcome(call, problem, True)
         if call.name == "use_skill":
-            from backend.services.skill_runtime.registry import get_search_skill, load_search_skills
+            from server.services.skill_runtime.registry import get_search_skill, load_search_skills
             if get_search_skill(str(args.get("skill", ""))) is None:
                 ids = ", ".join(s.id for s in load_search_skills())
                 return ToolOutcome(call, f"Error: '{args.get('skill')}' is not a lookup skill. "
@@ -470,7 +470,7 @@ class AgentLoop:
         and the middle parts most relevant to the question instead."""
         if not self.base_messages:
             return
-        from backend.services.files.retrieval import condense_long_text
+        from server.services.files.retrieval import condense_long_text
 
         latest = self.base_messages[-1]
         content = str(latest.get("content", ""))
@@ -487,7 +487,7 @@ class AgentLoop:
 
     def _missing_reads(self) -> list[ToolCall]:
         """Calls this request needs (reads, or an explicit "forget …") that haven't run yet."""
-        from backend.services.tool_registry import TOOL_REGISTRY
+        from server.services.tool_registry import TOOL_REGISTRY
 
         attached = bool(getattr(self.ctx, "attachment_ids", None))
         calls = []
@@ -516,7 +516,7 @@ class AgentLoop:
         # right after them is still a promise, not an answer.
         if self.tools_used[self.auto_calls:] or getattr(self.ctx, "attachment_ids", None):
             return False
-        from backend.services.chat_pipeline.stage_tools import _promises_lookup
+        from server.services.chat_pipeline.stage_tools import _promises_lookup
         return _promises_lookup(content or "", "")
 
     async def _model_step(self, messages: list[dict], tools: list[dict] | None, stream_tokens: bool) -> AssistantTurn:

@@ -1,4 +1,4 @@
-from backend.services.scheduler import (
+from server.services.scheduler import (
     confidence_decay,
     daily_memory_compaction,
     daily_personality_decay,

@@ -4,9 +4,9 @@ import httpx
 from fastapi import APIRouter, Body, Header
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
-from backend.config import BASE_DIR, settings
-from backend.services.audit_log import record_audit
-from backend.services.workspace_integrations import (
+from server.config import BASE_DIR, settings
+from server.services.audit_log import record_audit
+from server.services.workspace_integrations import (
     WorkspaceIntegrationError,
     google_workspace,
     integration_status,

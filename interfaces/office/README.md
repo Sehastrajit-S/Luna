@@ -22,7 +22,7 @@ Brings Luna's chat, memory, and AI capabilities into Word, Excel, and PowerPoint
 
 ### Step 1 — start Luna
 ```
-python -m backend.main
+python -m server.main
 ```
 
 The add-in files are served automatically at `http://localhost:8899/addin/office/`.

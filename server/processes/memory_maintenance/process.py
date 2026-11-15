@@ -1,7 +1,7 @@
 from apscheduler.triggers.cron import CronTrigger
 
-from backend.processes.registry import ProcessDef
-from backend.processes.memory_maintenance import jobs
+from server.processes.registry import ProcessDef
+from server.processes.memory_maintenance import jobs
 
 
 def register_scheduler(scheduler):

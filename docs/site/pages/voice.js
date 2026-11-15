@@ -26,7 +26,7 @@ export default function Voice() {
           No audio leaves your machine.
         </p>
 
-        <p>The pipeline runs as the <code>voice_runtime</code> background process (<code>backend/processes/voice_runtime/</code>)
+        <p>The pipeline runs as the <code>voice_runtime</code> background process (<code>server/processes/voice_runtime/</code>)
         and exposes its state through <code>/api/voice/</code>. The frontend's <code>VoiceOrb</code> component
         connects to this state and drives the animated listening indicator.</p>
 
@@ -99,7 +99,7 @@ wake_word=hey luna`}</code></pre>
         </p>
 
         <p>The recording indicator uses the <code>VoiceOrb</code> component
-        (<code>frontend/src/components/Voice/VoiceOrb.tsx</code>) which animates based on audio amplitude
+        (<code>interfaces/web/src/components/Voice/VoiceOrb.tsx</code>) which animates based on audio amplitude
         from the <code>useVoiceRecorder</code> hook.</p>
 
         <Callout type="tip" title="Keyboard shortcut">
@@ -147,7 +147,7 @@ for i, voice in enumerate(engine.getProperty('voices')):
         <h2 id="emotion">Emotion detection</h2>
         <p>
           Luna analyses the emotional tone of transcribed speech to update the personality engine.
-          The analysis runs in <code>backend/services/voice.py</code> using keyword heuristics and
+          The analysis runs in <code>server/services/voice/</code> using keyword heuristics and
           sentiment scoring — no external model is required.
         </p>
         <p>Detected emotions influence the <code>emotional_support</code> dimension of the personality

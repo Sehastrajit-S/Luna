@@ -3,11 +3,11 @@ import random
 from datetime import datetime
 from typing import Optional
 from sqlalchemy.orm import Session
-from backend.models.database import PersonalityState, FeedbackLog
-from backend.services.personality.constants import (
+from server.models.database import PersonalityState, FeedbackLog
+from server.services.personality.constants import (
     MOODS, MOOD_EXPRESSION, VERBOSITY_LABELS, HUMOR_LABELS, FORMALITY_LABELS,
 )
-from backend.services.personality.sentiment import (
+from server.services.personality.sentiment import (
     _label, assess_user_sentiment, compute_time_mood,
 )
 

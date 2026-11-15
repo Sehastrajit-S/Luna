@@ -29,13 +29,13 @@ from pathlib import Path
 import httpx
 from sqlalchemy.orm import Session
 
-from backend.config import DATA_DIR, settings
-from backend.models.database import Attachment
-from backend.services.files.extract import (
+from server.config import DATA_DIR, settings
+from server.models.database import Attachment
+from server.services.files.extract import (
     IMAGE_EXT, MAX_UPLOAD_BYTES, ExtractedFile, Section, UnsupportedFile, check_supported, extract_file,
 )
-from backend.services.files import retrieval
-from backend.services.llm.context_window import estimate_tokens
+from server.services.files import retrieval
+from server.services.llm.context_window import estimate_tokens
 
 logger = logging.getLogger(__name__)
 
@@ -147,7 +147,7 @@ async def _vision_describe(model: str, png: bytes) -> str:
 
 async def _describe_image(data: bytes, ext: str) -> ExtractedFile:
     """Image → exact text via OCR + a description from the vision model."""
-    from backend.services.files.ocr import OcrUnavailable, ocr_image
+    from server.services.files.ocr import OcrUnavailable, ocr_image
 
     out = ExtractedFile(kind="image", mime_type=IMAGE_MIME.get(ext, "image/png"), page_count=1)
     try:
@@ -313,7 +313,7 @@ async def summarize_document(attachment: Attachment, doc: ExtractedFile) -> str:
     async with lock:
         if cache.exists():
             return cache.read_text(encoding="utf-8")
-        from backend.services.llm import ollama
+        from server.services.llm import ollama
 
         group_chars = int((settings.llm_context_window - settings.llm_max_output_tokens - 1500) * 3.5)
         groups, current = [], ""

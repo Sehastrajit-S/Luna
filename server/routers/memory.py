@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from backend.models.database import get_db, Fact, FactRelationship
-from backend.models.schemas import FactOut, FactCreate, StatusResponse
-from backend.services.memory_manager import MemoryManager
-from backend.services.personality import PersonalityEngine
-from backend.models.schemas import PersonalityOut
+from server.models.database import get_db, Fact, FactRelationship
+from server.models.schemas import FactOut, FactCreate, StatusResponse
+from server.services.memory_manager import MemoryManager
+from server.services.personality import PersonalityEngine
+from server.models.schemas import PersonalityOut
 
 router = APIRouter(prefix="/api/memory", tags=["memory"])
 
@@ -94,7 +94,7 @@ def get_memory_graph(db: Session = Depends(get_db)):
 
 @router.get("/activities")
 def get_activities(db: Session = Depends(get_db)):
-    from backend.services.activity_tracker import ActivityTracker, Activity
+    from server.services.activity_tracker import ActivityTracker, Activity
     tracker = ActivityTracker(db)
     acts = tracker.get_recent_activities(20)
     return [

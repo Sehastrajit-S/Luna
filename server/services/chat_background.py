@@ -8,12 +8,12 @@ from pathlib import Path
 
 from sqlalchemy.orm import Session
 
-from backend.config import DATA_DIR, settings
-from backend.models.database import Conversation, Message, get_db
-from backend.services.memory_manager import MemoryManager
-from backend.services.personality import PersonalityEngine, compute_implicit_reward
-from backend.services.activity_tracker import ActivityTracker
-from backend.services.fact_extractor import (
+from server.config import DATA_DIR, settings
+from server.models.database import Conversation, Message, get_db
+from server.services.memory_manager import MemoryManager
+from server.services.personality import PersonalityEngine, compute_implicit_reward
+from server.services.activity_tracker import ActivityTracker
+from server.services.fact_extractor import (
     extract_facts_from_conversation,
     extract_emotional_arc,
     extract_session_facts,
@@ -196,7 +196,7 @@ async def post_conversation_processing(
                 recent_text = format_conversation_for_extraction(msgs)
                 facts = await extract_session_facts(recent_text)
                 if facts:
-                    from backend.services.session_state import add_session_facts
+                    from server.services.session_state import add_session_facts
                     add_session_facts(db, conversation_id, facts)
 
                 arc = await extract_emotional_arc(conv_text)

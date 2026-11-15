@@ -34,7 +34,7 @@ def _pdf_with_pages(pages: list[str]) -> bytes:
 
 class ExtractionTests(unittest.TestCase):
     def test_pdf_pages_are_labelled(self) -> None:
-        from backend.services.files.extract import extract_file
+        from server.services.files.extract import extract_file
 
         doc = extract_file(_pdf_with_pages(["Revenue grew 12 percent", "Churn fell to 3 percent"]), "report.pdf")
         self.assertEqual(doc.kind, "pdf")
@@ -46,7 +46,7 @@ class ExtractionTests(unittest.TestCase):
 
     def test_scanned_and_encrypted_pdfs_explain_themselves(self) -> None:
         from pypdf import PdfWriter
-        from backend.services.files.extract import UnsupportedFile, extract_file
+        from server.services.files.extract import UnsupportedFile, extract_file
 
         writer = PdfWriter()
         writer.add_blank_page(612, 792)
@@ -66,7 +66,7 @@ class ExtractionTests(unittest.TestCase):
 
     def test_docx_keeps_headings_and_tables(self) -> None:
         import docx
-        from backend.services.files.extract import extract_file
+        from server.services.files.extract import extract_file
 
         d = docx.Document()
         d.add_heading("Quarterly Plan", level=1)
@@ -84,7 +84,7 @@ class ExtractionTests(unittest.TestCase):
 
     def test_pptx_slides_and_notes(self) -> None:
         from pptx import Presentation
-        from backend.services.files.extract import extract_file
+        from server.services.files.extract import extract_file
 
         deck = Presentation()
         slide = deck.slides.add_slide(deck.slide_layouts[1])
@@ -101,7 +101,7 @@ class ExtractionTests(unittest.TestCase):
 
     def test_xlsx_and_csv_get_a_data_profile(self) -> None:
         from openpyxl import Workbook
-        from backend.services.files.extract import extract_file
+        from server.services.files.extract import extract_file
 
         wb = Workbook(); ws = wb.active; ws.title = "Sales"
         ws.append(["region", "revenue"])
@@ -121,7 +121,7 @@ class ExtractionTests(unittest.TestCase):
 
     def test_text_code_html_and_notebooks(self) -> None:
         import json
-        from backend.services.files.extract import extract_file
+        from server.services.files.extract import extract_file
 
         code = extract_file(("\n".join(f"line {i}" for i in range(400))).encode(), "big.py")
         self.assertEqual(code.sections[0].label, "lines 1–150")
@@ -134,7 +134,7 @@ class ExtractionTests(unittest.TestCase):
         self.assertIn("caf", latin.full_text)
 
     def test_unsupported_types_have_clear_messages(self) -> None:
-        from backend.services.files.extract import UnsupportedFile, check_supported
+        from server.services.files.extract import UnsupportedFile, check_supported
 
         with self.assertRaisesRegex(UnsupportedFile, "save it as .docx"):
             check_supported("old.doc")
@@ -157,7 +157,7 @@ def _text_image(lines: list[str], size=(1400, 500)):
 
 class OcrTests(unittest.TestCase):
     def test_scanned_pdf_is_read_with_ocr(self) -> None:
-        from backend.services.files.extract import extract_file
+        from server.services.files.extract import extract_file
 
         page1 = _text_image(["Lease Agreement", "Monthly rent: $2,350 due on the 1st"])
         page2 = _text_image(["Security deposit: $4,700", "Term: 12 months"])
@@ -172,7 +172,7 @@ class OcrTests(unittest.TestCase):
 
     def test_mixed_pdf_only_ocrs_scanned_pages(self) -> None:
         from pypdf import PdfReader, PdfWriter
-        from backend.services.files.extract import extract_file
+        from server.services.files.extract import extract_file
 
         scanned = io.BytesIO()
         _text_image(["Appendix B scanned signature page"]).save(scanned, "PDF")
@@ -183,8 +183,8 @@ class OcrTests(unittest.TestCase):
             writer.add_page(page)
         out = io.BytesIO(); writer.write(out)
 
-        with mock.patch("backend.services.files.ocr.ocr_image", wraps=__import__(
-                "backend.services.files.ocr", fromlist=["ocr_image"]).ocr_image) as spy:
+        with mock.patch("server.services.files.ocr.ocr_image", wraps=__import__(
+                "server.services.files.ocr", fromlist=["ocr_image"]).ocr_image) as spy:
             doc = extract_file(out.getvalue(), "mixed.pdf")
         self.assertEqual(spy.call_count, 1)                   # only page 2 went through OCR
         self.assertIn("Typed page", doc.sections[0].text)
@@ -192,7 +192,7 @@ class OcrTests(unittest.TestCase):
         self.assertTrue(any("Page 2 was scanned" in w for w in doc.warnings))
 
     def test_image_gets_exact_ocr_text_plus_vision_description(self) -> None:
-        from backend.services.files import service
+        from server.services.files import service
 
         img = _text_image(["TypeError: cannot read properties of undefined", "at render (App.jsx:42)"])
         buf = io.BytesIO(); img.save(buf, "PNG")
@@ -211,7 +211,7 @@ class OcrTests(unittest.TestCase):
         self.assertFalse(doc.warnings)
 
     def test_vision_model_falls_back_to_best_installed(self) -> None:
-        from backend.services.files import service
+        from server.services.files import service
 
         with mock.patch.object(service, "_installed_models", new=mock.AsyncMock(return_value=["llava:13b", "moondream:latest"])):
             self.assertEqual(asyncio.run(service.pick_vision_model()), "llava:13b")
@@ -223,8 +223,8 @@ class AttachmentServiceTests(unittest.TestCase):
     def setUp(self) -> None:
         from sqlalchemy import create_engine, event
         from sqlalchemy.orm import sessionmaker
-        from backend.models.database import Base
-        from backend.services.files import service
+        from server.models.database import Base
+        from server.services.files import service
 
         self.tmp = Path(tempfile.mkdtemp())
         self.patch_root = mock.patch.object(service, "UPLOAD_ROOT", self.tmp)
@@ -240,13 +240,13 @@ class AttachmentServiceTests(unittest.TestCase):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def _conversation_with_message(self):
-        from backend.models.database import Conversation, Message
+        from server.models.database import Conversation, Message
         conv = Conversation(message_count=1); self.db.add(conv); self.db.commit()
         msg = Message(conversation_id=conv.id, role="user", content="see attached"); self.db.add(msg); self.db.commit()
         return conv, msg
 
     def test_small_file_is_sent_in_full_and_stays_for_follow_ups(self) -> None:
-        from backend.services.files import build_attachment_context, link_to_message, save_upload
+        from server.services.files import build_attachment_context, link_to_message, save_upload
 
         conv, msg = self._conversation_with_message()
         att = asyncio.run(save_upload(self.db, "report.pdf", _pdf_with_pages(["Revenue grew 12 percent"])))
@@ -263,10 +263,10 @@ class AttachmentServiceTests(unittest.TestCase):
         self.assertIn("Revenue grew 12 percent", later)
 
     def test_large_file_uses_relevant_excerpts_within_budget(self) -> None:
-        from backend.services.files import build_attachment_context, link_to_message, save_upload
-        from backend.services.files import retrieval
-        from backend.services.files.service import document_budget
-        from backend.services.llm.context_window import estimate_tokens
+        from server.services.files import build_attachment_context, link_to_message, save_upload
+        from server.services.files import retrieval
+        from server.services.files.service import document_budget
+        from server.services.llm.context_window import estimate_tokens
 
         conv, msg = self._conversation_with_message()
         pages = [f"Filler page {i} " + "lorem ipsum " * 400 for i in range(60)]
@@ -285,7 +285,7 @@ class AttachmentServiceTests(unittest.TestCase):
         self.assertLessEqual(estimate_tokens(block), document_budget() + 400)
 
     def test_cannot_claim_another_conversations_file_and_sent_files_are_locked(self) -> None:
-        from backend.services.files import link_to_message, save_upload
+        from server.services.files import link_to_message, save_upload
 
         conv_a, msg_a = self._conversation_with_message()
         conv_b, msg_b = self._conversation_with_message()
@@ -294,9 +294,9 @@ class AttachmentServiceTests(unittest.TestCase):
         self.assertEqual(link_to_message(self.db, [att.id], conv_b.id, msg_b.id), [])
 
     def test_deleting_a_chat_deletes_its_files(self) -> None:
-        from backend.models.database import Attachment
-        from backend.routers.chat import delete_conversation
-        from backend.services.files import link_to_message, save_upload
+        from server.models.database import Attachment
+        from server.routers.chat import delete_conversation
+        from server.services.files import link_to_message, save_upload
 
         conv, msg = self._conversation_with_message()
         att = asyncio.run(save_upload(self.db, "notes.md", b"# Notes\nremember the milk"))
@@ -310,9 +310,9 @@ class AttachmentServiceTests(unittest.TestCase):
 
     def test_unsent_uploads_are_swept_after_a_day(self) -> None:
         from datetime import datetime, timedelta, timezone
-        from backend.models.database import Attachment
-        from backend.services.files import link_to_message, save_upload
-        from backend.services.files.service import sweep_unsent_uploads
+        from server.models.database import Attachment
+        from server.services.files import link_to_message, save_upload
+        from server.services.files.service import sweep_unsent_uploads
 
         conv, msg = self._conversation_with_message()
         old_unsent = asyncio.run(save_upload(self.db, "old.txt", b"forgotten"))
@@ -330,7 +330,7 @@ class AttachmentServiceTests(unittest.TestCase):
         self.assertFalse((self.tmp / old_unsent.id).exists())
 
     def test_empty_upload_rejected(self) -> None:
-        from backend.services.files import UnsupportedFile, save_upload
+        from server.services.files import UnsupportedFile, save_upload
 
         with self.assertRaisesRegex(UnsupportedFile, "empty"):
             asyncio.run(save_upload(self.db, "empty.txt", b""))

@@ -1,5 +1,5 @@
-from backend.processes.registry import ProcessDef
-from backend.services.voice import voice_service
+from server.processes.registry import ProcessDef
+from server.services.voice import voice_service
 
 
 PROCESS = ProcessDef(

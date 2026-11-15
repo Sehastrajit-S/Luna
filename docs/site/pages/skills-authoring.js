@@ -22,7 +22,7 @@ export default function SkillsAuthoringPage() {
       <section>
         <h2 id="overview">Overview</h2>
         <p>
-          A skill is a folder under <code>skills/</code> containing a single
+          A skill is a folder under <code>server/skills/</code> containing a single
           <code>SKILL.md</code> file. No Python code is required for a basic skill —
           just a markdown file that tells the LLM how to behave when the skill is active.
           For skills that need a dedicated HTTP endpoint or custom logic, a Python
@@ -32,8 +32,8 @@ export default function SkillsAuthoringPage() {
 
       <section>
         <h2 id="structure">File structure</h2>
-        <CodeFile label="skills/my-skill/">
-          <pre><code>{`skills/
+        <CodeFile label="server/skills/my-skill/">
+          <pre><code>{`server/skills/
   my-skill/
     SKILL.md            ← required: instructions for the LLM
     handler.py          ← optional: custom Python endpoint
@@ -51,7 +51,7 @@ export default function SkillsAuthoringPage() {
           <li><strong>Trigger description</strong> — one or two sentences describing when to use this skill. Luna reads this to decide whether to invoke the skill for a given request.</li>
           <li><strong>Workflow rules</strong> — numbered steps the model should follow when the skill is active.</li>
         </ol>
-        <CodeFile label="skills/my-skill/SKILL.md — minimal">
+        <CodeFile label="server/skills/my-skill/SKILL.md — minimal">
           <pre><code>{`# My Skill
 
 Use this skill when the user asks to do X or Y.
@@ -91,9 +91,9 @@ Workflow:
         <h3>Adding a new tool to the registry</h3>
         <p>
           If your skill needs a tool that doesn't exist yet, register it in
-          <code>backend/services/tool_registry.py</code>:
+          <code>server/services/tool_registry.py</code>:
         </p>
-        <CodeFile label="backend/services/tool_registry.py">
+        <CodeFile label="server/services/tool_registry.py">
           <pre><code>{`{
     "name": "my_tool",
     "description": "Does something useful. Args: query (str).",
@@ -107,7 +107,7 @@ Workflow:
 }`}</code></pre>
         </CodeFile>
         <p>
-          Then handle it in <code>backend/services/tool_runner/executor.py</code> under
+          Then handle it in <code>server/services/tool_runner/executor.py</code> under
           the <code>execute_tool_call()</code> dispatcher.
         </p>
       </section>
@@ -120,11 +120,11 @@ Workflow:
           endpoint (e.g. the coding agent at <code>/api/coding/stream</code>), add
           a FastAPI router in the backend:
         </p>
-        <CodeFile label="backend/routers/my_skill.py">
+        <CodeFile label="server/routers/my_skill.py">
           <pre><code>{`from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
-from backend.models.database import get_db
+from server.models.database import get_db
 
 router = APIRouter()
 
@@ -136,15 +136,15 @@ async def my_skill_stream(payload: dict, db: Session = Depends(get_db)):
         yield 'data: {"type":"done"}\\n\\n'
     return StreamingResponse(generate(), media_type="text/event-stream")`}</code></pre>
         </CodeFile>
-        <CodeFile label="backend/main.py — register the router">
-          <pre><code>{`from backend.routers.my_skill import router as my_skill_router
+        <CodeFile label="server/main.py — register the router">
+          <pre><code>{`from server.routers.my_skill import router as my_skill_router
 app.include_router(my_skill_router)`}</code></pre>
         </CodeFile>
       </section>
 
       <section>
         <h2 id="example">Full example — price-tracker skill</h2>
-        <CodeFile label="skills/price-tracker/SKILL.md">
+        <CodeFile label="server/skills/price-tracker/SKILL.md">
           <pre><code>{`# Price Tracker
 
 Use this skill when the user asks to track, monitor, or compare prices for products,
@@ -174,8 +174,8 @@ Workflow:
       <section>
         <h2 id="loading">How skills are loaded</h2>
         <p>
-          At startup, <code>backend/services/skill_manager.py</code> walks
-          <code>skills/*/SKILL.md</code> and builds an in-memory registry. The registry
+          At startup, <code>server/services/skill_manager.py</code> walks
+          <code>server/skills/*/SKILL.md</code> and builds an in-memory registry. The registry
           is exposed to the LLM as a <code>list_skills</code> tool call result on the
           first turn of each conversation.
         </p>
@@ -184,7 +184,7 @@ Workflow:
           During development, restart the backend after editing a <code>SKILL.md</code>.
         </p>
         <CodeFile label="Python — access the registry directly">
-          <pre><code>{`from backend.services.skill_manager import list_skills, get_skill
+          <pre><code>{`from server.services.skill_manager import list_skills, get_skill
 
 skills = list_skills()         # all skills as dicts
 skill  = get_skill("research") # a single skill by folder name

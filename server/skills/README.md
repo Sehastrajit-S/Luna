@@ -13,7 +13,7 @@ When a user sends a message, Luna checks all installed skills and follows the ma
 - **how to format output** for the desktop app (`electron.md`) and terminal (`cli.md`)
 
 Luna loads skills from two places:
-- `skills/` — built-in skills (this folder)
+- `server/skills/` — built-in skills (this folder)
 - `data/workspace/skills/` — user-installed skills (created at runtime)
 
 ---
@@ -21,7 +21,7 @@ Luna loads skills from two places:
 ## Folder structure
 
 ```
-skills/
+server/skills/
 └── your-skill-name/
     ├── skill.json     ← required: metadata, permissions, tools
     ├── SKILL.md       ← required: instructions Luna follows
@@ -40,7 +40,7 @@ Only `skill.json` and `SKILL.md` are required. Luna works fine without the UI-sp
 Name it after what the skill does, lowercase with hyphens:
 
 ```
-skills/recipe-finder/
+server/skills/recipe-finder/
 ```
 
 ### 2. Write `skill.json`
@@ -207,14 +207,14 @@ A ready-to-copy template lives in [`_template/`](_template/). It contains all fo
 
 ```bash
 # from the repo root
-cp -r skills/_template skills/my-new-skill
+cp -r server/skills/_template server/skills/my-new-skill
 ```
 
 ---
 
 ## Contributing
 
-1. Copy `skills/_template/` into a new folder under `skills/`.
+1. Copy `server/skills/_template/` into a new folder under `server/skills/`.
 2. Fill in the four files — rename `_template` references to your skill name.
 3. Test locally against a few real prompts.
 4. Open a pull request with a short description of what the skill does and two or three example prompts that trigger it.

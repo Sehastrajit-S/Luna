@@ -43,7 +43,7 @@ microsoft_workspace_tenant_id=common
 microsoft_workspace_refresh_token=
 ```
 
-See [`integrations/google-workspace/`](../../integrations/google-workspace/) and [`integrations/office/`](../../integrations/office/) for platform-specific add-ons.
+See [`interfaces/google-workspace/`](../../integrations/google-workspace/) and [`interfaces/office/`](../../integrations/office/) for platform-specific add-ons.
 
 ## Files
 

@@ -9,15 +9,15 @@ import json
 import logging
 import re
 
-from backend.services.tool_runner import (
+from server.services.tool_runner import (
     execute_tool_call,
     verify_tool_result,
     parse_tool_call_json,
     strip_tool_call_json,
 )
-from backend.services.permission_manager import permission_manager
-from backend.services.search_query import resolve_search_query
-from backend.services.chat_pipeline.context import ChatContext
+from server.services.permission_manager import permission_manager
+from server.services.search_query import resolve_search_query
+from server.services.chat_pipeline.context import ChatContext
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +87,7 @@ async def process_tools(ctx: ChatContext) -> None:
 
     # ── Lookups go through the skill runtime ──────────────────────────────────
     # use_skill names a skill; a plain web_search is matched to the best skill
-    # (skills/*) or runs as a grounded general search.
+    # (server/skills/*) or runs as a grounded general search.
     if tool_name in ("use_skill", "web_search"):
         await _run_lookup(ctx, tool_name, args)
         return
@@ -136,7 +136,7 @@ async def finish_plain_reply(ctx: ChatContext) -> None:
     # and chose; only correct a reply that *claims* a save that never happened.
     # (Acting on the user's wording alone replaced a recall answer — "remind me:
     # what's the project called?" — with a junk task.)
-    from backend.services.command_parser.schedule import claims_saved
+    from server.services.command_parser.schedule import claims_saved
     if not {"create_task", "create_event"} & set(getattr(ctx, "tools_used", None) or []):
         if getattr(ctx, "route", "") != "agent_loop" or claims_saved(ctx.full_response):
             await _ensure_promised_action(ctx)
@@ -150,13 +150,13 @@ _ACTION_TAG_RE = re.compile(r"\[(?:LAUNCH|TASK|EVENT|SPOTIFY|BROWSE|MAP|WIDGET|F
 async def _ensure_promised_action(ctx: ChatContext) -> None:
     """Never let "your reminder's set" stand when nothing was saved: create the
     task/event from the conversation, or say plainly that it isn't saved yet."""
-    from backend.services.command_parser.schedule import extract_item, to_command, wants_saved
+    from server.services.command_parser.schedule import extract_item, to_command, wants_saved
 
     if not wants_saved(ctx.user_message, ctx.full_response):
         return
     item = await extract_item(ctx.user_message, getattr(ctx, "history", None) or [])
     command = to_command(item) if item else None
-    from backend.services.command_parser.schedule import MAX_CLAIM_CHARS, claims_saved, reply_prose
+    from server.services.command_parser.schedule import MAX_CLAIM_CHARS, claims_saved, reply_prose
     if command:
         logger.info("Reply promised a %s without a command — creating it: %s", item["kind"], command)
         if len(reply_prose(ctx.full_response)) > MAX_CLAIM_CHARS:
@@ -175,9 +175,9 @@ _SCHEDULE_TAG_RE = re.compile(r"\[(?:TASK|EVENT):[^\]]*\]", re.IGNORECASE)
 def _save_schedule_now(ctx: ChatContext) -> None:
     """Save [TASK]/[EVENT] tags before the reply is shown, verify each against the
     database, and let the reply say what is actually stored (or what failed)."""
-    from backend.services.command_parser import parse_commands
-    from backend.services.command_parser.commands import save_and_verify
-    from backend.services.command_parser.schedule import CLAIM_RE
+    from server.services.command_parser import parse_commands
+    from server.services.command_parser.commands import save_and_verify
+    from server.services.command_parser.schedule import CLAIM_RE
 
     reply = ctx.full_response or ""
     if not _SCHEDULE_TAG_RE.search(reply):
@@ -197,8 +197,8 @@ def _confirm_bare_actions(ctx: ChatContext) -> None:
     shows the user nothing. Say what is being done, from the tag itself."""
     if _ACTION_TAG_RE.sub("", ctx.full_response or "").strip():
         return
-    from backend.services.command_parser import parse_commands
-    from backend.services.command_parser.commands import describe_commands
+    from server.services.command_parser import parse_commands
+    from server.services.command_parser.commands import describe_commands
 
     try:
         summary = describe_commands(parse_commands(ctx.full_response, user_message=ctx.user_message), ctx.db)
@@ -211,8 +211,8 @@ def _confirm_bare_actions(ctx: ChatContext) -> None:
 
 
 async def _run_lookup(ctx: ChatContext, tool_name: str, args: dict) -> None:
-    from backend.services.chat_pipeline.stage_dispatch import _search_answer_context
-    from backend.services.skill_runtime import get_search_skill, pick_search_skill, run_search_skill, run_web_search
+    from server.services.chat_pipeline.stage_dispatch import _search_answer_context
+    from server.services.skill_runtime import get_search_skill, pick_search_skill, run_search_skill, run_web_search
 
     model_request = str(args.get("request") or args.get("query") or "").strip()
     user_request = ctx.user_message

@@ -9,7 +9,7 @@ from unittest import mock
 
 class SettingsStoreTests(unittest.TestCase):
     def setUp(self) -> None:
-        from backend.services import settings_store as store
+        from server.services import settings_store as store
 
         self.store = store
         self.tmp = Path(tempfile.mkdtemp())
@@ -77,7 +77,7 @@ class SettingsStoreTests(unittest.TestCase):
     def test_put_without_token_is_forbidden(self) -> None:
         from fastapi import FastAPI
         from fastapi.testclient import TestClient
-        from backend.routers.settings import router
+        from server.routers.settings import router
 
         app = FastAPI()
         app.include_router(router)
@@ -95,7 +95,7 @@ class ActivityCalendarTests(unittest.TestCase):
     def setUp(self) -> None:
         from sqlalchemy import create_engine
         from sqlalchemy.orm import sessionmaker
-        from backend.models.database import Base, Conversation, Message
+        from server.models.database import Base, Conversation, Message
 
         engine = create_engine("sqlite://")
         Base.metadata.create_all(engine)
@@ -107,7 +107,7 @@ class ActivityCalendarTests(unittest.TestCase):
         self.db.add(self.Message(conversation_id=conv.id, role=role, content=text, created_at=utc))
 
     def test_days_levels_topics_and_most_active(self) -> None:
-        from backend.services.activity_calendar import month_activity
+        from server.services.activity_calendar import month_activity
 
         conv = self.Conversation(title="SatPV outline"); self.db.add(conv); self.db.commit()
         for h in range(9):
@@ -125,7 +125,7 @@ class ActivityCalendarTests(unittest.TestCase):
         self.assertEqual(len(data["days"]), 30)
 
     def test_streak_counts_back_from_today_or_yesterday(self) -> None:
-        from backend.services.activity_calendar import current_streak
+        from server.services.activity_calendar import current_streak
 
         conv = self.Conversation(); self.db.add(conv); self.db.commit()
         today = date(2026, 9, 23)

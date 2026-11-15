@@ -28,10 +28,10 @@ export default function Environment() {
         </p>
         <CodeFile label="terminal">
           <pre><code>{`# Personal variant
-cp .env.personal.example .env
+cp deploy/.env.personal.example .env
 
 # Business variant
-cp .env.business.example .env`}</code></pre>
+cp deploy/.env.business.example .env`}</code></pre>
         </CodeFile>
         <Callout type="warn" title="Never commit .env">
           <p><code>.env</code> may contain API keys, your name, and local paths. It is gitignored by default.</p>

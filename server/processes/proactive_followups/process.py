@@ -1,7 +1,7 @@
 from apscheduler.triggers.interval import IntervalTrigger
 
-from backend.processes.registry import ProcessDef
-from backend.processes.proactive_followups import jobs
+from server.processes.registry import ProcessDef
+from server.processes.proactive_followups import jobs
 
 
 def register_scheduler(scheduler):

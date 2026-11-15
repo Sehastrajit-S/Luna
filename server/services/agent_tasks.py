@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from backend.config import DATA_DIR
+from server.config import DATA_DIR
 
 TASKS_PATH = DATA_DIR / "agent_tasks.json"
 

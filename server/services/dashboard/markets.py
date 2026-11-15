@@ -6,8 +6,8 @@ from typing import Optional
 
 import httpx
 
-from backend.config import settings
-from backend.services.dashboard.common import HEADERS, log
+from server.config import settings
+from server.services.dashboard.common import HEADERS, log
 
 US_SYMBOLS = ["TSLA", "AAPL", "NVDA", "MSFT", "AMZN", "SPY"]
 CRYPTO_IDS = {"BTC": "bitcoin", "ETH": "ethereum"}

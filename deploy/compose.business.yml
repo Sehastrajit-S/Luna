@@ -4,13 +4,13 @@
 # Rate limiting, JWT auth, and professional persona are enabled via .env.
 #
 # Quick start:
-#   cp .env.business.example .env
+#   cp deploy/.env.business.example .env
 #   # Edit .env — set jwt_secret, business_name, llm_provider
-#   docker compose -f compose.business.yml up -d
+#   docker compose -f deploy/compose.business.yml up -d
 #   open http://localhost:8899
 #
 # With NVIDIA GPU:
-#   docker compose -f compose.business.yml -f compose.gpu.yml up -d
+#   docker compose -f deploy/compose.business.yml -f deploy/compose.gpu.yml up -d
 #
 # Cloud LLM only (no Ollama):
 #   Remove the 'ollama' service and its depends_on below, set llm_provider=anthropic (etc.) in .env
@@ -35,14 +35,14 @@ services:
   # ── Luna — business backend + frontend ────────────────────────────────────────
   luna:
     build:
-      context: .
+      context: ..
       dockerfile: Dockerfile
     ports:
       - "8899:8899"
     env_file:
-      - path: .env
+      - path: ../.env
         required: true
-      - path: .env.business
+      - path: ../.env.business
         required: false
     environment:
       # Force business variant and production-safe defaults

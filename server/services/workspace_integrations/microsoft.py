@@ -3,8 +3,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from backend.config import settings
-from backend.services.workspace_integrations.base import (
+from server.config import settings
+from server.services.workspace_integrations.base import (
     MICROSOFT_GRAPH_BASE,
     WorkspaceIntegrationError,
     WorkspaceResponse,

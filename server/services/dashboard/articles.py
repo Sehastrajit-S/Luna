@@ -2,7 +2,7 @@ import re
 
 import httpx
 
-from backend.services.dashboard.common import HEADERS, log
+from server.services.dashboard.common import HEADERS, log
 
 
 async def fetch_article(url: str) -> dict:

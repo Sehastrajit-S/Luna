@@ -42,7 +42,7 @@ function createMainWindow() {
   win.on('leave-full-screen', () => win.webContents.send('window:fullscreen-changed', false))
 
   // Static UI scaffold for now (no chat/backend wiring yet) — swap this for
-  // the real frontend/dist build once this shell is ready to go live.
+  // the real interfaces/web/dist build once this shell is ready to go live.
   win.loadFile(path.join(__dirname, '..', '..', 'renderer', 'index.html'))
 
   return win

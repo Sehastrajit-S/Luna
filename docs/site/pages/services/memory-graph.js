@@ -52,8 +52,8 @@ export default function MemoryGraphService() {
       <section>
         <h2 id="init">Instantiation</h2>
         <CodeFile label="example.py">
-          <pre><code>{`from backend.services.memory_graph import MemoryGraph
-from backend.models.database import SessionLocal
+          <pre><code>{`from server.services.memory_graph import MemoryGraph
+from server.models.database import SessionLocal
 
 db = SessionLocal()
 graph = MemoryGraph(db)
@@ -85,7 +85,7 @@ db.close()`}</code></pre>
 ) -> None`}</code></pre>
         </CodeFile>
         <CodeFile label="example.py">
-          <pre><code>{`from backend.services.memory_graph import MemoryGraph, REL_UPDATES
+          <pre><code>{`from server.services.memory_graph import MemoryGraph, REL_UPDATES
 
 graph = MemoryGraph(db)
 
@@ -110,7 +110,7 @@ graph.link_facts(42, 17, REL_UPDATES, confidence=0.95, note="user corrected thei
 ) -> list[FactNode]`}</code></pre>
         </CodeFile>
         <CodeFile label="example.py">
-          <pre><code>{`from backend.services.memory_graph import MemoryGraph, REL_CONFIRMS, REL_RELATED
+          <pre><code>{`from server.services.memory_graph import MemoryGraph, REL_CONFIRMS, REL_RELATED
 
 graph = MemoryGraph(db)
 
@@ -183,7 +183,7 @@ for cluster in clusters:
 ) -> None`}</code></pre>
         </CodeFile>
         <CodeFile label="example.py">
-          <pre><code>{`from backend.services.llm import ollama
+          <pre><code>{`from server.services.llm import ollama
 
 graph.store_episode(
     conversation_id=42,
@@ -240,7 +240,7 @@ subgraph = graph.get_subgraph(fact_ids)`}</code></pre>
           </tbody>
         </table>
         <CodeFile label="import">
-          <pre><code>{`from backend.services.memory_graph import (
+          <pre><code>{`from server.services.memory_graph import (
     REL_CONTRADICTS, REL_CONFIRMS, REL_UPDATES,
     REL_RELATED, REL_CAUSED_BY, REL_PRECEDES, REL_PART_OF,
     ALL_REL_TYPES,   # list of all seven strings

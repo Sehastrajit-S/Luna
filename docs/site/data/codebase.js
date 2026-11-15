@@ -6,8 +6,8 @@ export const codebaseCategories = [
     files: [
       {
         slug: 'luna',
-        title: 'cli/luna.mjs',
-        path: 'cli/luna.mjs',
+        title: 'interfaces/cli/luna.mjs',
+        path: 'interfaces/cli/luna.mjs',
         summary: 'Main Luna CLI command dispatcher for running dev, backend, frontend, Electron, and utility workflows.',
         details: [
           'Defines the supported CLI commands and their associated subprocess behavior.',
@@ -58,8 +58,8 @@ export const codebaseCategories = [
     files: [
       {
         slug: 'main',
-        title: 'backend/main.py',
-        path: 'backend/main.py',
+        title: 'server/main.py',
+        path: 'server/main.py',
         summary: 'FastAPI application bootstrap with lifecycle hooks, middleware, and router registration.',
         details: [
           'Defines a FastAPI app with a lifespan manager that initializes the database and starts scheduler/process lifecycle.',
@@ -71,20 +71,20 @@ export const codebaseCategories = [
       },
       {
         slug: 'server',
-        title: 'backend/server.py',
-        path: 'backend/server.py',
+        title: 'server/server.py',
+        path: 'server/server.py',
         summary: 'Standalone backend entrypoint used by Electron to launch the FastAPI server and manage PID cleanup.',
         details: [
           'Configures stdout/stderr encoding and adds the project root to sys.path for subprocess startup.',
           'Writes a PID file so the Electron shell can identify and clean up stale backend processes.',
           'Registers an atexit cleanup handler to remove the PID file on normal shutdown.',
-          'Starts Uvicorn with the FastAPI application from backend.main on the configured host and port.',
+          'Starts Uvicorn with the FastAPI application from server.main on the configured host and port.',
         ],
       },
       {
         slug: 'config',
-        title: 'backend/config.py',
-        path: 'backend/config.py',
+        title: 'server/config.py',
+        path: 'server/config.py',
         summary: 'Application settings and environment configuration using Pydantic BaseSettings.',
         details: [
           'Defines host/port settings, provider selection, model names, and runtime booleans.',
@@ -96,8 +96,8 @@ export const codebaseCategories = [
       },
       {
         slug: 'processes-registry',
-        title: 'backend/processes/registry.py',
-        path: 'backend/processes/registry.py',
+        title: 'server/processes/registry.py',
+        path: 'server/processes/registry.py',
         summary: 'Dynamic process registration and lifecycle management for background runtime work.',
         details: [
           'Defines a shared ProcessDef dataclass to describe process metadata and lifecycle hooks.',
@@ -109,8 +109,8 @@ export const codebaseCategories = [
       },
       {
         slug: 'chat-router',
-        title: 'backend/routers/chat.py',
-        path: 'backend/routers/chat.py',
+        title: 'server/routers/chat.py',
+        path: 'server/routers/chat.py',
         summary: 'Chat API route implementation, prompt composition, streaming, and memory orchestration.',
         details: [
           'Defines the /api/chat endpoints for streaming chat, confirmations, and conversation controls.',
@@ -122,8 +122,8 @@ export const codebaseCategories = [
       },
       {
         slug: 'agent-router',
-        title: 'backend/routers/agent.py',
-        path: 'backend/routers/agent.py',
+        title: 'server/routers/agent.py',
+        path: 'server/routers/agent.py',
         summary: 'Agent and skill management API routes for workspace, browser, permissions, and audit data.',
         details: [
           'Provides endpoints for installed skills, workflow processes, audit history, and tool permissions.',
@@ -141,8 +141,8 @@ export const codebaseCategories = [
     files: [
       {
         slug: 'main',
-        title: 'frontend/src/main.tsx',
-        path: 'frontend/src/main.tsx',
+        title: 'interfaces/web/src/main.tsx',
+        path: 'interfaces/web/src/main.tsx',
         summary: 'React application bootstrap that mounts the Luna UI into the browser DOM.',
         details: [
           'Imports the top-level App component and global styles.',
@@ -152,8 +152,8 @@ export const codebaseCategories = [
       },
       {
         slug: 'app',
-        title: 'frontend/src/App.tsx',
-        path: 'frontend/src/App.tsx',
+        title: 'interfaces/web/src/App.tsx',
+        path: 'interfaces/web/src/App.tsx',
         summary: 'Top-level React app shell that coordinates auth, view mode, health checks, and main UI views.',
         details: [
           'Detects Electron runtime and handles authentication for browser access.',
@@ -165,8 +165,8 @@ export const codebaseCategories = [
       },
       {
         slug: 'api-client',
-        title: 'frontend/src/api/client.ts',
-        path: 'frontend/src/api/client.ts',
+        title: 'interfaces/web/src/api/client.ts',
+        path: 'interfaces/web/src/api/client.ts',
         summary: 'Typed frontend API client for calling backend endpoints from the React app.',
         details: [
           'Defines request helpers for backend paths, auth headers, and common response handling.',

@@ -10,12 +10,12 @@ from pathlib import Path
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from backend.config import DATA_DIR, settings
-from backend.models.database import get_db
-from backend.services.memory_manager import MemoryManager
-from backend.services.personality import PersonalityEngine
-from backend.services.activity_tracker import ActivityTracker
-from backend.services.media_context import get_watching_context
+from server.config import DATA_DIR, settings
+from server.models.database import get_db
+from server.services.memory_manager import MemoryManager
+from server.services.personality import PersonalityEngine
+from server.services.activity_tracker import ActivityTracker
+from server.services.media_context import get_watching_context
 
 router = APIRouter(prefix="/api/train", tags=["train"])
 
@@ -83,7 +83,7 @@ def _parse_options(text: str) -> list[str]:
 
 
 async def _call_ollama(system: str, user: str) -> str:
-    from backend.services.llm import ollama
+    from server.services.llm import ollama
     return await ollama.complete(user, system=system, temperature=0.7)
 
 
@@ -95,8 +95,8 @@ async def training_chat(body: dict, db: Session = Depends(get_db)):
     every feature can be trained — Spotify, maps, tasks, etc.
     """
     import asyncio
-    from backend.services.prompt_builder import build_system_prompt
-    from backend.services.spotify import spotify_service
+    from server.services.prompt_builder import build_system_prompt
+    from server.services.spotify import spotify_service
 
     history: list[dict] = body.get("history", [])
     message = (body.get("message") or "").strip()
@@ -149,7 +149,7 @@ async def training_chat(body: dict, db: Session = Depends(get_db)):
         return {"response": response, "luna_tone": luna_tone or "neutral", "user_state": user_state or "neutral"}
 
     async def call(temperature: float) -> dict:
-        from backend.services.llm import ollama
+        from server.services.llm import ollama
         raw = await ollama.complete(
             messages[-1]["content"],
             system="\n\n".join(m["content"] for m in messages[:-1]),
@@ -259,7 +259,7 @@ def get_pairs(mode: str = None):
 @router.post("/test-extraction")
 async def test_extraction(body: dict):
     """Run the fact extractor on a conversation snippet and return what it would store."""
-    from backend.services.fact_extractor import EXTRACTION_SYSTEM, _build_extraction_examples
+    from server.services.fact_extractor import EXTRACTION_SYSTEM, _build_extraction_examples
     conversation = (body.get("conversation") or "").strip()
     if not conversation:
         return {"result": "[]"}

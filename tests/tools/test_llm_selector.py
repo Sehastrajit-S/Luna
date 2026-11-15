@@ -37,8 +37,8 @@ class LLMSelectorTests(unittest.TestCase):
     FRIEND = "http://10.0.0.2:11434"
 
     def setUp(self) -> None:
-        from backend.config import settings
-        from backend.services.llm import selector
+        from server.config import settings
+        from server.services.llm import selector
 
         self.settings = settings
         self.selector = selector

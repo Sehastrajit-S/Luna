@@ -10,7 +10,7 @@ from fastapi import UploadFile, File
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
 
-from backend.services.voice import voice_service, VoiceState
+from server.services.voice import voice_service, VoiceState
 
 router = APIRouter(prefix="/api/voice", tags=["voice"])
 
@@ -63,7 +63,7 @@ def toggle_voice():
 
 @router.post("/away/off")
 def away_off():
-    from backend.services.away_state import set_away
+    from server.services.away_state import set_away
     set_away(False)
     return {"ok": True}
 
@@ -79,7 +79,7 @@ async def transcribe_audio(audio: UploadFile = File(...)):
     The desktop app records WebM/Opus in the browser engine and posts it here;
     the transcript goes into the message box for the user to review and send.
     """
-    from backend.services.stt import stt
+    from server.services.stt import stt
 
     suffix = os.path.splitext(audio.filename or "")[1].lower()
     if suffix not in _AUDIO_SUFFIXES:
@@ -148,8 +148,8 @@ async def speak_text(body: SpeakRequest):
 
 @router.get("/stt-status")
 async def stt_status():
-    from backend.config import settings
-    from backend.services.stt import stt
+    from server.config import settings
+    from server.services.stt import stt
     return {"provider": settings.stt_provider, "model": settings.stt_model, "loaded": stt.loaded}
 
 
@@ -180,7 +180,7 @@ async def mobile_voice(audio: UploadFile = File(...)):
 @router.get("/elevenlabs-voices")
 async def elevenlabs_voices():
     """List available ElevenLabs voices for the configured API key."""
-    from backend.config import settings
+    from server.config import settings
     if not settings.elevenlabs_api_key:
         return JSONResponse({"error": "elevenlabs_api_key is not set"}, status_code=400)
 
@@ -216,7 +216,7 @@ def vosk_status():
 
 @router.post("/install-vosk")
 async def install_vosk():
-    from backend.services.voice import voice_service as _vs
+    from server.services.voice import voice_service as _vs
 
     async def _stream():
         import asyncio, json as _json

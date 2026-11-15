@@ -17,8 +17,8 @@ from typing import Awaitable, Callable
 
 import httpx
 
-from backend.config import settings
-from backend.services.llm.providers import _TIMEOUT
+from server.config import settings
+from server.services.llm.providers import _TIMEOUT
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +76,7 @@ _TAGGED_RE = re.compile(r"<tool_call>\s*(\{.*?\})\s*</tool_call>", re.DOTALL)
 
 def calls_from_text(content: str, known_tools: set[str]) -> tuple[str, list[ToolCall]]:
     """Tool calls a model wrote into its reply instead of calling natively."""
-    from backend.services.tool_runner.parser import parse_tool_call_json, strip_tool_call_json
+    from server.services.tool_runner.parser import parse_tool_call_json, strip_tool_call_json
 
     calls: list[ToolCall] = []
     text = content or ""
@@ -114,7 +114,7 @@ async def chat_step(
     on_token: Callable[[str], Awaitable[None]] | None = None,
 ) -> AssistantTurn:
     """One model call with tools. Streams text tokens to `on_token` as they arrive."""
-    from backend.services.llm import selector
+    from server.services.llm import selector
     think, predict = selector.ollama_think_options(settings.ollama_model, settings.llm_max_output_tokens)
     payload = {
         "model": settings.ollama_model,

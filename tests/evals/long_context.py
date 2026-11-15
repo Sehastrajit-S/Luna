@@ -9,7 +9,7 @@ One conversation, driven well past the model's 16k-token window:
   5. needle-in-a-haystack: one long pasted message (~8k and ~20k tokens) with a
      passphrase hidden in the middle.
 Writes results to long_context_results.json and prints a summary. Run it against an
-isolated instance (python -m utilities.evals.run), never the live backend: every
+isolated instance (python -m tests.evals.run), never the live backend: every
 message becomes the shared active conversation, which the desktop app follows.
 """
 import json

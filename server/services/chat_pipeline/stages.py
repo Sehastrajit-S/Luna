@@ -9,16 +9,16 @@ from typing import AsyncGenerator
 
 from fastapi import BackgroundTasks
 
-from backend.services.chat_pipeline.context import ChatContext
-from backend.services.chat_pipeline.stage_persist import persist
-from backend.services.chat_pipeline.stage_context import build_context
-from backend.services.chat_pipeline.stage_dispatch import dispatch_direct_commands
-from backend.services.chat_pipeline.stage_generate import generate
-from backend.services.chat_pipeline.stage_tools import process_tools
-from backend.services.chat_pipeline.stage_finalize import finalize
-from backend.services.chat_pipeline.stage_small_talk import answer_small_talk
-from backend.services.agent_loop import agent_loop_applies, run_agent_turn
-from backend.services.response_formatter import strip_cards
+from server.services.chat_pipeline.context import ChatContext
+from server.services.chat_pipeline.stage_persist import persist
+from server.services.chat_pipeline.stage_context import build_context
+from server.services.chat_pipeline.stage_dispatch import dispatch_direct_commands
+from server.services.chat_pipeline.stage_generate import generate
+from server.services.chat_pipeline.stage_tools import process_tools
+from server.services.chat_pipeline.stage_finalize import finalize
+from server.services.chat_pipeline.stage_small_talk import answer_small_talk
+from server.services.agent_loop import agent_loop_applies, run_agent_turn
+from server.services.response_formatter import strip_cards
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +65,7 @@ async def run_pipeline(ctx: ChatContext, background_tasks: BackgroundTasks) -> A
 
         # ── Stage 4 (fallback): single-shot generate + one tool call ──────────
         elif not ctx.dispatched:
-            from backend.services.chat_pipeline.stage_generate import uses_special_agent
+            from server.services.chat_pipeline.stage_generate import uses_special_agent
             ctx.route = "special_agent" if uses_special_agent(ctx) else "single_shot"
             # For streaming stages, we need to flush SSE events as they're produced.
             # The generate stage queues events in ctx.sse_events.

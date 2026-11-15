@@ -7,7 +7,7 @@ from tests.tools import _bootstrap  # noqa: F401
 
 class SpotifyToolTests(unittest.TestCase):
     def test_direct_command_parser(self) -> None:
-        from backend.services.command_parser import parse_user_spotify_request
+        from server.services.command_parser import parse_user_spotify_request
 
         cases = {
             "play shape of you": {"action": "play", "query": "shape of you"},
@@ -22,7 +22,7 @@ class SpotifyToolTests(unittest.TestCase):
                 self.assertEqual(parse_user_spotify_request(message, None), expected)
 
     def test_service_auth_state_is_readable(self) -> None:
-        from backend.services.spotify import spotify_service
+        from server.services.spotify import spotify_service
 
         self.assertIsInstance(spotify_service._ready, bool)
         self.assertIsInstance(spotify_service.is_connected, bool)

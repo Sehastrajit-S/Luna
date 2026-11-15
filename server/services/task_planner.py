@@ -4,7 +4,7 @@ Detects complex multi-step tasks and executes them in a plan → execute → obs
 """
 import re
 from typing import AsyncGenerator
-from backend.services.llm import ollama
+from server.services.llm import ollama
 
 
 # Keywords that suggest a multi-step task needing a plan

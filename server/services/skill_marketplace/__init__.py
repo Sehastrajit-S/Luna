@@ -11,28 +11,28 @@ Public API for managing community-contributed skills:
 
 Skills installed via the marketplace go to:
     data/workspace/skills/<id>/
-This keeps user-installed skills separate from built-in ones in skills/.
+This keeps user-installed skills separate from built-in ones in server/skills/.
 """
-from backend.services.skill_marketplace.manifest import (
+from server.services.skill_marketplace.manifest import (
     SkillManifest,
     ManifestError,
     validate_manifest,
     load_manifest,
 )
-from backend.services.skill_marketplace.installer import (
+from server.services.skill_marketplace.installer import (
     install_skill,
     remove_skill,
     InstallError,
     InstallResult,
 )
-from backend.services.skill_marketplace.registry import (
+from server.services.skill_marketplace.registry import (
     list_installed,
     list_registry,
     refresh_registry,
     search_registry,
     get_registry_entry,
 )
-from backend.services.skill_marketplace.publisher import (
+from server.services.skill_marketplace.publisher import (
     validate_for_publish,
     PublishError,
 )

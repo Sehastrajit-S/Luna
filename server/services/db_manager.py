@@ -15,7 +15,7 @@ from typing import Optional
 
 from sqlalchemy import text
 
-from backend.models.database import DB_BACKEND, DB_URL, SessionLocal, engine
+from server.models.database import DB_BACKEND, DB_URL, SessionLocal, engine
 
 
 def db_backend() -> str:

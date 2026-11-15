@@ -149,7 +149,7 @@ npx cap sync ios`}</code></pre>
         </CodeFile>
 
         <CodeFile label="Docker">
-          <pre><code>{`cp .env.personal.example .env
+          <pre><code>{`cp deploy/.env.personal.example .env
 docker compose up -d
 # Open http://localhost:8899`}</code></pre>
         </CodeFile>
@@ -178,7 +178,7 @@ luna setup`}</code></pre>
         </CodeFile>
 
         <CodeFile label="VS Code extension">
-          <pre><code>{`cd integrations/vscode
+          <pre><code>{`cd interfaces/vscode
 npm install
 npm run compile
 npx vsce package`}</code></pre>

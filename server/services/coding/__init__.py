@@ -13,9 +13,9 @@ Public API — import from here, not from submodules:
   tool_list_files       — list a directory
   WORKSPACE_ROOT        — default workspace path
 """
-from backend.services.coding.agent import stream_coding_agent
-from backend.services.coding.indexer import build_workspace_index
-from backend.services.coding.tools import (
+from server.services.coding.agent import stream_coding_agent
+from server.services.coding.indexer import build_workspace_index
+from server.services.coding.tools import (
     WORKSPACE_ROOT,
     execute_coding_tool,
     tool_delete_file,

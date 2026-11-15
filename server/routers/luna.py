@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 
-from backend.services.dashboard import articles, markets, news, weather
+from server.services.dashboard import articles, markets, news, weather
 
 router = APIRouter(prefix="/api/luna", tags=["luna"])
 

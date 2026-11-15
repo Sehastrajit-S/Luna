@@ -14,7 +14,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from backend.config import settings
+from server.config import settings
 
 logger = logging.getLogger(__name__)
 

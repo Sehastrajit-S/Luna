@@ -48,7 +48,7 @@ _WEB_SEARCH_TRIGGER_RE = re.compile(
 
 
 # Generic "go look this up" phrasing only. What a request is *about* (jobs,
-# papers, products…) is decided by the skills' own intents in skills/*/skill.json.
+# papers, products…) is decided by the skills' own intents in server/skills/*/skill.json.
 _SEARCH_REQUEST_RE = re.compile(
     # "can you search and find me …", "search for …"
     r"^\s*(?:hey\s+|please\s+)?(?:can|could|would|will)\s+you\s+(?:please\s+)?(?:search|look\s+up)\b"

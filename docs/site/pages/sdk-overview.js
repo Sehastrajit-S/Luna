@@ -257,8 +257,8 @@ CODING_MODEL=qwen2.5-coder:7b`}</code></pre>
 
         <h3>1. Start the backend</h3>
         <pre><code>{`cd /path/to/Luna
-pip install -r backend/requirements.txt
-uvicorn backend.main:app --host 127.0.0.1 --port 8899`}</code></pre>
+pip install -r server/requirements.txt
+uvicorn server.main:app --host 127.0.0.1 --port 8899`}</code></pre>
 
         <p>The Swagger UI is available at <code>http://localhost:8899/docs</code> once running.</p>
 
@@ -337,7 +337,7 @@ while (true) {
           <pre><code>{`import asyncio, sys
 sys.path.insert(0, "/path/to/Luna")
 
-from backend.services.llm import ollama
+from server.services.llm import ollama
 
 async def main():
     async for token in ollama.stream_chat(
@@ -359,8 +359,8 @@ print(result)`}</code></pre>
 
         <h3>Memory — store and retrieve facts</h3>
         <CodeFile label="my_app.py">
-          <pre><code>{`from backend.services.memory_manager import MemoryManager
-from backend.models.database import SessionLocal
+          <pre><code>{`from server.services.memory_manager import MemoryManager
+from server.models.database import SessionLocal
 
 db = SessionLocal()
 mm = MemoryManager(db)
@@ -382,8 +382,8 @@ db.close()`}</code></pre>
 
         <h3>Personality — build a system prompt</h3>
         <CodeFile label="my_app.py">
-          <pre><code>{`from backend.services.personality import PersonalityEngine
-from backend.models.database import SessionLocal
+          <pre><code>{`from server.services.personality import PersonalityEngine
+from server.models.database import SessionLocal
 
 db = SessionLocal()
 engine = PersonalityEngine(db)
@@ -401,7 +401,7 @@ db.close()`}</code></pre>
       {/* ── Service map ───────────────────────────────────────── */}
       <section>
         <h2 id="service-map">Service map</h2>
-        <p>Every Luna service lives in <code>backend/services/</code> and is documented on its own page.</p>
+        <p>Every Luna service lives in <code>server/services/</code> and is documented on its own page.</p>
         <table>
           <thead>
             <tr><th>Service</th><th>What it does</th></tr>

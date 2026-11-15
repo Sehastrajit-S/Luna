@@ -12,8 +12,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Literal
 
-from backend.config import settings
-from backend.services.llm import ollama as llm
+from server.config import settings
+from server.services.llm import ollama as llm
 
 
 # ── per-user session (no DB dependency for lightweight channel use) ───────────
@@ -53,7 +53,7 @@ _THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL)
 
 
 def _clean_for_channel(text: str) -> str:
-    from backend.services.response_formatter import strip_cards
+    from server.services.response_formatter import strip_cards
     text = strip_cards(_THINK_RE.sub("", text))
     text = _UI_CMD_RE.sub("", text)
     # Collapse excess whitespace/newlines
@@ -89,7 +89,7 @@ def _channel_system_prompt(channel: str, user_display: str) -> str:
         )
 
     try:
-        from backend.services.skill_manager import get_skills_prompt
+        from server.services.skill_manager import get_skills_prompt
         skills_block = get_skills_prompt(ui="channel")
         skills_section = f"\n## Skills\n{skills_block}\n" if skills_block and "No local" not in skills_block else ""
     except Exception:

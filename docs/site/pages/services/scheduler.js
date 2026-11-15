@@ -42,7 +42,7 @@ export default function SchedulerService() {
 
         <h3>Start / stop</h3>
         <CodeFile label="example.py">
-          <pre><code>{`from backend.services.scheduler import luna_scheduler
+          <pre><code>{`from server.services.scheduler import luna_scheduler
 
 luna_scheduler.start()   # called by FastAPI lifespan on startup
 luna_scheduler.stop()    # called on shutdown`}</code></pre>
@@ -83,7 +83,7 @@ luna_scheduler.stop()    # called on shutdown`}</code></pre>
           appended to <code>proactive_queue</code> so the chat frontend can surface it.
         </p>
         <CodeFile label="example.py">
-          <pre><code>{`from backend.services.scheduler.jobs import check_upcoming_events
+          <pre><code>{`from server.services.scheduler.jobs import check_upcoming_events
 
 check_upcoming_events()   # run manually for testing`}</code></pre>
         </CodeFile>
@@ -105,7 +105,7 @@ check_upcoming_events()   # run manually for testing`}</code></pre>
           3:00 AM daily in a fresh event loop (safe to call from a thread).
         </p>
         <CodeFile label="example.py">
-          <pre><code>{`from backend.services.scheduler.jobs import daily_memory_compaction
+          <pre><code>{`from server.services.scheduler.jobs import daily_memory_compaction
 
 daily_memory_compaction()   # blocks until compaction completes`}</code></pre>
         </CodeFile>
@@ -234,7 +234,7 @@ interview | presentation | exam | test | deadline | surgery | appointment | flig
           any pending messages as SSE events.
         </p>
         <CodeFile label="example.py">
-          <pre><code>{`from backend.services.scheduler.notifications import proactive_queue
+          <pre><code>{`from server.services.scheduler.notifications import proactive_queue
 
 # Add a custom proactive message
 proactive_queue.append("Your 2 PM meeting is in 10 minutes.")
@@ -253,11 +253,11 @@ while proactive_queue:
       <section>
         <h2 id="custom">Adding custom jobs</h2>
         <p>
-          Each process module in <code>backend/processes/</code> can register its own
+          Each process module in <code>server/processes/</code> can register its own
           APScheduler jobs by exposing a <code>register_scheduler(scheduler)</code>
           function. The scheduler calls it at startup via the process registry.
         </p>
-        <CodeFile label="backend/processes/my_process.py">
+        <CodeFile label="server/processes/my_process.py">
           <pre><code>{`from apscheduler.schedulers.background import BackgroundScheduler
 
 def register_scheduler(scheduler: BackgroundScheduler):
@@ -273,7 +273,7 @@ def my_job_function():
     print("custom job running")`}</code></pre>
         </CodeFile>
         <p>
-          Any module placed in <code>backend/processes/</code> is auto-discovered by
+          Any module placed in <code>server/processes/</code> is auto-discovered by
           <code>iter_processes()</code> — no manual registration needed.
         </p>
       </section>

@@ -11,7 +11,7 @@ const { contextBridge, ipcRenderer } = require('electron')
 // Sandboxed preloads can only require('electron') — requiring
 // ../shared/ipc-channels threw, so the whole bridge (window controls, opening
 // links) silently never loaded. The names are copied from that file;
-// utilities/tests/tools/test_desktop_ipc.py fails if they drift apart.
+// tests/tools/test_desktop_ipc.py fails if they drift apart.
 const IPC = {
   window: {
     minimize: 'window:minimize',

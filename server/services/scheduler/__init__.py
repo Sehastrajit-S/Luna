@@ -1,6 +1,6 @@
 """Luna proactive scheduler: background jobs, notifications, companion check-ins."""
-from backend.services.scheduler.notifications import send_windows_notification, proactive_queue
-from backend.services.scheduler.jobs import (
+from server.services.scheduler.notifications import send_windows_notification, proactive_queue
+from server.services.scheduler.jobs import (
     check_upcoming_events,
     check_overdue_tasks,
     daily_memory_compaction,
@@ -15,7 +15,7 @@ from backend.services.scheduler.jobs import (
     vision_aware_checkin,
     sync_spotify_activity,
 )
-from backend.services.scheduler.service import LunaScheduler, luna_scheduler
+from server.services.scheduler.service import LunaScheduler, luna_scheduler
 
 __all__ = [
     "send_windows_notification",

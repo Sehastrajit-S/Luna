@@ -84,7 +84,7 @@ async def resolve_search_queries(message: str, history: list[dict] | None, candi
         f"Latest user message: {_clean_turn(message, 300)}\n\nSearch queries:"
     )
     try:
-        from backend.services.llm import ollama
+        from server.services.llm import ollama
         raw = await asyncio.wait_for(
             ollama.complete(prompt=prompt, system=MULTI_REWRITE_SYSTEM, temperature=0.0),
             timeout=REWRITE_TIMEOUT_S,
@@ -115,7 +115,7 @@ async def resolve_search_query(message: str, history: list[dict] | None, candida
     )
     prompt = f"Conversation:\n{transcript}\n\nLatest user message: {_clean_turn(message, 400)}\n\nSearch query:"
     try:
-        from backend.services.llm import ollama
+        from server.services.llm import ollama
         rewritten = _sanitize(await asyncio.wait_for(
             ollama.complete(prompt=prompt, system=REWRITE_SYSTEM, temperature=0.0),
             timeout=REWRITE_TIMEOUT_S,

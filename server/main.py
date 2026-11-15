@@ -6,24 +6,24 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-from backend.config import settings
-from backend.models.database import init_db, Base, engine
-from backend.services.activity_tracker import Activity
-from backend.services.scheduler import luna_scheduler
-from backend.routers import chat, memory, calendar, system, voice as voice_router, spotify as spotify_router, state as state_router, train as train_router, sleep as sleep_router, luna as luna_router, agent as agent_router, channels as channels_router, admin as admin_router, workspace_integrations as workspace_integrations_router
-from backend.routers.proactive import router as proactive_router
-from backend.routers.coding import router as coding_router
-from backend.routers.observe import router as observe_router
-from backend.routers.health_integrations import router as health_router
-from backend.routers.skills import router as skills_router
-from backend.routers.files import router as files_router
-from backend.routers.settings import router as settings_router
-from backend.middleware.rate_limit import RateLimitMiddleware
-from backend.middleware.logging_middleware import RequestIDMiddleware
-from backend.core.logging import configure_logging
-from backend.processes.registry import start_lifecycle_processes, stop_lifecycle_processes
-from backend.services.telemetry import tracer
-from backend.models.database import SessionLocal
+from server.config import settings
+from server.models.database import init_db, Base, engine
+from server.services.activity_tracker import Activity
+from server.services.scheduler import luna_scheduler
+from server.routers import chat, memory, calendar, system, voice as voice_router, spotify as spotify_router, state as state_router, train as train_router, sleep as sleep_router, luna as luna_router, agent as agent_router, channels as channels_router, admin as admin_router, workspace_integrations as workspace_integrations_router
+from server.routers.proactive import router as proactive_router
+from server.routers.coding import router as coding_router
+from server.routers.observe import router as observe_router
+from server.routers.health_integrations import router as health_router
+from server.routers.skills import router as skills_router
+from server.routers.files import router as files_router
+from server.routers.settings import router as settings_router
+from server.middleware.rate_limit import RateLimitMiddleware
+from server.middleware.logging_middleware import RequestIDMiddleware
+from server.core.logging import configure_logging
+from server.processes.registry import start_lifecycle_processes, stop_lifecycle_processes
+from server.services.telemetry import tracer
+from server.models.database import SessionLocal
 
 # Configure structured logging before anything else logs
 configure_logging()
@@ -35,7 +35,7 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     init_db()
     # Local access token for settings writes (read by the desktop app's main process).
-    from backend.services.settings_store import local_api_token
+    from server.services.settings_store import local_api_token
     local_api_token()
     tracer.init(SessionLocal)
     # Test/eval instances run without reminders, check-ins and other jobs that
@@ -47,7 +47,7 @@ async def lifespan(app: FastAPI):
     selector_task = None
     if settings.llm_auto_select:
         import asyncio
-        from backend.services.llm import selector
+        from server.services.llm import selector
         await selector.select_now()
         selector_task = asyncio.create_task(selector.run_forever())
     yield
@@ -130,7 +130,7 @@ app.include_router(files_router)
 app.include_router(settings_router)
 
 # Serve Office Add-in static files at /addin/office/
-office_addin_dir = Path(__file__).parent.parent / "office-addin"
+office_addin_dir = Path(__file__).parent.parent / "interfaces" / "office"
 if office_addin_dir.exists():
     app.mount("/addin/office", StaticFiles(directory=str(office_addin_dir)), name="office-addin")
 

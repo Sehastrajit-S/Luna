@@ -10,7 +10,7 @@ from datetime import date, datetime, time, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
-from backend.models.database import Conversation, Message
+from server.models.database import Conversation, Message
 
 # messages/day → level 0–4 (same scale GitHub-style heatmaps use)
 LEVEL_THRESHOLDS = (1, 3, 8, 16)

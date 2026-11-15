@@ -15,7 +15,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $root   = (Resolve-Path "$PSScriptRoot\..\..")
-$outDir = Join-Path $root "docs-site\public\screenshots"
+$outDir = Join-Path $root "docs/site\public\screenshots"
 $out    = Join-Path $outDir "cli-output.png"
 $py     = Join-Path $PSScriptRoot "render_cli.py"
 

@@ -210,7 +210,7 @@ BUSINESS_TONE=technical`}</code></pre>
             and optionally add <code>.env.business</code> for variant-specific overrides.
           </li>
           <li>
-            Restart the backend: <code>python -m backend.main</code>.
+            Restart the backend: <code>python -m server.main</code>.
           </li>
           <li>
             Run <code>alembic upgrade head</code> if switching to a new database.

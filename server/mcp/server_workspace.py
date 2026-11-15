@@ -4,11 +4,11 @@ Exposes: workspace_list, workspace_read, workspace_write
 Resources: workspace://{path}
 
 Run:
-    python -m backend.mcp.server_workspace
+    python -m server.mcp.server_workspace
 """
 import json
 from mcp.server.fastmcp import FastMCP
-from backend.services.workspace import (
+from server.services.workspace import (
     list_workspace as _list,
     read_workspace_file as _read,
     write_workspace_file as _write,

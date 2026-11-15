@@ -24,12 +24,12 @@ from typing import AsyncGenerator
 
 import httpx
 
-from backend.config import settings
-from backend.services.coding.indexer import build_workspace_index
-from backend.services.coding.parser import extract_plan, parse_tool_call, strip_tool_call
-from backend.services.coding.prompts import PLAN_PROMPT, SYSTEM
-from backend.services.coding.tools import WORKSPACE_ROOT, execute_coding_tool
-from backend.services.llm import ollama as llm
+from server.config import settings
+from server.services.coding.indexer import build_workspace_index
+from server.services.coding.parser import extract_plan, parse_tool_call, strip_tool_call
+from server.services.coding.prompts import PLAN_PROMPT, SYSTEM
+from server.services.coding.tools import WORKSPACE_ROOT, execute_coding_tool
+from server.services.llm import ollama as llm
 
 _TIMEOUT = httpx.Timeout(connect=10.0, read=300.0, write=30.0, pool=5.0)
 
@@ -69,7 +69,7 @@ async def _stream_ollama_tokens(
     messages: list[dict],
     system: str,
 ) -> AsyncGenerator[str, None]:
-    from backend.services.llm import selector
+    from server.services.llm import selector
     think, predict = selector.ollama_think_options(model, 8192)
     payload = {
         "model": model,
@@ -126,7 +126,7 @@ async def _complete_provider(
     system: str,
 ) -> str:
     if provider == "ollama":
-        from backend.services.llm import selector
+        from server.services.llm import selector
         think, predict = selector.ollama_think_options(model, 512)
         payload = {
             "model": model,

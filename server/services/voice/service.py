@@ -13,8 +13,8 @@ from typing import Callable
 
 import numpy as np
 
-from backend.services.stt import stt
-from backend.services.voice.models import VoiceState
+from server.services.stt import stt
+from server.services.voice.models import VoiceState
 
 
 class VoiceService:
@@ -106,7 +106,7 @@ class VoiceService:
             self._download_vosk()
         from vosk import Model
         self._vosk_model = Model(str(self.VOSK_DIR))
-        # Speech-to-text is the shared local engine (backend/services/stt.py),
+        # Speech-to-text is the shared local engine (server/services/stt.py),
         # the same one the desktop mic button and mobile endpoint use.
         stt.ensure_loaded()
         self._init_pygame()
@@ -196,7 +196,7 @@ class VoiceService:
                             triggered = True
 
                     if triggered:
-                        from backend.services.away_state import is_away, set_away
+                        from server.services.away_state import is_away, set_away
                         if is_away():
                             set_away(False)
                             self._fire_ui_event({"type": "away", "action": "off"})
@@ -227,7 +227,7 @@ class VoiceService:
     # ── follow-up conversation window ─────────────────────────────────────────
 
     def _conversation_mode(self, audio_q: queue.Queue[bytes]):
-        from backend.services.away_state import is_away
+        from server.services.away_state import is_away
         TIMEOUT = 240
         idle    = 0
         self._set_state(VoiceState.FOLLOWUP)
@@ -372,7 +372,7 @@ class VoiceService:
 
     def _analyze_emotion(self, audio_bytes: bytes) -> str:
         try:
-            from backend.services.personality import classify_voice_emotion
+            from server.services.personality import classify_voice_emotion
             pcm = np.frombuffer(audio_bytes, dtype=np.int16).astype(np.float32)
             if len(pcm) < self.SAMPLE_RATE // 4:
                 return "neutral"
@@ -417,7 +417,7 @@ class VoiceService:
 
     def _transcribe_elevenlabs(self, audio_path: str) -> str:
         import httpx
-        from backend.config import settings
+        from server.config import settings
 
         with open(audio_path, "rb") as f:
             resp = httpx.post(
@@ -434,7 +434,7 @@ class VoiceService:
         return stt.transcribe_file(audio_path).text
 
     def _transcribe_path(self, audio_path: str) -> str:
-        from backend.config import settings
+        from server.config import settings
         if settings.stt_provider == "elevenlabs" and settings.elevenlabs_api_key:
             try:
                 return self._transcribe_elevenlabs(audio_path)
@@ -482,7 +482,7 @@ class VoiceService:
                             elif cmd.get("type") == "away":
                                 action = cmd.get("action", "on")
                                 if action == "on":
-                                    from backend.services.away_state import set_away
+                                    from server.services.away_state import set_away
                                     set_away(True)
                                 self._fire_ui_event({"type": "away", "action": action})
                             elif cmd.get("type") == "widget":
@@ -549,7 +549,7 @@ class VoiceService:
                                     elif cmd.get("type") == "away":
                                         action = cmd.get("action", "on")
                                         if action == "on":
-                                            from backend.services.away_state import set_away
+                                            from server.services.away_state import set_away
                                             set_away(True)
                                         self._fire_ui_event({"type": "away", "action": action})
                                     elif cmd.get("type") == "widget":
@@ -592,7 +592,7 @@ class VoiceService:
         audio_q: queue.Queue[tuple[str, str | None] | None] = queue.Queue()
 
         def _tts_synthesizer():
-            from backend.services.tool_runner import strip_tool_call_json
+            from server.services.tool_runner import strip_tool_call_json
             while True:
                 sentence = sentence_q.get()
                 if sentence is None or self._stop.is_set():
@@ -651,7 +651,7 @@ class VoiceService:
     _barge_in_triggered: bool = False
 
     def _speak(self, text: str):
-        from backend.config import settings
+        from server.config import settings
 
         engines = []
         if settings.tts_provider == "elevenlabs" and settings.elevenlabs_api_key:
@@ -673,7 +673,7 @@ class VoiceService:
         """Synthesize text to a temp mp3 path (caller deletes it), no playback.
         Tries ElevenLabs first if configured, falls back to edge-tts. Returns
         None if every engine failed (caller falls back to inline pyttsx3)."""
-        from backend.config import settings
+        from server.config import settings
 
         text = self._tts_normalize(text)
         if settings.tts_provider == "elevenlabs" and settings.elevenlabs_api_key:
@@ -729,7 +729,7 @@ class VoiceService:
     def _synthesize_elevenlabs(self, text: str) -> str:
         """Raw ElevenLabs synthesis — expects already-normalized text, returns mp3 path."""
         import httpx
-        from backend.config import settings
+        from server.config import settings
 
         resp = httpx.post(
             f"https://api.elevenlabs.io/v1/text-to-speech/{settings.elevenlabs_voice_id}",

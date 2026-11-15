@@ -20,7 +20,7 @@ import logging.handlers
 import sys
 from contextvars import ContextVar
 
-from backend.config import DATA_DIR, settings
+from server.config import DATA_DIR, settings
 
 # ── Request correlation ────────────────────────────────────────────────────────
 # Accessible from any async/sync code in the same request context.

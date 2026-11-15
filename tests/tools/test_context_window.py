@@ -14,7 +14,7 @@ def _conversation(turns: int, reply_chars: int = 2500) -> list[dict]:
 
 class ContextWindowTests(unittest.TestCase):
     def test_long_conversation_fits_and_keeps_pinned_content(self) -> None:
-        from backend.services.llm.context_window import estimate_tokens, fit_context
+        from server.services.llm.context_window import estimate_tokens, fit_context
 
         system = "SYSTEM RULES " + ("r" * 30000)
         messages = _conversation(100) + [{"role": "user", "content": "I mean one that is new for actions"}]
@@ -30,7 +30,7 @@ class ContextWindowTests(unittest.TestCase):
         self.assertLessEqual(total, 16384 - 1024)
 
     def test_old_replies_are_clipped_but_latest_reply_is_intact(self) -> None:
-        from backend.services.llm.context_window import fit_context
+        from server.services.llm.context_window import fit_context
 
         messages = _conversation(3, reply_chars=3000) + [{"role": "user", "content": "follow up"}]
         fitted = fit_context("sys", messages, context_window=32768, max_output_tokens=1024)
@@ -41,7 +41,7 @@ class ContextWindowTests(unittest.TestCase):
         self.assertEqual(fitted.dropped_messages, 0)
 
     def test_short_conversation_is_untouched(self) -> None:
-        from backend.services.llm.context_window import fit_context
+        from server.services.llm.context_window import fit_context
 
         messages = [{"role": "user", "content": "hi"}, {"role": "assistant", "content": "hey"}, {"role": "user", "content": "how are you"}]
         fitted = fit_context("sys", messages, context_window=16384, max_output_tokens=1024)
@@ -49,7 +49,7 @@ class ContextWindowTests(unittest.TestCase):
         self.assertEqual(fitted.system_prompt, "sys")
 
     def test_huge_user_message_is_clipped_not_the_system_prompt(self) -> None:
-        from backend.services.llm.context_window import fit_context
+        from server.services.llm.context_window import fit_context
 
         system = "SYSTEM " + "s" * 8000
         fitted = fit_context(system, [{"role": "user", "content": "start " + "y" * 200000 + " end"}],
@@ -64,7 +64,7 @@ class ContextWindowTests(unittest.TestCase):
 
 class SkillDisclosureTests(unittest.TestCase):
     def test_only_relevant_skill_instructions_are_included(self) -> None:
-        from backend.services.skill_manager import get_skills_prompt
+        from server.services.skill_manager import get_skills_prompt
 
         everything = get_skills_prompt(message=None)
         casual = get_skills_prompt(message="hey how was your day")
@@ -85,31 +85,31 @@ class SearchQueryTests(unittest.TestCase):
     ]
 
     def test_self_contained_message_skips_rewrite(self) -> None:
-        from backend.services import search_query
+        from server.services import search_query
 
-        with mock.patch("backend.services.llm.ollama.complete") as complete:
+        with mock.patch("server.services.llm.ollama.complete") as complete:
             q = asyncio.run(search_query.resolve_search_query("latest qwen3 release notes for tool calling", self.HISTORY))
         self.assertEqual(q, "latest qwen3 release notes for tool calling")
         complete.assert_not_called()
 
     def test_follow_up_is_rewritten_with_context(self) -> None:
-        from backend.services import search_query
+        from server.services import search_query
 
         async def fake_complete(prompt, system="", temperature=0.3):
             self.assertIn("newest model for actions", prompt)
             return 'Query: "newest large action models for agents 2026"\n'
 
-        with mock.patch("backend.services.llm.ollama.complete", side_effect=fake_complete):
+        with mock.patch("server.services.llm.ollama.complete", side_effect=fake_complete):
             q = asyncio.run(search_query.resolve_search_query("I mean one that is new for actions not chatbots", self.HISTORY))
         self.assertEqual(q, "newest large action models for agents 2026")
 
     def test_rewrite_failure_falls_back_to_recent_turns(self) -> None:
-        from backend.services import search_query
+        from server.services import search_query
 
         async def boom(*_a, **_k):
             raise TimeoutError("model busy")
 
-        with mock.patch("backend.services.llm.ollama.complete", side_effect=boom):
+        with mock.patch("server.services.llm.ollama.complete", side_effect=boom):
             q = asyncio.run(search_query.resolve_search_query("I mean one that is new for actions not chatbots", self.HISTORY))
         self.assertIn("newest model for actions", q)
         self.assertIn("not chatbots", q)
@@ -118,7 +118,7 @@ class SearchQueryTests(unittest.TestCase):
 
 class PromiseGuardTests(unittest.TestCase):
     def test_bare_promises_are_detected(self) -> None:
-        from backend.services.chat_pipeline.stage_tools import _promises_lookup
+        from server.services.chat_pipeline.stage_tools import _promises_lookup
 
         for reply in (
             "Sure, let's check that out.",
@@ -130,7 +130,7 @@ class PromiseGuardTests(unittest.TestCase):
                 self.assertTrue(_promises_lookup(reply, "I mean one that is new for actions not chatbots"))
 
     def test_real_answers_and_personal_data_are_left_alone(self) -> None:
-        from backend.services.chat_pipeline.stage_tools import _promises_lookup
+        from server.services.chat_pipeline.stage_tools import _promises_lookup
 
         self.assertFalse(_promises_lookup("Paris is the capital of France.", "capital of france?"))
         self.assertFalse(_promises_lookup("Let me check your calendar.", "am I free at 3?"))

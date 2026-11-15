@@ -13,7 +13,7 @@ from tests.tools import _bootstrap  # noqa: F401
 
 
 def _session():
-    from backend.models.database import Base
+    from server.models.database import Base
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
     Base.metadata.create_all(engine)
     return sessionmaker(bind=engine)()
@@ -21,7 +21,7 @@ def _session():
 
 class CalculatorTests(unittest.TestCase):
     def test_exact_arithmetic(self) -> None:
-        from backend.services.calculator import calculate
+        from server.services.calculator import calculate
         self.assertEqual(calculate("17*23"), "17*23 = 391")
         self.assertEqual(calculate("17 x 23"), "17 x 23 = 391")
         self.assertEqual(calculate("15% of 80"), "15% of 80 = 12")
@@ -29,14 +29,14 @@ class CalculatorTests(unittest.TestCase):
         self.assertEqual(calculate("1,200 / 3"), "1,200 / 3 = 400")
 
     def test_rejects_code_and_bad_input(self) -> None:
-        from backend.services.calculator import calculate
+        from server.services.calculator import calculate
         for expr in ("__import__('os').system('dir')", "open('x')", "a + 1", "9**99999", "1/0", ""):
             self.assertTrue(calculate(expr).startswith("Error"), expr)
 
 
 class RequiredCallsTests(unittest.TestCase):
     def calls(self, message):
-        from backend.services.agent_loop.grounding import required_calls
+        from server.services.agent_loop.grounding import required_calls
         return required_calls(message)
 
     def test_live_state_questions_need_their_read(self) -> None:
@@ -82,7 +82,7 @@ class NewsTests(unittest.TestCase):
     ]
 
     def test_general_news_runs_daily_news(self) -> None:
-        from backend.services.agent_loop.grounding import is_general_news, required_calls
+        from server.services.agent_loop.grounding import is_general_news, required_calls
         for q in ("What's the news today?", "Give me today's headlines", "what's happening in the world"):
             self.assertEqual(required_calls(q), [("daily_news", {"topic": ""})], q)
             self.assertTrue(is_general_news(q), q)
@@ -91,7 +91,7 @@ class NewsTests(unittest.TestCase):
         self.assertEqual(required_calls("did you save my news preferences?"), [])
 
     def run_news(self, *args):
-        from backend.services.dashboard import news
+        from server.services.dashboard import news
         with mock.patch.object(news, "get_news", new=mock.AsyncMock(return_value=self.ITEMS)):
             return asyncio.run(news.daily_news(*args))
 
@@ -111,7 +111,7 @@ class NewsTests(unittest.TestCase):
 
 class ScheduleTests(unittest.TestCase):
     def test_wrong_weekday_is_sent_back_with_the_right_date(self) -> None:
-        from backend.services.agent_loop.loop import _weekday_mismatch
+        from server.services.agent_loop.loop import _weekday_mismatch
         today = datetime.now()
         tuesday = today + timedelta(days=(1 - today.weekday()) % 7 or 7)
         monday = tuesday - timedelta(days=1)
@@ -123,7 +123,7 @@ class ScheduleTests(unittest.TestCase):
         self.assertIsNone(_weekday_mismatch("remind me tomorrow", "create_task", {"due": f"{monday:%Y-%m-%d}T09:00"}))
 
     def test_unstated_time_is_asked_not_guessed(self) -> None:
-        from backend.services.agent_loop.loop import _unstated_time
+        from server.services.agent_loop.loop import _unstated_time
         event = {"title": "Sync with John", "datetime": "2026-10-12T09:00"}
         self.assertIn("ask them when", _unstated_time(["Set up a meeting with John"], "create_event", event))
         self.assertIsNone(_unstated_time(["Set up a meeting with John", "Thursday at 2"], "create_event", event))
@@ -133,14 +133,14 @@ class ScheduleTests(unittest.TestCase):
                                                       {"title": "Buy milk", "due": "2026-10-10T09:00"}))
 
     def test_tool_spec_lists_the_coming_week(self) -> None:
-        from backend.services.agent_loop.loop import _live_spec
-        from backend.services.tool_registry import model_tool_spec
+        from server.services.agent_loop.loop import _live_spec
+        from server.services.tool_registry import model_tool_spec
         description = _live_spec(model_tool_spec("create_event"))["function"]["description"]
         nxt = datetime.now() + timedelta(days=1)
         self.assertIn(f"{nxt:%A} = {nxt:%Y-%m-%d}", description)
 
     def test_reply_states_the_saved_row_not_the_models_claim(self) -> None:
-        from backend.services.agent_loop.loop import _with_saved
+        from server.services.agent_loop.loop import _with_saved
         saved = ["Added “Quillon sync” to your calendar — Monday, Oct 12 at 3:00 PM."]
         text = _with_saved('The meeting "Quillon sync" is scheduled for next Tuesday at 3:00 PM.', saved, ["Quillon sync"])
         self.assertEqual(text, saved[0])
@@ -150,7 +150,7 @@ class ScheduleTests(unittest.TestCase):
 
 class ToolSearchTests(unittest.TestCase):
     def test_finds_tools_that_are_already_loaded(self) -> None:
-        from backend.services.agent_loop.tool_selection import search_tools
+        from server.services.agent_loop.tool_selection import search_tools
         active = ["web_search", "create_task"]
         self.assertNotIn("create_task", search_tools("create_task", active))
         self.assertEqual(search_tools("create_task", [], among=active), ["create_task"])
@@ -161,14 +161,14 @@ class MemoryTests(unittest.TestCase):
         self.db = _session()
 
     def _fact(self, content, active=True):
-        from backend.models.database import Fact
+        from server.models.database import Fact
         fact = Fact(category="relationship", content=content, confidence=1.0, is_active=active)
         self.db.add(fact)
         self.db.commit()
         return fact
 
     def _memory(self):
-        from backend.services.memory_manager import MemoryManager
+        from server.services.memory_manager import MemoryManager
         memory = MemoryManager(self.db)
         memory._get_collection = mock.MagicMock(return_value=mock.MagicMock(get=mock.MagicMock(return_value={})))
         return memory
@@ -188,9 +188,9 @@ class MemoryTests(unittest.TestCase):
         self.assertEqual(self._memory().forget("everything you know"), [])
 
     def test_forget_memory_tool_reads_back(self) -> None:
-        from backend.services.tool_runner import execute_tool_call
+        from server.services.tool_runner import execute_tool_call
         self._fact("User has a dog named Quillon")
-        with mock.patch("backend.services.memory_manager.MemoryManager._get_collection",
+        with mock.patch("server.services.memory_manager.MemoryManager._get_collection",
                         return_value=mock.MagicMock(get=mock.MagicMock(return_value={}))):
             out = asyncio.run(execute_tool_call({"tool": "forget_memory", "args": {"about": "my dog"}}, self.db, 1))
             none = asyncio.run(execute_tool_call({"tool": "forget_memory", "args": {"about": "my car"}}, self.db, 1))
@@ -198,7 +198,7 @@ class MemoryTests(unittest.TestCase):
         self.assertIn("nothing to forget", none)
 
     def test_recall_skips_inactive_facts(self) -> None:
-        from backend.services.memory_manager import MemoryManager
+        from server.services.memory_manager import MemoryManager
         gone = self._fact("User has a dog named Quillon", active=False)
         kept = self._fact("User is allergic to cashews")
         col = mock.MagicMock()
@@ -215,7 +215,7 @@ class MemoryTests(unittest.TestCase):
         self.assertNotIn(gone.content, recalled)
 
     def test_fact_quotes_must_come_from_the_user(self) -> None:
-        from backend.services.fact_extractor import _quote_is_grounded, _user_text
+        from server.services.fact_extractor import _quote_is_grounded, _user_text
         convo = "User: schedule Quillon sync next Tuesday\nLuna: Your meeting is scheduled for next Tuesday at 3 PM."
         users = _user_text(convo)
         self.assertTrue(_quote_is_grounded("schedule Quillon sync next Tuesday", users))

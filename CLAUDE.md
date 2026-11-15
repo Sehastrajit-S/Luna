@@ -23,15 +23,15 @@ The expected agent behavior is to plan the work, gather context across tools, ma
 
 Use these existing Luna pieces before adding new abstractions:
 
-- Agent/planner: `backend/services/planner/`, `backend/services/task_planner.py`, `backend/services/agent_tasks.py`
-- Tool router and permissions: `backend/services/tool_registry.py`, `backend/services/tool_runner/`, `backend/services/permission_manager.py`, `backend/services/audit_log.py`
-- Memory: `backend/services/memory_manager/`, `backend/services/memory_graph/`, `backend/mcp/server_memory.py`
-- Coding agent: `backend/services/coding/`, `skills/coding-agent/`
-- GitHub: `backend/services/github.py`, `backend/mcp/server_github.py`
-- Google Workspace/Gmail/Drive/Calendar: `backend/services/workspace_integrations/google.py`, `backend/mcp/server_google.py`, `skills/workspace-suite/`
-- Microsoft 365: `backend/services/workspace_integrations/microsoft.py`, `backend/mcp/server_microsoft.py`
-- Slack channel ingestion/replies: `backend/routers/channels.py`, `backend/services/channel_bridge.py`
-- MCP servers: `backend/mcp/`
+- Agent/planner: `server/services/planner/`, `server/services/task_planner.py`, `server/services/agent_tasks.py`
+- Tool router and permissions: `server/services/tool_registry.py`, `server/services/tool_runner/`, `server/services/permission_manager.py`, `server/services/audit_log.py`
+- Memory: `server/services/memory_manager/`, `server/services/memory_graph/`, `server/mcp/server_memory.py`
+- Coding agent: `server/services/coding/`, `server/skills/coding-agent/`
+- GitHub: `server/services/github.py`, `server/mcp/server_github.py`
+- Google Workspace/Gmail/Drive/Calendar: `server/services/workspace_integrations/google.py`, `server/mcp/server_google.py`, `server/skills/workspace-suite/`
+- Microsoft 365: `server/services/workspace_integrations/microsoft.py`, `server/mcp/server_microsoft.py`
+- Slack channel ingestion/replies: `server/routers/channels.py`, `server/services/channel_bridge.py`
+- MCP servers: `server/mcp/`
 - Observability primitives: audit log, telemetry, health routes, and tool result verification.
 
 ## Current Gaps For The AI Employee Vision
@@ -59,32 +59,32 @@ Luna already exposes FastMCP servers that Claude Desktop can launch over stdio. 
   "mcpServers": {
     "luna-memory": {
       "command": "python",
-      "args": ["-m", "backend.mcp.server_memory"],
+      "args": ["-m", "server.mcp.server_memory"],
       "cwd": "E:/Luna"
     },
     "luna-web": {
       "command": "python",
-      "args": ["-m", "backend.mcp.server_web"],
+      "args": ["-m", "server.mcp.server_web"],
       "cwd": "E:/Luna"
     },
     "luna-workspace": {
       "command": "python",
-      "args": ["-m", "backend.mcp.server_workspace"],
+      "args": ["-m", "server.mcp.server_workspace"],
       "cwd": "E:/Luna"
     },
     "luna-github": {
       "command": "python",
-      "args": ["-m", "backend.mcp.server_github"],
+      "args": ["-m", "server.mcp.server_github"],
       "cwd": "E:/Luna"
     },
     "luna-google": {
       "command": "python",
-      "args": ["-m", "backend.mcp.server_google"],
+      "args": ["-m", "server.mcp.server_google"],
       "cwd": "E:/Luna"
     },
     "luna-microsoft": {
       "command": "python",
-      "args": ["-m", "backend.mcp.server_microsoft"],
+      "args": ["-m", "server.mcp.server_microsoft"],
       "cwd": "E:/Luna"
     }
   }
@@ -101,10 +101,10 @@ Required credentials live in `.env`. Never commit `.env`.
 ## Implementation Rules For Enterprise Connectors
 
 - Prefer MCP-compatible tool boundaries for external systems so Claude Desktop and Luna can share the same integrations.
-- Put provider-specific API code under `backend/services/` or a clear provider subpackage.
-- Put HTTP routes under `backend/routers/` only when the Luna app needs to expose UI or webhook endpoints.
-- Add tool definitions to `backend/services/tool_registry.py` only for tools the Luna chat runtime should call directly.
-- Add MCP servers under `backend/mcp/server_<provider>.py` when Claude Desktop should call the provider directly.
+- Put provider-specific API code under `server/services/` or a clear provider subpackage.
+- Put HTTP routes under `server/routers/` only when the Luna app needs to expose UI or webhook endpoints.
+- Add tool definitions to `server/services/tool_registry.py` only for tools the Luna chat runtime should call directly.
+- Add MCP servers under `server/mcp/server_<provider>.py` when Claude Desktop should call the provider directly.
 - For OAuth providers, persist only the minimum needed token material and refresh through a service layer. Redact secrets in logs and user-facing errors.
 - Mark write actions as risky and route them through the existing confirmation/permission flow.
 - Add audit log entries for external reads and writes that include provider, action, target IDs, and outcome.

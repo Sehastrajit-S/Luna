@@ -1,8 +1,8 @@
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
-from backend.processes.registry import ProcessDef
-from backend.processes.calendar_reminders import jobs
+from server.processes.registry import ProcessDef
+from server.processes.calendar_reminders import jobs
 
 
 def register_scheduler(scheduler):

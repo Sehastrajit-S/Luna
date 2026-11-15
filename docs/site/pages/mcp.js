@@ -34,12 +34,12 @@ export default function MCPPage() {
         <table>
           <thead><tr><th>Server</th><th>Module</th><th>What it exposes</th></tr></thead>
           <tbody>
-            <tr><td><code>luna-memory</code></td><td><code>backend.mcp.server_memory</code></td><td>List, search, and add facts; personality state resource.</td></tr>
-            <tr><td><code>luna-web</code></td><td><code>backend.mcp.server_web</code></td><td>Web search, fetch, deep research, dataset search.</td></tr>
-            <tr><td><code>luna-workspace</code></td><td><code>backend.mcp.server_workspace</code></td><td>List, read, and write files in the sandboxed workspace.</td></tr>
-            <tr><td><code>luna-github</code></td><td><code>backend.mcp.server_github</code></td><td>Repos, issues, PRs, comments.</td></tr>
-            <tr><td><code>luna-google</code></td><td><code>backend.mcp.server_google</code></td><td>Gmail, Google Calendar, Drive, Tasks.</td></tr>
-            <tr><td><code>luna-microsoft</code></td><td><code>backend.mcp.server_microsoft</code></td><td>Outlook, Microsoft Calendar, OneDrive, To Do.</td></tr>
+            <tr><td><code>luna-memory</code></td><td><code>server.mcp.server_memory</code></td><td>List, search, and add facts; personality state resource.</td></tr>
+            <tr><td><code>luna-web</code></td><td><code>server.mcp.server_web</code></td><td>Web search, fetch, deep research, dataset search.</td></tr>
+            <tr><td><code>luna-workspace</code></td><td><code>server.mcp.server_workspace</code></td><td>List, read, and write files in the sandboxed workspace.</td></tr>
+            <tr><td><code>luna-github</code></td><td><code>server.mcp.server_github</code></td><td>Repos, issues, PRs, comments.</td></tr>
+            <tr><td><code>luna-google</code></td><td><code>server.mcp.server_google</code></td><td>Gmail, Google Calendar, Drive, Tasks.</td></tr>
+            <tr><td><code>luna-microsoft</code></td><td><code>server.mcp.server_microsoft</code></td><td>Outlook, Microsoft Calendar, OneDrive, To Do.</td></tr>
           </tbody>
         </table>
       </section>
@@ -56,32 +56,32 @@ export default function MCPPage() {
   "mcpServers": {
     "luna-memory": {
       "command": "python",
-      "args": ["-m", "backend.mcp.server_memory"],
+      "args": ["-m", "server.mcp.server_memory"],
       "cwd": "C:/path/to/Luna"
     },
     "luna-web": {
       "command": "python",
-      "args": ["-m", "backend.mcp.server_web"],
+      "args": ["-m", "server.mcp.server_web"],
       "cwd": "C:/path/to/Luna"
     },
     "luna-workspace": {
       "command": "python",
-      "args": ["-m", "backend.mcp.server_workspace"],
+      "args": ["-m", "server.mcp.server_workspace"],
       "cwd": "C:/path/to/Luna"
     },
     "luna-github": {
       "command": "python",
-      "args": ["-m", "backend.mcp.server_github"],
+      "args": ["-m", "server.mcp.server_github"],
       "cwd": "C:/path/to/Luna"
     },
     "luna-google": {
       "command": "python",
-      "args": ["-m", "backend.mcp.server_google"],
+      "args": ["-m", "server.mcp.server_google"],
       "cwd": "C:/path/to/Luna"
     },
     "luna-microsoft": {
       "command": "python",
-      "args": ["-m", "backend.mcp.server_microsoft"],
+      "args": ["-m", "server.mcp.server_microsoft"],
       "cwd": "C:/path/to/Luna"
     }
   }
@@ -300,12 +300,12 @@ MICROSOFT_TENANT_ID=...`}</code></pre>
         </p>
         <CodeFile label="terminal">
           <pre><code>{`# From the Luna root directory:
-python -m backend.mcp.server_memory
-python -m backend.mcp.server_web
-python -m backend.mcp.server_workspace
-python -m backend.mcp.server_github
-python -m backend.mcp.server_google
-python -m backend.mcp.server_microsoft`}</code></pre>
+python -m server.mcp.server_memory
+python -m server.mcp.server_web
+python -m server.mcp.server_workspace
+python -m server.mcp.server_github
+python -m server.mcp.server_google
+python -m server.mcp.server_microsoft`}</code></pre>
         </CodeFile>
         <Callout type="note">
           MCP servers communicate over stdio — they're not HTTP servers and don't bind
@@ -313,7 +313,7 @@ python -m backend.mcp.server_microsoft`}</code></pre>
         </Callout>
 
         <h3>Adding a new MCP server</h3>
-        <CodeFile label="backend/mcp/server_example.py">
+        <CodeFile label="server/mcp/server_example.py">
           <pre><code>{`from mcp.server.fastmcp import FastMCP
 
 mcp = FastMCP("luna-example")

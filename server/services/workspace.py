@@ -7,7 +7,7 @@ from __future__ import annotations
 import base64
 from pathlib import Path
 
-from backend.config import DATA_DIR
+from server.config import DATA_DIR
 
 WORKSPACE_DIR = DATA_DIR / "workspace"
 WORKSPACE_DIR.mkdir(parents=True, exist_ok=True)

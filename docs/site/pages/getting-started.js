@@ -101,7 +101,7 @@ luna docker:business`}</code></pre>
 
         <h3>Personal — local Ollama (CPU)</h3>
         <CodeFile label="terminal">
-          <pre><code>{`cp .env.personal.example .env   # edit model / location
+          <pre><code>{`cp deploy/.env.personal.example .env   # edit model / location
 docker compose up -d
 open http://localhost:8899`}</code></pre>
         </CodeFile>
@@ -119,7 +119,7 @@ docker compose -f compose.cloud.yml up -d`}</code></pre>
 
         <h3>Business variant</h3>
         <CodeFile label="terminal">
-          <pre><code>{`cp .env.business.example .env
+          <pre><code>{`cp deploy/.env.business.example .env
 # Edit .env — set jwt_secret, business_name, llm_provider
 docker compose -f compose.business.yml up -d`}</code></pre>
         </CodeFile>

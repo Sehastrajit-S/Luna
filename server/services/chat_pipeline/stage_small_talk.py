@@ -7,10 +7,10 @@ and finalize skips the LLM-backed background work.
 """
 import logging
 
-from backend.config import settings
-from backend.models.database import Message
-from backend.services.command_parser.small_talk import classify_small_talk, small_talk_reply
-from backend.services.chat_pipeline.context import ChatContext
+from server.config import settings
+from server.models.database import Message
+from server.services.command_parser.small_talk import classify_small_talk, small_talk_reply
+from server.services.chat_pipeline.context import ChatContext
 
 logger = logging.getLogger(__name__)
 

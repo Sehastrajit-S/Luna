@@ -14,7 +14,7 @@ from pathlib import Path
 
 import httpx
 
-from backend.config import BASE_DIR, DATA_DIR, _env_files, reload_settings, settings
+from server.config import BASE_DIR, DATA_DIR, _env_files, reload_settings, settings
 
 logger = logging.getLogger(__name__)
 

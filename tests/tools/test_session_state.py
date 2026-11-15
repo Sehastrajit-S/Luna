@@ -23,7 +23,7 @@ def decode_base62(code: str) -> int:
 
 
 def _db():
-    from backend.models.database import Base
+    from server.models.database import Base
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
     Base.metadata.create_all(engine)
     return sessionmaker(bind=engine)()
@@ -31,8 +31,8 @@ def _db():
 
 def _conversation(db, turns):
     """turns: list of (user, luna). Records artifacts the way finalize does."""
-    from backend.models.database import Conversation, Message
-    from backend.services.session_state import record_artifacts
+    from server.models.database import Conversation, Message
+    from server.services.session_state import record_artifacts
 
     conv = Conversation()
     db.add(conv)
@@ -48,7 +48,7 @@ def _conversation(db, turns):
 
 class SessionStateTests(unittest.TestCase):
     def test_code_blocks_are_recorded_with_their_names_and_turn(self) -> None:
-        from backend.models.database import ConversationArtifact
+        from server.models.database import ConversationArtifact
 
         db = _db()
         conv = _conversation(db, [("We're building Snip.", "Got it."),
@@ -60,14 +60,14 @@ class SessionStateTests(unittest.TestCase):
         self.assertEqual((rows[0].language, rows[0].turn), ("python", 2))
 
     def test_one_line_snippets_are_not_artifacts(self) -> None:
-        from backend.models.database import ConversationArtifact
+        from server.models.database import ConversationArtifact
 
         db = _db()
         _conversation(db, [("reverse a string?", "Use:\n```python\ns[::-1]\n```")])
         self.assertEqual(db.query(ConversationArtifact).count(), 0)
 
     def test_pinned_block_indexes_code_and_includes_what_the_user_refers_to(self) -> None:
-        from backend.services.session_state import session_state_block
+        from server.services.session_state import session_state_block
 
         db = _db()
         conv = _conversation(db, [("Write the base62 encoder", ENCODER_REPLY)] +
@@ -82,7 +82,7 @@ class SessionStateTests(unittest.TestCase):
         self.assertEqual(session_state_block(db, _conversation(db, [("hi", "Hey.")]).id, "hi"), "")
 
     def test_search_finds_turns_that_left_the_window(self) -> None:
-        from backend.services.session_state import search_conversation
+        from server.services.session_state import search_conversation
 
         db = _db()
         conv = _conversation(db, [("Our cache TTL is 24 hours and codes are 7 characters.", "Noted.")] +
@@ -93,7 +93,7 @@ class SessionStateTests(unittest.TestCase):
         self.assertIn("Nothing in this conversation matches", search_conversation(db, conv.id, "kubernetes"))
 
     def test_search_tool_runs_through_the_executor(self) -> None:
-        from backend.services.tool_runner import execute_tool_call
+        from server.services.tool_runner import execute_tool_call
 
         db = _db()
         conv = _conversation(db, [("Write the base62 encoder", ENCODER_REPLY)])
@@ -102,7 +102,7 @@ class SessionStateTests(unittest.TestCase):
         self.assertIn("ALPHABET", result)
 
     def test_facts_are_append_only_deduplicated_and_pinned_first(self) -> None:
-        from backend.services.session_state import add_session_facts, session_state_block
+        from server.services.session_state import add_session_facts, session_state_block
 
         db = _db()
         conv = _conversation(db, [("We're building Snip on FastAPI.", "Got it.")])
@@ -115,7 +115,7 @@ class SessionStateTests(unittest.TestCase):
         self.assertEqual(block.count("Snip"), 1)
 
     def test_turns_out_of_the_window_are_listed_in_order(self) -> None:
-        from backend.services.session_state import session_state_block
+        from server.services.session_state import session_state_block
 
         db = _db()
         topics = ["TCP congestion control", "B-tree indexes"] + [f"topic number {i}" for i in range(28)]
@@ -126,8 +126,8 @@ class SessionStateTests(unittest.TestCase):
         self.assertNotIn("topic number 27", block)                # still in the visible window
 
     def test_search_is_a_core_read_only_tool(self) -> None:
-        from backend.services.agent_loop.tool_selection import select_tools
-        from backend.services.tool_registry import get_tool
+        from server.services.agent_loop.tool_selection import select_tools
+        from server.services.tool_registry import get_tool
 
         self.assertIn("search_conversation", select_tools("hello"))
         self.assertTrue(get_tool("search_conversation").read_only)

@@ -1,7 +1,7 @@
 """Lock, sleep, shutdown, restart controls."""
 import shutil
 
-from backend.services.system_controls.helpers import IS_MAC, IS_WINDOWS, IS_LINUX, PLATFORM, _run, _osascript, _ps
+from server.services.system_controls.helpers import IS_MAC, IS_WINDOWS, IS_LINUX, PLATFORM, _run, _osascript, _ps
 
 
 def lock_screen() -> tuple[bool, str]:

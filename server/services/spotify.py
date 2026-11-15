@@ -43,7 +43,7 @@ _DEFAULT_CLIENT_SECRET = "884d7cfd25bb461ebeae3a26f0a475c7"
 
 
 def _load_creds() -> dict[str, str]:
-    from backend.config import settings
+    from server.config import settings
     creds: dict[str, str] = {}
     # Primary: main .env via Settings
     if settings.spotify_client_id:

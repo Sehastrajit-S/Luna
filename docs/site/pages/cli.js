@@ -43,7 +43,7 @@ export default function CLI() {
         </CodeFile>
 
         <p>The double dash (<code>--</code>) is required by npm to pass arguments to the script.
-        Everything after it is forwarded to <code>cli/luna.mjs</code>.</p>
+        Everything after it is forwarded to <code>interfaces/cli/luna.mjs</code>.</p>
 
         <p>After running <code>npm link</code> (see <a href="#global">Global install</a>), you can
         drop the <code>npm run luna --</code> prefix and just use <code>luna</code>:</p>
@@ -76,7 +76,7 @@ luna help       # list all commands`}</code></pre>
             <tr><td><code>frontend</code></td><td>Start only the Vite dev server on port 5173.</td></tr>
             <tr><td><code>electron</code></td><td>Start only the Electron shell (backend must already be running).</td></tr>
             <tr><td><code>tunnel</code></td><td>Start an ngrok tunnel to the backend port. Useful for registering Telegram / Discord / Slack webhooks during development.</td></tr>
-            <tr><td><code>build</code></td><td>Build the frontend for production (<code>frontend/dist/</code>).</td></tr>
+            <tr><td><code>build</code></td><td>Build the frontend for production (<code>interfaces/web/dist/</code>).</td></tr>
             <tr><td><code>dist</code></td><td>Build the frontend and package the Windows NSIS installer.</td></tr>
             <tr><td><code>check</code></td><td>Run lightweight Python syntax checks on critical backend files.</td></tr>
             <tr><td><code>processes</code></td><td>Print all registered backend background processes as JSON.</td></tr>
@@ -161,7 +161,7 @@ luna chat --no "try this but deny risky actions"`}</code></pre>
         <CodeFile label="terminal">
           <pre><code>{`luna clean`}</code></pre>
         </CodeFile>
-        <p>Deletes <code>frontend/dist/</code>, <code>electron/dist/</code>, and any other gitignored
+        <p>Deletes <code>interfaces/web/dist/</code>, <code>electron/dist/</code>, and any other gitignored
         build artefacts. Does <strong>not</strong> touch <code>data/</code> — your memory and runtime
         data are preserved.</p>
 
@@ -206,7 +206,7 @@ luna chat --no "try this but deny risky actions"`}</code></pre>
 
         <h3>Starting the Business variant</h3>
         <CodeFile label="terminal">
-          <pre><code>{`cp .env.business.example .env
+          <pre><code>{`cp deploy/.env.business.example .env
 # Edit .env — set jwt_secret, business_name, llm_provider
 luna docker:business
 
@@ -271,7 +271,7 @@ luna doctor
 # 3. Start full stack for development
 luna dev
 
-# 4. Make your changes in frontend/ or backend/
+# 4. Make your changes in interfaces/web/ or server/
 
 # 5. Check backend syntax hasn't broken
 luna check

@@ -7,7 +7,7 @@ from tests.tools import _bootstrap  # noqa: F401
 
 class AppLauncherToolTests(unittest.TestCase):
     def test_profile_catalog_is_available(self) -> None:
-        from backend.services.app_launcher import APP_PROFILES, list_app_profiles, list_known_apps
+        from server.services.app_launcher import APP_PROFILES, list_app_profiles, list_known_apps
 
         profiles = list_app_profiles()
         known = list_known_apps()
@@ -17,7 +17,7 @@ class AppLauncherToolTests(unittest.TestCase):
         self.assertIn("sticky notes", known)
 
     def test_common_app_discovery_does_not_launch(self) -> None:
-        from backend.services.app_launcher import find_app
+        from server.services.app_launcher import find_app
 
         for app in ("calculator", "terminal", "vscode", "spotify"):
             with self.subTest(app=app):

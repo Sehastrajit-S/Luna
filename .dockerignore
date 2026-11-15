@@ -1,13 +1,13 @@
 # Dependencies
 node_modules/
-frontend/node_modules/
-desktop-app/node_modules/
-docs-site/node_modules/
+interfaces/web/node_modules/
+interfaces/desktop/node_modules/
+docs/site/node_modules/
 
 # Build artifacts (rebuilt inside Docker)
-frontend/dist/
-docs-site/.next/
-docs-site/out/
+interfaces/web/dist/
+docs/site/.next/
+docs/site/out/
 
 # Runtime data (mounted as a named volume)
 data/
@@ -21,17 +21,17 @@ data/
 .vscode/
 
 # Desktop shell: only its renderer + resources are served as the web UI
-desktop-app/node_modules/
-desktop-app/build/
-desktop-app/src/main/
-desktop-app/src/preload/
+interfaces/desktop/node_modules/
+interfaces/desktop/build/
+interfaces/desktop/src/main/
+interfaces/desktop/src/preload/
 dist-electron/
 
 # Mobile React app (built locally for Capacitor, not served by Docker)
-frontend/
+interfaces/web/
 
 # Docs site (not served by the backend)
-docs-site/
+docs/site/
 
 # Python cache
 **/__pycache__/

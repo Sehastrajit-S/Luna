@@ -6,8 +6,8 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from backend.services.health_integrations.db import _update_sync, persist
-from backend.services.health_integrations.models import (
+from server.services.health_integrations.db import _update_sync, persist
+from server.services.health_integrations.models import (
     ACTIVE_MINUTES, BLOOD_OXYGEN, BMI, BODY_FAT_PCT, BP_DIASTOLIC,
     BP_SYSTOLIC, CALORIES, DISTANCE_KM, HEART_RATE, HRV, RESTING_HR,
     RESPIRATORY_RATE, SLEEP_DURATION, STEPS, VO2_MAX, WEIGHT_KG,

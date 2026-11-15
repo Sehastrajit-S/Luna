@@ -19,8 +19,8 @@ import httpx
 from fastapi import APIRouter, Body
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from backend.config import settings, write_env_value
-from backend.services.coding import (
+from server.config import settings, write_env_value
+from server.services.coding import (
     WORKSPACE_ROOT,
     execute_coding_tool,
     stream_coding_agent,

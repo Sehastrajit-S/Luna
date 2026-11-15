@@ -6,7 +6,7 @@ import json
 import warnings
 from pathlib import Path
 
-from backend.config import DATA_DIR
+from server.config import DATA_DIR
 
 # Suppress pycaw COMError warnings for missing properties
 warnings.filterwarnings("ignore", message="COMError")

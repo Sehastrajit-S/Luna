@@ -22,18 +22,18 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 # The auto-discovery system imports this base at startup:
-from backend.services.health_integrations.base import (
+from server.services.health_integrations.base import (
     EnvField, HealthIntegration, IntegrationManifest,
 )
 # Persist points and update the sync log:
-from backend.services.health_integrations.db import _update_sync, persist
+from server.services.health_integrations.db import _update_sync, persist
 # All available metric type constants live here:
-from backend.services.health_integrations.models import (
+from server.services.health_integrations.models import (
     STEPS, HEART_RATE, SLEEP_DURATION,          # … import what you need
     HealthIntegrationError, HealthMetricPoint,
 )
 # Shared HTTP helpers — use _get for Bearer/token auth, _oauth_refresh for OAuth:
-from backend.services.health_integrations.oauth import _get  # , _oauth_refresh
+from server.services.health_integrations.oauth import _get  # , _oauth_refresh
 
 log = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ MY_BASE = "https://api.myplatform.com/v1"
 
 def myplatform_is_configured() -> bool:
     # TODO: check env vars via self.env() or os.environ / settings
-    from backend.config import settings
+    from server.config import settings
     return bool(getattr(settings, "myplatform_api_key", ""))
 
 

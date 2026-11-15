@@ -168,7 +168,7 @@ def _get_desktop_apps() -> dict[str, str]:
                                 if clean:
                                     exec_cmd = clean[0]
                 if not skip and name and exec_cmd:
-                    from backend.services.app_launcher.launcher import _normalize
+                    from server.services.app_launcher.launcher import _normalize
                     apps[_normalize(name)] = exec_cmd
             except Exception:
                 continue

@@ -21,9 +21,9 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import AsyncGenerator
 
-from backend.services.llm import ollama
-from backend.services.agents.events import CrewEvent, CrewEventType
-from backend.services.agents.scratchpad import Scratchpad
+from server.services.llm import ollama
+from server.services.agents.events import CrewEvent, CrewEventType
+from server.services.agents.scratchpad import Scratchpad
 
 logger = logging.getLogger(__name__)
 

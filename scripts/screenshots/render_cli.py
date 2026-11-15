@@ -8,7 +8,7 @@ from pathlib import Path
 
 BG, FG, DIM, GREEN, PURPLE = "#0d0d14", "#e2e8f0", "#64748b", "#4ade80", "#a78bfa"
 
-_default_out = Path(__file__).resolve().parents[2] / "docs-site" / "public" / "screenshots" / "cli-output.png"
+_default_out = Path(__file__).resolve().parents[2] / "docs/site" / "public" / "screenshots" / "cli-output.png"
 out_path = Path(sys.argv[1]) if len(sys.argv) > 1 else _default_out
 cmd_label = sys.argv[2] if len(sys.argv) > 2 else "--help"
 

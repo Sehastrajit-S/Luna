@@ -3,7 +3,7 @@ import unittest
 
 class ExplicitWebSearchTests(unittest.TestCase):
     def test_explicit_requests_extract_query(self) -> None:
-        from backend.services.command_parser.research import extract_explicit_web_search_query
+        from server.services.command_parser.research import extract_explicit_web_search_query
 
         cases = {
             "can you web search and find me what is the newest model for actions with LLM":
@@ -21,7 +21,7 @@ class ExplicitWebSearchTests(unittest.TestCase):
                 self.assertEqual(extract_explicit_web_search_query(prompt), expected)
 
     def test_non_requests_do_not_trigger(self) -> None:
-        from backend.services.command_parser.research import extract_explicit_web_search_query
+        from server.services.command_parser.research import extract_explicit_web_search_query
 
         for prompt in (
             "what is the newest model for actions with LLM",
@@ -35,7 +35,7 @@ class ExplicitWebSearchTests(unittest.TestCase):
                 self.assertIsNone(extract_explicit_web_search_query(prompt))
 
     def test_fabricated_search_widget_becomes_real_search(self) -> None:
-        from backend.services.chat_pipeline.stage_tools import _try_bracket_formats
+        from server.services.chat_pipeline.stage_tools import _try_bracket_formats
 
         tc = _try_bracket_formats(
             "Sure, let's check that out.\n[WIDGET:web_search|Newest Model for Actions with LLM|Model Name: Qwen-Audio; Release Date: 2024]"

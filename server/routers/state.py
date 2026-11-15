@@ -6,8 +6,8 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from backend.models.database import get_db, StateEvent
-from backend.services.state_engine import state_engine, STATE_POLICIES, UserState
+from server.models.database import get_db, StateEvent
+from server.services.state_engine import state_engine, STATE_POLICIES, UserState
 
 router = APIRouter(prefix="/api/state", tags=["state"])
 

@@ -29,7 +29,7 @@ from dataclasses import dataclass, field
 
 import httpx
 
-from backend.config import DATA_DIR, settings
+from server.config import DATA_DIR, settings
 
 logger = logging.getLogger(__name__)
 

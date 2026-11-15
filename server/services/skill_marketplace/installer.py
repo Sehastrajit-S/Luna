@@ -15,7 +15,7 @@ Each install:
   4. Moves the validated skill to data/workspace/skills/<id>/
   5. Writes a .marketplace.json sidecar with install metadata
 
-Built-in skills (in skills/) are NEVER touched by this installer.
+Built-in skills (in server/skills/) are NEVER touched by this installer.
 """
 from __future__ import annotations
 
@@ -30,8 +30,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from backend.config import BASE_DIR, DATA_DIR
-from backend.services.skill_marketplace.manifest import (
+from server.config import BASE_DIR, DATA_DIR
+from server.services.skill_marketplace.manifest import (
     ManifestError,
     SkillManifest,
     load_manifest,
@@ -39,9 +39,9 @@ from backend.services.skill_marketplace.manifest import (
 
 logger = logging.getLogger(__name__)
 
-# Skills installed via the marketplace go here. Built-in skills/ stays untouched.
+# Skills installed via the marketplace go here. Built-in server/skills/ stays untouched.
 USER_SKILLS_DIR = DATA_DIR / "workspace" / "skills"
-BUILTIN_SKILLS_DIR = BASE_DIR / "skills"
+BUILTIN_SKILLS_DIR = BASE_DIR / "server" / "skills"
 
 GIT_URL_RE = re.compile(
     r"^(?:https?://|git@)(?:[\w.-]+[:/])[\w./-]+?(?:\.git)?/?$"

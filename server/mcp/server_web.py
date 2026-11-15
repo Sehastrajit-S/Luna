@@ -3,17 +3,17 @@
 Exposes: web_search, web_fetch, web_research, dataset_search
 
 Run:
-    python -m backend.mcp.server_web
+    python -m server.mcp.server_web
 
 Claude Desktop config:
     "luna-web": {
         "command": "python",
-        "args": ["-m", "backend.mcp.server_web"],
+        "args": ["-m", "server.mcp.server_web"],
         "cwd": "/path/to/Luna"
     }
 """
 from mcp.server.fastmcp import FastMCP
-from backend.services.web_tools import (
+from server.services.web_tools import (
     web_search as _web_search,
     web_fetch as _web_fetch,
     web_research as _web_research,

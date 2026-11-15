@@ -2,7 +2,7 @@
 import shutil
 import subprocess
 
-from backend.services.system_controls.helpers import IS_MAC, IS_WINDOWS, IS_LINUX, _run, _ps
+from server.services.system_controls.helpers import IS_MAC, IS_WINDOWS, IS_LINUX, _run, _ps
 
 
 def get_clipboard() -> tuple[bool, str]:

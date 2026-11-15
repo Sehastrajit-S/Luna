@@ -9,8 +9,8 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, JSON, Float
-from backend.models.database import Base, SessionLocal
-from backend.services.llm import ollama
+from server.models.database import Base, SessionLocal
+from server.services.llm import ollama
 
 # How long an activity can run before it's auto-completed (hours).
 # Applies when no estimated_duration_minutes is set.
@@ -201,7 +201,7 @@ class ActivityTracker:
         guess from chat text, it reads what's really playing right now and
         opens/updates/closes the activity to match.
         """
-        from backend.services.spotify import spotify_service
+        from server.services.spotify import spotify_service
 
         if not spotify_service.is_connected:
             return None

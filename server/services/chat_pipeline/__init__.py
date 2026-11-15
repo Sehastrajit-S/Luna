@@ -13,7 +13,7 @@ Stages:
 5. tools       — Parse tool calls from LLM output, execute them
 6. finalize    — Emit SSE events, persist assistant message, queue background tasks
 """
-from backend.services.chat_pipeline.context import ChatContext
-from backend.services.chat_pipeline.stages import run_pipeline
+from server.services.chat_pipeline.context import ChatContext
+from server.services.chat_pipeline.stages import run_pipeline
 
 __all__ = ["ChatContext", "run_pipeline"]

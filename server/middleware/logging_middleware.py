@@ -3,7 +3,7 @@ Request ID middleware.
 
 Attaches a unique request_id to every request, adds it to response headers,
 and logs request completion. Logging setup itself (handlers, formatters,
-file rotation) lives in backend.core.logging — configure_logging() is
+file rotation) lives in server.core.logging — configure_logging() is
 re-exported here for backward compatibility.
 """
 import logging
@@ -13,7 +13,7 @@ import uuid
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from backend.core.logging import configure_logging, request_id_var  # noqa: F401
+from server.core.logging import configure_logging, request_id_var  # noqa: F401
 
 __all__ = ["RequestIDMiddleware", "configure_logging", "request_id_var"]
 

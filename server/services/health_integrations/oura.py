@@ -7,15 +7,15 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from backend.config import settings
-from backend.services.health_integrations.db import _update_sync, persist
-from backend.services.health_integrations.models import (
+from server.config import settings
+from server.services.health_integrations.db import _update_sync, persist
+from server.services.health_integrations.models import (
     ACTIVE_MINUTES, CALORIES, DISTANCE_KM, HEART_RATE, HRV,
     READINESS_SCORE, RESTING_HR, RESPIRATORY_RATE, SLEEP_AWAKE,
     SLEEP_DEEP, SLEEP_DURATION, SLEEP_LIGHT, SLEEP_REM, STEPS, STRESS_SCORE,
     HealthIntegrationError, HealthMetricPoint,
 )
-from backend.services.health_integrations.oauth import _get
+from server.services.health_integrations.oauth import _get
 
 log = logging.getLogger(__name__)
 
@@ -97,7 +97,7 @@ async def oura_sync(db: Session, target_date: Optional[str] = None) -> list[Heal
 
 # ── Integration class (auto-discovered by sync.py) ────────────────────────────
 
-from backend.services.health_integrations.base import EnvField, HealthIntegration, IntegrationManifest  # noqa: E402
+from server.services.health_integrations.base import EnvField, HealthIntegration, IntegrationManifest  # noqa: E402
 
 
 class OuraIntegration(HealthIntegration):

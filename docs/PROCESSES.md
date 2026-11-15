@@ -5,7 +5,7 @@ L.U.N.A. uses a process registry so background work can be contributed in small,
 ## Layout
 
 ```text
-backend/
+server/
   processes/
     registry.py
     calendar_reminders/
@@ -29,7 +29,7 @@ Each process package owns one runtime concern. A process can register scheduled 
 Every process module exports `PROCESS`:
 
 ```python
-from backend.processes.registry import ProcessDef
+from server.processes.registry import ProcessDef
 
 PROCESS = ProcessDef(
     id="example_process",
@@ -50,11 +50,11 @@ All hooks are optional:
 
 ## Adding a Process
 
-1. Create `backend/processes/<process_id>/process.py`.
+1. Create `server/processes/<process_id>/process.py`.
 2. Add a package `__init__.py`.
 3. Export a `PROCESS` object.
-4. Add the module path to `PROCESS_MODULES` in `backend/processes/registry.py`.
-5. Keep feature logic in `backend/services/` when it is shared or large.
+4. Add the module path to `PROCESS_MODULES` in `server/processes/registry.py`.
+5. Keep feature logic in `server/services/` when it is shared or large.
 6. Add or update API routes only if the process needs external controls.
 
 Use `docs/PROCESS_TEMPLATE.md` when adding a new process.
@@ -72,4 +72,4 @@ Use `docs/PROCESS_TEMPLATE.md` when adding a new process.
 
 ## Contribution Rule
 
-If a change affects one process, keep the PR inside that process package and the service modules it calls. Avoid adding unrelated jobs to `scheduler.py`; scheduler wiring should live in `backend/processes/*/process.py`.
+If a change affects one process, keep the PR inside that process package and the service modules it calls. Avoid adding unrelated jobs to `scheduler.py`; scheduler wiring should live in `server/processes/*/process.py`.

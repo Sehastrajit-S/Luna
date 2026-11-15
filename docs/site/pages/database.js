@@ -195,7 +195,7 @@ alembic downgrade -1`}</code></pre>
         </Callout>
         <h3>Creating a migration</h3>
         <CodeFile label="terminal">
-          <pre><code>{`# After editing SQLAlchemy models in backend/models/database.py:
+          <pre><code>{`# After editing SQLAlchemy models in server/models/database.py:
 alembic revision --autogenerate -m "add my_new_column"
 alembic upgrade head`}</code></pre>
         </CodeFile>
@@ -203,7 +203,7 @@ alembic upgrade head`}</code></pre>
 
       <section>
         <h2 id="schema">Schema overview</h2>
-        <p>Key tables in <code>backend/models/database.py</code>:</p>
+        <p>Key tables in <code>server/models/database.py</code>:</p>
         <table>
           <thead><tr><th>Table</th><th>Description</th></tr></thead>
           <tbody>

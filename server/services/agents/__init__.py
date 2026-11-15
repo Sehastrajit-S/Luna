@@ -24,11 +24,11 @@ Each Crew run is a single async generator yielding CrewEvents.  Callers
 (typically the chat pipeline or a /api/agents/crew endpoint) consume events
 as they arrive.
 """
-from backend.services.agents.events import CrewEvent, CrewEventType
-from backend.services.agents.scratchpad import Scratchpad
-from backend.services.agents.roles import AgentRole, ROLE_DEFINITIONS, RoleAgent
-from backend.services.agents.crew import Crew, run_crew
-from backend.services.agents.detector import is_crew_request
+from server.services.agents.events import CrewEvent, CrewEventType
+from server.services.agents.scratchpad import Scratchpad
+from server.services.agents.roles import AgentRole, ROLE_DEFINITIONS, RoleAgent
+from server.services.agents.crew import Crew, run_crew
+from server.services.agents.detector import is_crew_request
 
 __all__ = [
     "AgentRole",

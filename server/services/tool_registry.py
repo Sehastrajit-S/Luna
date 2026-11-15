@@ -7,7 +7,7 @@ call against them before it runs.
 from dataclasses import dataclass, field
 from enum import Enum
 
-from backend.services.tool_schemas import READ_ONLY_TOOLS, TOOL_SCHEMAS
+from server.services.tool_schemas import READ_ONLY_TOOLS, TOOL_SCHEMAS
 
 
 class RiskLevel(str, Enum):

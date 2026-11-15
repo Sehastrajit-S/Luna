@@ -6,10 +6,10 @@ from sqlalchemy.orm import sessionmaker
 
 class ConversationDeleteTests(unittest.TestCase):
     def test_delete_unlinks_references_instead_of_failing(self) -> None:
-        from backend.models.database import (
+        from server.models.database import (
             Base, Conversation, Episode, Fact, FeedbackLog, Message,
         )
-        from backend.routers.chat import delete_conversation
+        from server.routers.chat import delete_conversation
 
         engine = create_engine("sqlite://")
         event.listen(engine, "connect", lambda conn, _r: conn.execute("PRAGMA foreign_keys=ON"))

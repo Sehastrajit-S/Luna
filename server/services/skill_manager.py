@@ -2,7 +2,7 @@
 
 Skill folder layout
 -------------------
-skills/<name>/
+server/skills/<name>/
     skill.json      — metadata (id, name, description, permissions, tools)
     SKILL.md        — shared base instructions (used when no UI variant exists)
     cli.md          — CLI/terminal-specific output rules (appended for CLI context)
@@ -17,9 +17,9 @@ import re
 from pathlib import Path
 from typing import Any, Literal
 
-from backend.config import BASE_DIR, DATA_DIR
+from server.config import BASE_DIR, DATA_DIR
 
-SKILL_DIRS = [BASE_DIR / "skills", DATA_DIR / "workspace" / "skills"]
+SKILL_DIRS = [BASE_DIR / "server" / "skills", DATA_DIR / "workspace" / "skills"]
 
 UIVariant = Literal["electron", "cli", "channel"]
 

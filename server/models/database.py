@@ -5,7 +5,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 from sqlalchemy.pool import NullPool, QueuePool
 from datetime import datetime, timezone
-from backend.config import settings
+from server.config import settings
 
 
 def _resolve_db_url() -> str:

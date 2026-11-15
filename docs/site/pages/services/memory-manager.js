@@ -45,8 +45,8 @@ export default function MemoryManagerService() {
       <section>
         <h2 id="init">Instantiation</h2>
         <CodeFile label="example.py">
-          <pre><code>{`from backend.services.memory_manager import MemoryManager
-from backend.models.database import SessionLocal
+          <pre><code>{`from server.services.memory_manager import MemoryManager
+from server.models.database import SessionLocal
 
 db = SessionLocal()
 mm = MemoryManager(db)

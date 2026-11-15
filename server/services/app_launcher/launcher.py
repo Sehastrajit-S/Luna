@@ -6,7 +6,7 @@ import subprocess
 from difflib import get_close_matches
 from pathlib import Path
 
-from backend.services.app_launcher.profiles import (
+from server.services.app_launcher.profiles import (
     APP_PROFILES,
     COMMON_APP_ALIASES,
     STICKY_NOTES_APP_IDS,
@@ -75,7 +75,7 @@ def _best_match(query: str, apps: dict[str, str]) -> str | None:
 
 
 def _sticky_notes_candidates() -> list[str]:
-    from backend.services.app_launcher.discovery import (
+    from server.services.app_launcher.discovery import (
         _get_luna_apps,
         _get_start_menu_apps,
         _get_store_apps,
@@ -160,7 +160,7 @@ def launch_sticky_notes() -> tuple[bool, str]:
 
 
 def find_app(name: str) -> tuple[bool, str]:
-    from backend.services.app_launcher.discovery import (
+    from server.services.app_launcher.discovery import (
         _get_desktop_apps,
         _get_luna_apps,
         _get_registry_apps,
@@ -284,7 +284,7 @@ def close_app(name: str) -> tuple[bool, str]:
 
 
 def list_known_apps() -> list[str]:
-    from backend.services.app_launcher.discovery import (
+    from server.services.app_launcher.discovery import (
         _get_desktop_apps,
         _get_registry_apps,
         _get_start_menu_apps,

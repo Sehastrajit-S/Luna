@@ -22,7 +22,7 @@ def is_away() -> bool:
 
 def _start_sleep(label: str) -> None:
     try:
-        from backend.models.database import SessionLocal, SleepLog
+        from server.models.database import SessionLocal, SleepLog
         now = datetime.now(timezone.utc)
         db = SessionLocal()
         try:
@@ -44,7 +44,7 @@ def _end_sleep() -> None:
     if not log_id or not start:
         return
     try:
-        from backend.models.database import SessionLocal, SleepLog
+        from server.models.database import SessionLocal, SleepLog
         now = datetime.now(timezone.utc)
         db = SessionLocal()
         try:

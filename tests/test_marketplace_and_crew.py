@@ -1,22 +1,22 @@
 """Sanity check tests for skill_marketplace + agents packages.
 
-Run: python utilities/tests/test_marketplace_and_crew.py
+Run: python tests/test_marketplace_and_crew.py
 """
 import sys
 from pathlib import Path
 
 # Ensure project root on path
-ROOT = Path(__file__).resolve().parent.parent.parent
+ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 
 def test_skill_marketplace():
-    from backend.services.skill_marketplace import (
+    from server.services.skill_marketplace import (
         SkillManifest, ManifestError, validate_manifest,
         install_skill, remove_skill, InstallError,
         list_installed, validate_for_publish,
     )
-    from backend.services.skill_marketplace.manifest import ALLOWED_PERMISSIONS
+    from server.services.skill_marketplace.manifest import ALLOWED_PERMISSIONS
 
     # Valid manifest
     m = validate_manifest({
@@ -74,11 +74,11 @@ def test_skill_marketplace():
 
 
 def test_agents():
-    from backend.services.agents import (
+    from server.services.agents import (
         AgentRole, ROLE_DEFINITIONS, Scratchpad, CrewEvent, CrewEventType,
         is_crew_request,
     )
-    from backend.services.agents.crew import _parse_plan
+    from server.services.agents.crew import _parse_plan
 
     # Detector tests
     assert is_crew_request(

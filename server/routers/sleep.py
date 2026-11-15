@@ -2,7 +2,7 @@
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from backend.models.database import get_db, SleepLog
+from server.models.database import get_db, SleepLog
 
 router = APIRouter(prefix="/api/sleep", tags=["sleep"])
 

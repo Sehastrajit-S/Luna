@@ -176,7 +176,7 @@ def _page_ranges(numbers: list[int]) -> str:
 
 def _ocr_scanned_pages(data: bytes, out: ExtractedFile) -> None:
     """Read pages that have no text layer (scans, photos of pages) with OCR."""
-    from backend.services.files.ocr import OcrUnavailable, ocr_pdf_pages
+    from server.services.files.ocr import OcrUnavailable, ocr_pdf_pages
 
     scanned = [i for i, s in enumerate(out.sections) if len(s.text) < _MIN_TEXT_LAYER_CHARS]
     if not scanned:

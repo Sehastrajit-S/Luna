@@ -18,7 +18,7 @@ from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from backend.config import settings
+from server.config import settings
 
 # paths that are never rate-limited
 _SKIP_PATHS = {

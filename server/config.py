@@ -195,10 +195,10 @@ class Settings(BaseSettings):
 
     # ── Paths ─────────────────────────────────────────────────────────────────
     chroma_path: str = str(DATA_DIR / "chroma")
-    frontend_dist: str = str(BASE_DIR / "frontend" / "dist")
+    frontend_dist: str = str(BASE_DIR / "interfaces" / "web" / "dist")
     # Browser UI: the same renderer the desktop app loads, served at "/".
-    web_ui_dir: str = str(BASE_DIR / "desktop-app" / "src" / "renderer")
-    web_ui_resources: str = str(BASE_DIR / "desktop-app" / "resources")
+    web_ui_dir: str = str(BASE_DIR / "interfaces" / "desktop" / "src" / "renderer")
+    web_ui_resources: str = str(BASE_DIR / "interfaces" / "desktop" / "resources")
 
     # ── Memory ────────────────────────────────────────────────────────────────
     max_conversation_history: int = 30
@@ -253,7 +253,7 @@ class Settings(BaseSettings):
     # Enterprise workflow defaults
     enterprise_workflow_workspace_root: str = str(BASE_DIR)
     enterprise_workflow_base_branch: str = "main"
-    enterprise_workflow_test_command: str = "python -W ignore -m unittest discover -s utilities/tests/tools -p \"test_*.py\" -v"
+    enterprise_workflow_test_command: str = "python -W ignore -m unittest discover -s tests/tools -p \"test_*.py\" -v"
 
     # Google Workspace / Microsoft 365 (OAuth access tokens; opt-in)
     google_workspace_client_id: str = ""

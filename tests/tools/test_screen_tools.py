@@ -7,7 +7,7 @@ from tests.tools import _bootstrap  # noqa: F401
 
 class ScreenToolTests(unittest.TestCase):
     def test_safe_screen_tools_return_dicts(self) -> None:
-        from backend.services.screen_perception import execute_screen_tool
+        from server.services.screen_perception import execute_screen_tool
 
         for tool_name, args in (
             ("get_active_window", {}),
@@ -18,7 +18,7 @@ class ScreenToolTests(unittest.TestCase):
                 self.assertIsInstance(result, dict)
 
     def test_unknown_screen_tool_reports_error(self) -> None:
-        from backend.services.screen_perception import execute_screen_tool
+        from server.services.screen_perception import execute_screen_tool
 
         result = execute_screen_tool("__missing__", {})
         self.assertIn("error", result)

@@ -8,13 +8,13 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPExcepti
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
-from backend.models.database import Attachment, Conversation, get_db
-from backend.models.schemas import AttachmentOut
-from backend.services.files import (
+from server.models.database import Attachment, Conversation, get_db
+from server.models.schemas import AttachmentOut
+from server.services.files import (
     MAX_UPLOAD_BYTES, SUPPORTED_EXT, UnsupportedFile, delete_attachment_files, original_path,
     prepare_large_file, save_upload,
 )
-from backend.services.files.service import sweep_unsent_uploads
+from server.services.files.service import sweep_unsent_uploads
 
 logger = logging.getLogger(__name__)
 

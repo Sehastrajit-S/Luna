@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 
-from backend.services.coding.prompts import PLAN_RE
+from server.services.coding.prompts import PLAN_RE
 
 
 def _scan_json_object(text: str, start: int) -> int | None:

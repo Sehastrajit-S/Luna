@@ -43,7 +43,7 @@ taskkill /PID 12345 /F`}</code></pre>
         </CodeFile>
 
         <p>If you want to run Luna on a different port, set <code>backend_port=9000</code> in your
-        <code>.env</code> and update the Vite proxy in <code>frontend/vite.config.ts</code> to match.</p>
+        <code>.env</code> and update the Vite proxy in <code>interfaces/web/vite.config.ts</code> to match.</p>
       </section>
 
       <section>
@@ -216,7 +216,7 @@ for i, v in enumerate(engine.getProperty('voices')):
         </CodeFile>
 
         <h3>3. Check the proxy config</h3>
-        <p>The Vite proxy at <code>frontend/vite.config.ts</code> forwards <code>/api</code> to
+        <p>The Vite proxy at <code>interfaces/web/vite.config.ts</code> forwards <code>/api</code> to
         <code>http://localhost:8899</code>. If your backend port differs, update the proxy target.</p>
 
         <h3>4. TypeScript errors blocking the build</h3>
@@ -340,7 +340,7 @@ ls -lh data/luna.db`}</code></pre>
         <ul>
           <li>Missing type imports after adding a new component.</li>
           <li><code>any</code> type added to bypass a type error — find and fix the root type.</li>
-          <li>A new API response shape that doesn't match <code>frontend/src/types/index.ts</code>.</li>
+          <li>A new API response shape that doesn't match <code>interfaces/web/src/types/index.ts</code>.</li>
         </ul>
 
         <h3>Backend syntax errors</h3>
@@ -363,7 +363,7 @@ npm install`}</code></pre>
         <CodeFile label="terminal">
           <pre><code>{`python --version           # Must be 3.10 or newer
 pip install --upgrade pip  # Update pip first
-pip install -r backend/requirements.txt`}</code></pre>
+pip install -r server/requirements.txt`}</code></pre>
         </CodeFile>
 
         <Callout type="tip" title="Still stuck?">

@@ -21,7 +21,7 @@ import asyncio, sys, base64
 from pathlib import Path
 from playwright.async_api import async_playwright, Page
 
-OUT  = Path(__file__).resolve().parents[2] / "docs-site" / "public" / "screenshots"
+OUT  = Path(__file__).resolve().parents[2] / "docs/site" / "public" / "screenshots"
 URL  = "http://localhost:5173"
 
 # Use system Chrome if Playwright's bundled Chromium wasn't installed

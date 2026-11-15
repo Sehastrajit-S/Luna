@@ -28,7 +28,7 @@ export default function SkillsPage() {
         <h2 id="overview">Overview</h2>
         <p>
           A <strong>skill</strong> is a markdown file (<code>SKILL.md</code>) that lives
-          in a named folder under <code>skills/</code>. When Luna detects that a user's
+          in a named folder under <code>server/skills/</code>. When Luna detects that a user's
           request matches a skill's purpose, the skill's instructions are injected into
           the system prompt — no code changes, no redeployment.
         </p>
@@ -42,14 +42,14 @@ export default function SkillsPage() {
       <section>
         <h2 id="how-skills-work">How skills work</h2>
         <ol>
-          <li>The skill manager scans <code>skills/*/SKILL.md</code> on startup and caches all skill definitions.</li>
+          <li>The skill manager scans <code>server/skills/*/SKILL.md</code> on startup and caches all skill definitions.</li>
           <li>On each chat turn, the chat router calls <code>list_skills()</code> to expose skill names and descriptions to the LLM.</li>
           <li>The LLM decides whether to invoke a skill tool call based on the user's request.</li>
           <li>When invoked, the skill's <code>SKILL.md</code> content is injected as additional system context for that turn.</li>
           <li>Skills that have a dedicated endpoint (e.g. the coding agent) can also be called directly via their own route.</li>
         </ol>
-        <CodeFile label="skills/ directory layout">
-          <pre><code>{`skills/
+        <CodeFile label="server/skills/ directory layout">
+          <pre><code>{`server/skills/
   coding-agent/
     SKILL.md          ← workflow rules + tool list
   research/
@@ -157,7 +157,7 @@ export default function SkillsPage() {
 # Returns JSON array of { name, description, has_dedicated_endpoint }`}</code></pre>
         </CodeFile>
         <CodeFile label="Python">
-          <pre><code>{`from backend.services.skill_manager import list_skills
+          <pre><code>{`from server.services.skill_manager import list_skills
 
 skills = list_skills()
 for s in skills:

@@ -94,10 +94,10 @@ function detectMode(env) {
 }
 
 function composeArgs(mode) {
-  if (mode === 'business') return ['-f', 'compose.business.yml'];
-  if (mode === 'cloud')    return ['-f', 'compose.cloud.yml'];
-  if (mode === 'gpu')      return ['-f', 'compose.yml', '-f', 'compose.gpu.yml'];
-  return ['-f', 'compose.yml'];
+  if (mode === 'business') return ['-f', 'deploy/compose.business.yml'];
+  if (mode === 'cloud')    return ['-f', 'deploy/compose.cloud.yml'];
+  if (mode === 'gpu')      return ['-f', 'deploy/compose.yml', '-f', 'deploy/compose.gpu.yml'];
+  return ['-f', 'deploy/compose.yml'];
 }
 
 function dc(mode, ...extra) {

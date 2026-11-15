@@ -9,15 +9,15 @@ from typing import Optional
 import httpx
 from sqlalchemy.orm import Session
 
-from backend.config import settings
-from backend.services.health_integrations.db import _update_sync, persist
-from backend.services.health_integrations.models import (
+from server.config import settings
+from server.services.health_integrations.db import _update_sync, persist
+from server.services.health_integrations.models import (
     ACTIVE_MINUTES, BLOOD_OXYGEN, CALORIES, DISTANCE_KM, HRV,
     RESTING_HR, RESPIRATORY_RATE, SKIN_TEMP, SLEEP_AWAKE, SLEEP_DEEP,
     SLEEP_DURATION, SLEEP_LIGHT, SLEEP_REM, STEPS, WEIGHT_KG,
     HealthIntegrationError, HealthMetricPoint,
 )
-from backend.services.health_integrations.oauth import _get, _oauth_refresh
+from server.services.health_integrations.oauth import _get, _oauth_refresh
 
 log = logging.getLogger(__name__)
 
@@ -172,7 +172,7 @@ async def fitbit_sync(db: Session, target_date: Optional[str] = None) -> list[He
 
 # ── Integration class (auto-discovered by sync.py) ────────────────────────────
 
-from backend.services.health_integrations.base import EnvField, HealthIntegration, IntegrationManifest  # noqa: E402
+from server.services.health_integrations.base import EnvField, HealthIntegration, IntegrationManifest  # noqa: E402
 
 
 class FitbitIntegration(HealthIntegration):

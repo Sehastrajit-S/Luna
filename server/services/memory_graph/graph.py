@@ -10,8 +10,8 @@ import chromadb
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from backend.config import DATA_DIR
-from backend.services.memory_graph.models import FactNode, GraphEdge
+from server.config import DATA_DIR
+from server.services.memory_graph.models import FactNode, GraphEdge
 
 
 class MemoryGraph:

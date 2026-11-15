@@ -22,7 +22,7 @@ jobs:
           cache: 'pip'
 
       - name: Install Python dependencies
-        run: pip install -r backend/requirements.txt pyinstaller
+        run: pip install -r server/requirements.txt pyinstaller
 
       - name: Build backend binary
         run: pyinstaller build-backend/luna-backend.spec --distpath dist-backend --noconfirm
@@ -95,15 +95,15 @@ jobs:
         run: cd frontend && npx cap sync android
 
       - name: Make Gradle wrapper executable
-        run: chmod +x frontend/android/gradlew
+        run: chmod +x interfaces/mobile/android/gradlew
 
       - name: Build APK (debug)
-        run: cd frontend/android && ./gradlew assembleDebug --no-daemon
+        run: cd interfaces/mobile/android && ./gradlew assembleDebug --no-daemon
 
       - name: Rename APK
         run: |
           VERSION=$(node -p "require('./electron/package.json').version")
-          cp frontend/android/app/build/outputs/apk/debug/app-debug.apk \
+          cp interfaces/mobile/android/app/build/outputs/apk/debug/app-debug.apk \
              "Luna-${VERSION}-android.apk"
 
       - name: Upload to release
@@ -147,7 +147,7 @@ jobs:
 
       - name: Resolve Swift packages
         run: |
-          cd frontend/ios/App
+          cd interfaces/mobile/ios/App
           xcodebuild -resolvePackageDependencies \
             -scheme App \
             -project App.xcodeproj \
@@ -155,7 +155,7 @@ jobs:
 
       - name: Build iOS (simulator, no signing)
         run: |
-          cd frontend/ios/App
+          cd interfaces/mobile/ios/App
           xcodebuild build \
             -scheme App \
             -project App.xcodeproj \
@@ -168,7 +168,7 @@ jobs:
       - name: Package .app as zip
         run: |
           VERSION=$(node -p "require('./electron/package.json').version")
-          APP=$(find frontend/ios/App/build -name "*.app" | head -1)
+          APP=$(find interfaces/mobile/ios/App/build -name "*.app" | head -1)
           zip -r "Luna-${VERSION}-ios-simulator.zip" "$APP"
 
       - name: Upload to release

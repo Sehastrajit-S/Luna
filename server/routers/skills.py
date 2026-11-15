@@ -19,7 +19,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request
 
-from backend.services.skill_marketplace import (
+from server.services.skill_marketplace import (
     InstallError,
     ManifestError,
     PublishError,

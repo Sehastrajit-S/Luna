@@ -35,7 +35,7 @@ if errorlevel 1 (
 
 echo.
 echo  Installing Python dependencies...
-pip install -r backend\requirements.txt
+pip install -r server\requirements.txt
 if errorlevel 1 (
     echo [ERROR] Python dependency install failed
     pause
@@ -44,38 +44,31 @@ if errorlevel 1 (
 echo [OK] Python dependencies installed
 
 echo.
-echo  Installing frontend dependencies...
-cd frontend
+echo  Installing web dependencies...
 call npm install
 if errorlevel 1 (
     echo [ERROR] npm install failed
-    cd ..
     pause
     exit /b 1
 )
 
 echo.
-echo  Building frontend...
+echo  Building web UI...
 call npm run build
 if errorlevel 1 (
-    echo [ERROR] Frontend build failed
-    cd ..
+    echo [ERROR] Web build failed
     pause
     exit /b 1
 )
-cd ..
 
 echo.
-echo  Installing Electron dependencies...
-cd electron
-call npm install
+echo  Installing desktop app dependencies...
+call npm install --prefix interfaces\desktop
 if errorlevel 1 (
-    echo [ERROR] Electron npm install failed
-    cd ..
+    echo [ERROR] Desktop npm install failed
     pause
     exit /b 1
 )
-cd ..
 echo [OK] Electron dependencies installed
 
 echo.
@@ -89,11 +82,10 @@ echo   Setup complete!
 echo  ==========================================
 echo.
 echo  To start Luna:
-echo    cd electron
-echo    npm start
+echo    npm --prefix interfaces\desktop start
 echo.
 echo  To start in dev mode (hot reload):
-echo    Terminal 1:  cd frontend ^&^& npm run dev
-echo    Terminal 2:  cd electron ^&^& npm start
+echo    Terminal 1:  npm run luna -- backend
+echo    Terminal 2:  npm --prefix interfaces\desktop start
 echo.
 pause

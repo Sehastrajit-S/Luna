@@ -10,7 +10,7 @@ tool, multi-step requests, and more.
 Checks: reply text (must / must not match), tools called (must / must not),
 the path that answered (no crew / coding agent unless asked), and the eval
 database (tasks/events created, at the expected local time). Run it through
-`python -m utilities.evals.run --suite scenarios` (isolated backend), never
+`python -m tests.evals.run --suite scenarios` (isolated backend), never
 against the live one.
 """
 from __future__ import annotations

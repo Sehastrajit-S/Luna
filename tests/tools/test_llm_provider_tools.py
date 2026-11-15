@@ -7,8 +7,8 @@ from tests.tools import _bootstrap  # noqa: F401
 
 class LLMProviderToolTests(unittest.TestCase):
     def test_nvidia_nim_provider_status_and_model(self) -> None:
-        from backend.config import settings
-        from backend.services.llm import ollama
+        from server.config import settings
+        from server.services.llm import ollama
 
         original = {
             "llm_provider": settings.llm_provider,
@@ -29,8 +29,8 @@ class LLMProviderToolTests(unittest.TestCase):
                 setattr(settings, key, value)
 
     def test_nvidia_nim_stream_uses_openai_compatible_generator(self) -> None:
-        from backend.config import settings
-        from backend.services.llm import ollama
+        from server.config import settings
+        from server.services.llm import ollama
 
         original = settings.llm_provider
         try:

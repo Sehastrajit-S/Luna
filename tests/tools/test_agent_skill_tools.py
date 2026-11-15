@@ -9,13 +9,13 @@ from tests.tools import _bootstrap  # noqa: F401
 
 class AgentSkillToolTests(unittest.TestCase):
     def test_list_skills_is_readable(self) -> None:
-        from backend.services.skill_manager import list_skills
+        from server.services.skill_manager import list_skills
 
         skills = list_skills()
         self.assertIsInstance(skills, list)
 
     def test_agent_task_create_round_trip(self) -> None:
-        from backend.services.agent_tasks import TASKS_PATH, create_agent_task
+        from server.services.agent_tasks import TASKS_PATH, create_agent_task
 
         before = TASKS_PATH.read_text(encoding="utf-8") if TASKS_PATH.exists() else None
         try:

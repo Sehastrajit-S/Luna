@@ -18,7 +18,7 @@ that has nothing else in it.
 ## Directory layout
 
 ```
-desktop-app/
+interfaces/desktop/
 ├── package.json
 ├── build/
 │   └── electron-builder.yml        # packaging config, kept out of package.json
@@ -28,7 +28,7 @@ desktop-app/
     │   ├── index.js                # entry point: WIRES modules together, contains no logic itself
     │   ├── app-lifecycle.js        # single-instance lock, window-all-closed, before-quit
     │   ├── menu.js                 # application menu bar
-    │   ├── backend/
+    │   ├── server/
     │   │   └── process-manager.js  # spawn/health-check/restart the Python backend
     │   ├── windows/
     │   │   ├── window-registry.js  # tracks open windows by name (no duplicate windows)

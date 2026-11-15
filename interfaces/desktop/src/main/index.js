@@ -15,12 +15,12 @@ const { app } = require('electron')
 // folder instead of %APPDATA%. Must run before anything reads userData
 // (the logger resolves its directory at require time).
 if (!app.isPackaged) {
-  app.setPath('userData', path.join(__dirname, '..', '..', '..', 'data', 'desktop-app'))
+  app.setPath('userData', path.join(__dirname, '..', '..', '..', '..', 'data', 'desktop-app'))
 }
 
 const logger = require('./services/logger')
 const { enforceSingleInstance, wireLifecycle } = require('./app-lifecycle')
-const backend = require('./backend/process-manager')
+const backend = require('./server/process-manager')
 const windowRegistry = require('./windows/window-registry')
 const { createMainWindow } = require('./windows/main-window')
 const IPC = require('../shared/ipc-channels')
@@ -29,7 +29,7 @@ const { buildAppMenu } = require('./menu')
 const trayService = require('./services/tray-service')
 const updaterService = require('./services/updater-service')
 
-const ROOT = path.join(__dirname, '..', '..', '..')
+const ROOT = path.join(__dirname, '..', '..', '..', '..')
 const ENV_PATH = path.join(ROOT, '.env')
 
 if (!enforceSingleInstance()) {
@@ -41,7 +41,7 @@ if (!enforceSingleInstance()) {
 
     backend.spawnBackend({
       cwd: ROOT,
-      scriptPath: path.join(ROOT, 'backend', 'server.py'),
+      scriptPath: path.join(ROOT, 'server', 'server.py'),
     })
 
     const mainWindow = createMainWindow()

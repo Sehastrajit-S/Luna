@@ -39,12 +39,12 @@ from typing import Any, Optional
 
 import httpx
 
-from backend.config import BASE_DIR, DATA_DIR, settings
-from backend.services.skill_marketplace.installer import (
+from server.config import BASE_DIR, DATA_DIR, settings
+from server.services.skill_marketplace.installer import (
     BUILTIN_SKILLS_DIR,
     USER_SKILLS_DIR,
 )
-from backend.services.skill_marketplace.manifest import (
+from server.services.skill_marketplace.manifest import (
     ManifestError,
     load_manifest,
 )

@@ -9,7 +9,7 @@ from tests.tools import _bootstrap  # noqa: F401
 
 class WorkspaceIntegrationToolTests(unittest.TestCase):
     def test_workspace_status_lists_supported_services(self) -> None:
-        from backend.main import app
+        from server.main import app
 
         client = TestClient(app)
         response = client.get("/api/integrations/workspace/status")
@@ -22,8 +22,8 @@ class WorkspaceIntegrationToolTests(unittest.TestCase):
         self.assertIn("teams", data["microsoft"]["services"])
 
     def test_google_workspace_missing_token_is_clean_error(self) -> None:
-        from backend.main import app
-        from backend.config import settings
+        from server.main import app
+        from server.config import settings
 
         original = settings.google_workspace_access_token
         original_refresh = settings.google_workspace_refresh_token
@@ -43,8 +43,8 @@ class WorkspaceIntegrationToolTests(unittest.TestCase):
         self.assertIn("access token is not configured", response.json()["detail"])
 
     def test_microsoft_workspace_missing_token_is_clean_error(self) -> None:
-        from backend.main import app
-        from backend.config import settings
+        from server.main import app
+        from server.config import settings
 
         original = settings.microsoft_workspace_access_token
         original_refresh = settings.microsoft_workspace_refresh_token

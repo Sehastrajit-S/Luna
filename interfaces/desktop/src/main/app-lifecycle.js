@@ -6,7 +6,7 @@
 'use strict'
 
 const { app, BrowserWindow } = require('electron')
-const backend = require('./backend/process-manager')
+const backend = require('./server/process-manager')
 const trayService = require('./services/tray-service')
 const windowRegistry = require('./windows/window-registry')
 const { createMainWindow } = require('./windows/main-window')

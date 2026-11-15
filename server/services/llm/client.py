@@ -5,8 +5,8 @@ from typing import AsyncGenerator
 
 import httpx
 
-from backend.config import settings
-from backend.services.llm.providers import (
+from server.config import settings
+from server.services.llm.providers import (
     _TIMEOUT,
     _provider,
     _stream_ollama,

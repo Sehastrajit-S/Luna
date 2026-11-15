@@ -19,9 +19,9 @@ from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query, Requ
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-from backend.config import settings
-from backend.models.database import get_db
-from backend.services.health_integrations import (
+from server.config import settings
+from server.models.database import get_db
+from server.services.health_integrations import (
     PLATFORM_CONFIGURED,
     PLATFORM_OAUTH,
     PLATFORM_SYNC,
@@ -217,7 +217,7 @@ async def samsung_webhook(
 
 @router.get("/metric-types")
 def metric_types():
-    from backend.services.health_integrations import METRIC_UNITS
+    from server.services.health_integrations import METRIC_UNITS
     return {
         "metric_types": [
             {"type": k, "unit": v}
@@ -236,7 +236,7 @@ def integration_manifests():
     The settings UI uses this to render integration cards and setup forms
     without any frontend code changes when a new integration is added.
     """
-    from backend.services.health_integrations.sync import _PLATFORMS
+    from server.services.health_integrations.sync import _PLATFORMS
     webhook = {"apple", "samsung"}
     platforms = []
     for pid, p in _PLATFORMS.items():

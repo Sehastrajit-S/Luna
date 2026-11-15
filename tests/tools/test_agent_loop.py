@@ -11,7 +11,7 @@ from sqlalchemy.orm import sessionmaker
 
 
 def _db():
-    from backend.models.database import Base
+    from server.models.database import Base
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
     Base.metadata.create_all(engine)
     return sessionmaker(bind=engine)()
@@ -25,12 +25,12 @@ def _ctx(message="hi", **extra):
 
 
 def _call(name, args=None, call_id=None):
-    from backend.services.llm.tool_calling import ToolCall
+    from server.services.llm.tool_calling import ToolCall
     return ToolCall(call_id or f"call_{name}", name, args or {})
 
 
 def _turn(content="", calls=()):
-    from backend.services.llm.tool_calling import AssistantTurn
+    from server.services.llm.tool_calling import AssistantTurn
     return AssistantTurn(content=content, tool_calls=list(calls))
 
 
@@ -47,11 +47,11 @@ class ScriptedModel:
 
 
 def _run(ctx, model):
-    from backend.services.agent_loop.loop import AgentLoop
+    from server.services.agent_loop.loop import AgentLoop
 
     async def go():
         events = []
-        with mock.patch("backend.services.agent_loop.loop.chat_step", new=model):
+        with mock.patch("server.services.agent_loop.loop.chat_step", new=model):
             async for event in AgentLoop(ctx, [{"role": "user", "content": ctx.user_message}]).run():
                 events.append(event)
         return events
@@ -60,7 +60,7 @@ def _run(ctx, model):
 
 class ToolDefinitionTests(unittest.TestCase):
     def test_every_tool_has_a_json_schema_matching_its_params(self) -> None:
-        from backend.services.tool_registry import TOOL_REGISTRY
+        from server.services.tool_registry import TOOL_REGISTRY
 
         for name, tool in TOOL_REGISTRY.items():
             schema = tool.input_schema
@@ -69,7 +69,7 @@ class ToolDefinitionTests(unittest.TestCase):
             self.assertLessEqual(set(schema.get("required", [])), set(schema["properties"]), name)
 
     def test_model_spec_is_function_calling_format(self) -> None:
-        from backend.services.tool_registry import model_tool_spec
+        from server.services.tool_registry import model_tool_spec
 
         spec = model_tool_spec("create_event")
         self.assertEqual(spec["type"], "function")
@@ -77,7 +77,7 @@ class ToolDefinitionTests(unittest.TestCase):
         self.assertEqual(spec["function"]["parameters"]["required"], ["title", "datetime"])
 
     def test_validation_coerces_and_reports(self) -> None:
-        from backend.services.tool_registry import validate_tool_args
+        from server.services.tool_registry import validate_tool_args
 
         args, error = validate_tool_args("create_event", {"title": "Sync", "datetime": "2026-09-25T15:00",
                                                           "duration": "30", "extra": 1, "junk": None})
@@ -90,7 +90,7 @@ class ToolDefinitionTests(unittest.TestCase):
 
 class ToolCallingFormatTests(unittest.TestCase):
     def test_calls_written_as_text_are_recovered(self) -> None:
-        from backend.services.llm.tool_calling import calls_from_text
+        from server.services.llm.tool_calling import calls_from_text
 
         known = {"web_search", "create_task"}
         text, calls = calls_from_text('<tool_call>{"name": "web_search", "arguments": {"query": "x"}}</tool_call>', known)
@@ -101,7 +101,7 @@ class ToolCallingFormatTests(unittest.TestCase):
         self.assertEqual(calls, [])
 
     def test_assistant_and_tool_messages(self) -> None:
-        from backend.services.llm.tool_calling import tool_result_message
+        from server.services.llm.tool_calling import tool_result_message
 
         call = _call("web_search", {"query": "x"})
         message = _turn("", [call]).as_message()
@@ -112,7 +112,7 @@ class ToolCallingFormatTests(unittest.TestCase):
 
 class AgentLoopTests(unittest.TestCase):
     def test_multi_step_saves_then_answers_from_the_result(self) -> None:
-        from backend.models.database import Task
+        from server.models.database import Task
 
         ctx = _ctx("add a task to call mom tomorrow at 9am")
         model = ScriptedModel(
@@ -146,7 +146,7 @@ class AgentLoopTests(unittest.TestCase):
             _turn("All done."),
         )
         started = time.perf_counter()
-        with mock.patch("backend.services.tool_runner.execute_tool_call", new=fake_execute):
+        with mock.patch("server.services.tool_runner.execute_tool_call", new=fake_execute):
             _run(ctx, model)
         elapsed = time.perf_counter() - started
         # get_volume + get_brightness together (0.3s), then the write alone, then the read after it.
@@ -174,19 +174,19 @@ class AgentLoopTests(unittest.TestCase):
 
         model = ScriptedModel(_turn("", [_call("get_volume", call_id="1")]), _turn("", [_call("get_volume", call_id="2")]),
                               _turn("It's at 40%."))
-        with mock.patch("backend.services.tool_runner.execute_tool_call", new=fake_execute):
+        with mock.patch("server.services.tool_runner.execute_tool_call", new=fake_execute):
             _run(ctx, model)
         self.assertEqual(calls, ["get_volume"])
         self.assertIn("already made this exact call", model.requests[2]["messages"][-1]["content"])
 
     def test_step_budget_forces_a_final_answer_without_tools(self) -> None:
-        from backend.config import settings
+        from server.config import settings
 
         ctx = _ctx("loop forever")
         turns = [_turn("", [_call("web_fetch", {"url": f"https://example.com/{i}"})]) for i in range(3)]
         model = ScriptedModel(*turns, _turn("Here's what I found."))
         with mock.patch.object(settings, "agent_max_steps", 3), \
-             mock.patch("backend.services.tool_runner.execute_tool_call", new=mock.AsyncMock(return_value="page")):
+             mock.patch("server.services.tool_runner.execute_tool_call", new=mock.AsyncMock(return_value="page")):
             _run(ctx, model)
         self.assertIsNone(model.requests[-1]["tools"])
         self.assertEqual(ctx.full_response, "Here's what I found.")
@@ -197,8 +197,8 @@ class AgentLoopTests(unittest.TestCase):
                               _turn("", [_call("web_fetch", {"url": "https://example.com"})]), _turn("It's $1,999."))
         # A price is looked up before the model answers (grounding); "let me check"
         # after that is still a non-answer and still gets nudged.
-        with mock.patch("backend.services.tool_runner.execute_tool_call", new=mock.AsyncMock(return_value="$1,999")), \
-             mock.patch("backend.services.agent_loop.loop.AgentLoop._lookup", new=mock.AsyncMock(return_value="$1,999")):
+        with mock.patch("server.services.tool_runner.execute_tool_call", new=mock.AsyncMock(return_value="$1,999")), \
+             mock.patch("server.services.agent_loop.loop.AgentLoop._lookup", new=mock.AsyncMock(return_value="$1,999")):
             _run(ctx, model)
         self.assertEqual(ctx.tools_used[0], "web_search")
         self.assertIn("didn't call a tool", model.requests[1]["messages"][-1]["content"])
@@ -213,15 +213,15 @@ class AgentLoopTests(unittest.TestCase):
         self.assertIn("Your last reply was empty", model.requests[1]["messages"][-1]["content"])
 
     def test_declined_confirmation_is_reported_to_the_model(self) -> None:
-        from backend.services.permission_manager import permission_manager
+        from server.services.permission_manager import permission_manager
 
         ctx = _ctx("close spotify")
         model = ScriptedModel(_turn("", [_call("close_app", {"app": "spotify"})]), _turn("Okay, I left Spotify open."))
         executed = mock.AsyncMock(return_value="closed")
         with mock.patch.object(permission_manager, "check", return_value=("confirm", "Close spotify?", "c1")), \
-             mock.patch("backend.services.chat_pipeline.stage_tools._wait_for_confirmation",
+             mock.patch("server.services.chat_pipeline.stage_tools._wait_for_confirmation",
                         new=mock.AsyncMock(return_value=False)), \
-             mock.patch("backend.services.tool_runner.execute_tool_call", new=executed):
+             mock.patch("server.services.tool_runner.execute_tool_call", new=executed):
             events = _run(ctx, model)
         executed.assert_not_called()
         types = [e["type"] for e in events]
@@ -240,8 +240,8 @@ class AgentLoopTests(unittest.TestCase):
 
 class LookupQualityTests(unittest.TestCase):
     def test_skill_with_nothing_to_fan_out_uses_a_general_search(self) -> None:
-        from backend.services.skill_runtime import runner
-        from backend.services.skill_runtime.registry import get_search_skill
+        from server.services.skill_runtime import runner
+        from server.services.skill_runtime.registry import get_search_skill
 
         skill = get_search_skill("product-search")
         general = runner.SkillRun(answer="general answer", skill_id="web")
@@ -254,8 +254,8 @@ class LookupQualityTests(unittest.TestCase):
         self.assertEqual(run.answer, "general answer")
 
     def test_only_cards_the_answer_mentions_are_shown(self) -> None:
-        from backend.services.agent_loop.loop import _relevant_cards
-        from backend.services.skill_runtime.runner import embed_cards
+        from server.services.agent_loop.loop import _relevant_cards
+        from server.services.skill_runtime.runner import embed_cards
 
         comment = embed_cards("", [{"title": "Laya III Personal Massager", "url": "https://a"},
                                    {"title": "Sony WH-1000XM6 Headphones", "url": "https://b"}]).strip()
@@ -265,7 +265,7 @@ class LookupQualityTests(unittest.TestCase):
         self.assertEqual(_relevant_cards([comment], "Neither brand makes LLMs."), "")
 
     def test_no_removed_links_notice_after_a_real_search(self) -> None:
-        from backend.services.chat_pipeline.stage_tools import strip_unverified_links
+        from server.services.chat_pipeline.stage_tools import strip_unverified_links
 
         text = "See [the guide](https://invented.example.com/deep/page)."
         self.assertIn("I removed 1 link", strip_unverified_links(text, ""))
@@ -284,7 +284,7 @@ class LongContextTests(unittest.TestCase):
         return "Here is a long log dump:\n\n" + " ".join(body) + "\n\nQuestion: what is the vault passphrase?"
 
     def test_long_paste_keeps_start_end_and_the_relevant_middle(self) -> None:
-        from backend.services.files import retrieval
+        from server.services.files import retrieval
 
         text = self._haystack(900, "The vault passphrase is copper-lantern-20.")
         with mock.patch.object(retrieval, "_embed_batch", new=mock.AsyncMock(return_value=None)):   # keyword ranking
@@ -297,14 +297,14 @@ class LongContextTests(unittest.TestCase):
         self.assertEqual(asyncio.run(retrieval.condense_long_text("short", 16000)), ("short", 0, 0))
 
     def test_long_paste_never_counts_as_a_save_request(self) -> None:
-        from backend.services.command_parser.schedule import wants_saved
+        from server.services.command_parser.schedule import wants_saved
 
         paste = "Schedule packet queue schedule record commit. " * 40
         self.assertFalse(wants_saved(paste, "The log shows no passphrase."))
         self.assertTrue(wants_saved("remind me to call mom at 5", "Okay."))
 
     def test_state_and_failure_replies_are_not_saved_as_style_examples(self) -> None:
-        from backend.services.chat_background import _is_style_example
+        from server.services.chat_background import _is_style_example
 
         self.assertTrue(_is_style_example("How is life", "Pretty good, busy week."))
         self.assertFalse(_is_style_example("What's my screen brightness?", "I can't check your screen brightness right now"))
@@ -312,7 +312,7 @@ class LongContextTests(unittest.TestCase):
         self.assertFalse(_is_style_example("x" * 400, "Sure."))
 
     def test_user_name_must_come_from_the_user(self) -> None:
-        from backend.services import fact_extractor
+        from server.services import fact_extractor
 
         convo = "User: hey, I'm Sam by the way\nLuna: Nice to meet you, Sam."
         for reply, expected in (("Sam", "Sam"), ("unknown.", None), ("Luna", None), ("Orion", None)):
@@ -320,8 +320,8 @@ class LongContextTests(unittest.TestCase):
                 self.assertEqual(asyncio.run(fact_extractor.extract_user_name(convo)), expected, reply)
 
     def test_summary_runs_every_ten_stored_messages(self) -> None:
-        from backend.models.database import Conversation, Message
-        from backend.services import chat_background
+        from server.models.database import Conversation, Message
+        from server.services import chat_background
 
         db = _db()
         conv = Conversation(message_count=3)             # a drifted counter must not matter
@@ -344,13 +344,13 @@ class LongContextTests(unittest.TestCase):
         summarize.assert_awaited_once()                  # second call: no new messages yet
         conv = db.query(Conversation).filter_by(id=cid).first()     # the task closed its session
         self.assertIn("BLUEFIN", conv.summary)
-        from backend.models.database import ConversationArtifact
+        from server.models.database import ConversationArtifact
         facts = [a.content for a in db.query(ConversationArtifact).filter_by(conversation_id=cid, kind="fact")]
         self.assertEqual(facts, ["Project name: Snip"])  # decisions also land in the append-only state
 
     def test_background_work_releases_its_connection(self) -> None:
-        from backend.models.database import Conversation
-        from backend.services import chat_background
+        from server.models.database import Conversation
+        from server.services import chat_background
 
         db = _db()
         conv = Conversation()
@@ -367,7 +367,7 @@ class RoutingAndStyleTests(unittest.TestCase):
         return SimpleNamespace(user_message=message, is_business=False, attachment_ids=[])
 
     def test_recall_and_coding_questions_stay_in_the_chat_loop(self) -> None:
-        from backend.services.chat_pipeline.stage_generate import uses_special_agent
+        from server.services.chat_pipeline.stage_generate import uses_special_agent
 
         probe = ("Quick check without looking anything up: what are the project codename, the deploy region, "
                  "the test budget and the reviewer's code word?")                     # "code" + "check" + "test"
@@ -380,14 +380,14 @@ class RoutingAndStyleTests(unittest.TestCase):
         self.assertFalse(uses_special_agent(self._ctx("write a React component in Next.js for a login form")))
 
     def test_crew_heuristic_still_available_without_the_loop(self) -> None:
-        from backend.services.agents import is_crew_request
+        from server.services.agents import is_crew_request
 
         text = "research the best vector databases and then write a detailed report comparing them for me"
         self.assertTrue(is_crew_request(text))
         self.assertFalse(is_crew_request(text, explicit_only=True))
 
     def test_style_examples_fit_the_message(self) -> None:
-        from backend.services.personality.style_examples import pick_examples, examples_prompt
+        from server.services.personality.style_examples import pick_examples, examples_prompt
 
         self.assertEqual(pick_examples("give me a recipe for butter chicken")[0]["cat"], "knowledge")
         self.assertEqual(pick_examples("hey")[0]["user"], "hey")
@@ -396,7 +396,7 @@ class RoutingAndStyleTests(unittest.TestCase):
         self.assertIn("copy the tone, not the facts", examples_prompt("I'm so tired"))
 
     def test_curated_examples_follow_the_persona_rules(self) -> None:
-        from backend.services.personality.style_examples import load_examples
+        from server.services.personality.style_examples import load_examples
 
         banned = re.compile(r"let me know|anything else|need anything|how can i help|feel free|\.\.\.|\b(?:darling|honey|babe|dear)\b", re.I)
         examples = load_examples()
@@ -407,7 +407,7 @@ class RoutingAndStyleTests(unittest.TestCase):
     def test_auto_saved_pairs_are_not_shown_to_the_model(self) -> None:
         import json as _json
         import tempfile
-        from backend.services import prompt_builder
+        from server.services import prompt_builder
 
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "rlhf_pairs.json"
@@ -427,7 +427,7 @@ class SkillChoiceTests(unittest.TestCase):
         model = ScriptedModel(_turn("", [_call("use_skill", {"skill": "dataset-builder", "request": "jev vs laya"})]),
                               _turn("", [_call("web_search", {"query": "jev vs laya"})]), _turn("They are decision models."))
         lookup = mock.AsyncMock(return_value="Jev and Laya are decision models.")
-        with mock.patch("backend.services.agent_loop.loop.AgentLoop._lookup", new=lookup):
+        with mock.patch("server.services.agent_loop.loop.AgentLoop._lookup", new=lookup):
             events = _run(ctx, model)
         skill_spec = next(t for t in model.requests[0]["tools"] if t["function"]["name"] == "use_skill")
         self.assertIn("product-search", skill_spec["function"]["parameters"]["properties"]["skill"]["enum"])
@@ -439,7 +439,7 @@ class SkillChoiceTests(unittest.TestCase):
 
 class SelectionAndRoutingTests(unittest.TestCase):
     def test_core_tools_groups_and_exclusions(self) -> None:
-        from backend.services.agent_loop.tool_selection import deferred_tools, select_tools
+        from server.services.agent_loop.tool_selection import deferred_tools, select_tools
 
         plain = select_tools("add a meeting at 6pm")
         self.assertIn("create_event", plain)
@@ -449,7 +449,7 @@ class SelectionAndRoutingTests(unittest.TestCase):
         self.assertFalse([n for n in deferred_tools(plain) if n.startswith("code_") or n == "web_research"])
 
     def test_multi_step_requests_skip_shortcuts(self) -> None:
-        from backend.services.agent_loop.routing import is_multi_step
+        from server.services.agent_loop.routing import is_multi_step
 
         self.assertTrue(is_multi_step("Find the latest Ollama release, then add a task to read it tonight"))
         self.assertTrue(is_multi_step("find flights to NYC and email me the cheapest one"))
@@ -457,13 +457,13 @@ class SelectionAndRoutingTests(unittest.TestCase):
         self.assertFalse(is_multi_step("search for black and white photography tips"))
 
     def test_desktop_loads_agent_steps(self) -> None:
-        renderer = Path(__file__).resolve().parents[3] / "desktop-app" / "src" / "renderer"
+        renderer = Path(__file__).resolve().parents[2] / "interfaces" / "desktop" / "src" / "renderer"
         self.assertIn('<script src="agent-steps.js"></script>', (renderer / "index.html").read_text(encoding="utf-8"))
         app = (renderer / "app.js").read_text(encoding="utf-8")
         self.assertIn("steps.handle(payload)", app)
 
     def test_streaming_reply_survives_switching_chats(self) -> None:
-        app = (Path(__file__).resolve().parents[3] / "desktop-app" / "src" / "renderer" / "app.js").read_text(encoding="utf-8")
+        app = (Path(__file__).resolve().parents[2] / "interfaces" / "desktop" / "src" / "renderer" / "app.js").read_text(encoding="utf-8")
         # Reopening a chat puts its still-streaming reply back, and a stream never
         # moves the user back to its own chat.
         self.assertIn("const live = streamFor(data.id)", app)

@@ -5,11 +5,11 @@ Exposes tools for Gmail, Calendar, Drive, Tasks.
 Requires: google_workspace_access_token in .env
 
 Run:
-    python -m backend.mcp.server_google
+    python -m server.mcp.server_google
 """
 import json
 from mcp.server.fastmcp import FastMCP
-from backend.services.workspace_integrations import google_workspace
+from server.services.workspace_integrations import google_workspace
 
 mcp = FastMCP("luna-google")
 

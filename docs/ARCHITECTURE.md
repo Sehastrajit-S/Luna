@@ -4,14 +4,14 @@ L.U.N.A. is split into four top-level work areas. Contributors should keep chang
 
 ## Backend
 
-Path: `backend/`
+Path: `server/`
 
 - `main.py`: FastAPI app setup, middleware, and router registration only.
 - `routers/`: HTTP API routes. Routers should stay thin and delegate business logic to services.
 - `services/`: feature logic, external providers, local model calls, background work, and integrations.
 - `models/`: database models and request/response schemas.
 
-Dashboard provider modules live in `backend/services/dashboard/`:
+Dashboard provider modules live in `server/services/dashboard/`:
 
 - `news.py`: RSS and TheNewsAPI aggregation.
 - `markets.py`: stock and crypto quotes/history.
@@ -21,7 +21,7 @@ Dashboard provider modules live in `backend/services/dashboard/`:
 
 ## Frontend
 
-Path: `frontend/src/`
+Path: `interfaces/web/src/`
 
 - `api/`: client wrappers for backend API calls.
 - `components/`: UI grouped by feature.
@@ -53,7 +53,7 @@ Path: `electron/`
 
 ## Skills
 
-Path: `skills/`
+Path: `server/skills/`
 
 Skills are optional extensions. A skill should include a `skill.json` manifest and a focused `SKILL.md`.
 
@@ -61,12 +61,12 @@ Skills are optional extensions. A skill should include a `skill.json` manifest a
 
 Prefer small PRs scoped to one feature area:
 
-- Backend provider change: one file under `backend/services/dashboard/` plus route tests/docs if needed.
+- Backend provider change: one file under `server/services/dashboard/` plus route tests/docs if needed.
 - API shape change: router + frontend API client + affected components.
 - UI-only change: affected component folder only.
 - Desktop-only change: `electron/` only.
-- Model/provider change: `backend/services/llm.py` and `.env.example`.
-- Runtime/background process change: one package under `backend/processes/`.
+- Model/provider change: `server/services/llm/` and `.env.example`.
+- Runtime/background process change: one package under `server/processes/`.
 
 Avoid placing provider logic inside routers or React components. Routers should compose services; components should render state and call API helpers.
 

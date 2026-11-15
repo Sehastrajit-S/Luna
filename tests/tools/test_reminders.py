@@ -9,7 +9,7 @@ from sqlalchemy.orm import sessionmaker
 
 
 def _session_factory():
-    from backend.models.database import Base
+    from server.models.database import Base
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
     Base.metadata.create_all(engine)
     return sessionmaker(bind=engine)
@@ -20,39 +20,39 @@ class PromisedActionTests(unittest.TestCase):
         return SimpleNamespace(user_message=user, full_response=reply, history=list(history), db=_session_factory()())
 
     def test_false_reminder_claim_creates_the_event(self) -> None:
-        from backend.services.chat_pipeline import stage_tools
+        from server.services.chat_pipeline import stage_tools
 
         six_pm = datetime.now().replace(hour=18, minute=0, second=0, microsecond=0)
         history = [{"role": "user", "content": "I got a meeting of my deep learning project at 6 p.m. today."},
                    {"role": "assistant", "content": "Got it."}]
         ctx = self._ctx("Added so that I can remember at that time.", "Okay, got it — your reminder's set.", history)
         item = {"kind": "event", "title": "Deep learning project meeting", "datetime": six_pm, "duration_minutes": 60}
-        with mock.patch("backend.services.command_parser.schedule.extract_item", new=mock.AsyncMock(return_value=item)):
+        with mock.patch("server.services.command_parser.schedule.extract_item", new=mock.AsyncMock(return_value=item)):
             asyncio.run(stage_tools._ensure_promised_action(ctx))
             stage_tools._confirm_bare_actions(ctx)
         self.assertIn("[EVENT:Deep learning project meeting|", ctx.full_response)       # finalize will save it
         self.assertIn("Added “Deep learning project meeting” to your calendar", ctx.full_response)
 
     def test_missing_details_are_admitted_not_faked(self) -> None:
-        from backend.services.chat_pipeline import stage_tools
+        from server.services.chat_pipeline import stage_tools
 
         ctx = self._ctx("remind me", "Sure — your reminder's set!")
-        with mock.patch("backend.services.command_parser.schedule.extract_item",
+        with mock.patch("server.services.command_parser.schedule.extract_item",
                         new=mock.AsyncMock(return_value={"kind": "task", "title": "", "datetime": None, "duration_minutes": 60})):
             asyncio.run(stage_tools._ensure_promised_action(ctx))
         self.assertEqual(ctx.full_response, "I haven't saved that yet — tell me what to call it and when it is and I'll add it.")
 
     def test_unrelated_replies_are_untouched(self) -> None:
-        from backend.services.chat_pipeline import stage_tools
+        from server.services.chat_pipeline import stage_tools
 
         ctx = self._ctx("write a helper", "I've added a helper function below.")
-        with mock.patch("backend.services.command_parser.schedule.extract_item") as extract:
+        with mock.patch("server.services.command_parser.schedule.extract_item") as extract:
             asyncio.run(stage_tools._ensure_promised_action(ctx))
         extract.assert_not_called()
         self.assertEqual(ctx.full_response, "I've added a helper function below.")
 
     def test_task_without_time_is_still_saved(self) -> None:
-        from backend.services.command_parser.schedule import to_command
+        from server.services.command_parser.schedule import to_command
 
         self.assertEqual(to_command({"kind": "task", "title": "Buy milk", "datetime": None, "duration_minutes": 60}),
                          "[TASK:Buy milk||medium]")
@@ -61,8 +61,8 @@ class PromisedActionTests(unittest.TestCase):
 
 class ReminderJobTests(unittest.TestCase):
     def test_heads_up_start_and_due_each_fire_once(self) -> None:
-        from backend.models.database import CalendarEvent, Task
-        from backend.services.scheduler import jobs
+        from server.models.database import CalendarEvent, Task
+        from server.services.scheduler import jobs
 
         factory = _session_factory()
         db = factory()
@@ -95,7 +95,7 @@ class CodeAnswerTests(unittest.TestCase):
                   "    link = Link(url=url)  # created_at is set, then schedule the cache task\n    return {'code': link.code}\n```\n")
 
     def test_code_is_not_a_claim(self) -> None:
-        from backend.services.command_parser.schedule import claims_saved, wants_saved
+        from server.services.command_parser.schedule import claims_saved, wants_saved
 
         self.assertFalse(claims_saved(self.CODE_REPLY))
         self.assertFalse(wants_saved("Write the FastAPI POST /shorten endpoint", self.CODE_REPLY))
@@ -104,36 +104,36 @@ class CodeAnswerTests(unittest.TestCase):
         self.assertFalse(claims_saved(long_prose))
 
     def test_code_reply_survives_the_reply_checks(self) -> None:
-        from backend.services.chat_pipeline import stage_tools
+        from server.services.chat_pipeline import stage_tools
 
         ctx = SimpleNamespace(user_message="Write the FastAPI POST /shorten endpoint", full_response=self.CODE_REPLY,
                               history=[], db=None, system_prompt="", document_context="", messages=[],
                               tool_outputs=[], tools_used=[], attachment_ids=[])
-        with mock.patch("backend.services.command_parser.schedule.extract_item") as extract:
+        with mock.patch("server.services.command_parser.schedule.extract_item") as extract:
             asyncio.run(stage_tools.finish_plain_reply(ctx))
         extract.assert_not_called()
         self.assertEqual(ctx.full_response, self.CODE_REPLY)
 
     def test_remind_me_what_is_a_recall_question(self) -> None:
-        from backend.services.command_parser.schedule import wants_saved
+        from server.services.command_parser.schedule import wants_saved
 
         self.assertFalse(wants_saved("Remind me: what's the project called, and what TTL did we set?", "Snip, 24 hours."))
         self.assertFalse(wants_saved("remind me of the name we picked", "Snip."))
         self.assertTrue(wants_saved("remind me to call mom at 6", "Okay."))
 
     def test_agent_loop_answer_is_not_overridden_without_a_claim(self) -> None:
-        from backend.services.chat_pipeline import stage_tools
+        from server.services.chat_pipeline import stage_tools
 
         ctx = SimpleNamespace(user_message="set a reminder for the standup", full_response="Which day and time?",
                               route="agent_loop", history=[], db=None, system_prompt="", document_context="",
                               messages=[], tool_outputs=[], tools_used=[], attachment_ids=[])
-        with mock.patch("backend.services.command_parser.schedule.extract_item") as extract:
+        with mock.patch("server.services.command_parser.schedule.extract_item") as extract:
             asyncio.run(stage_tools.finish_plain_reply(ctx))
         extract.assert_not_called()                     # the model asked a question; leave it
         self.assertEqual(ctx.full_response, "Which day and time?")
 
     def test_future_and_change_claims_are_claims(self) -> None:
-        from backend.services.command_parser.schedule import claims_saved
+        from server.services.command_parser.schedule import claims_saved
 
         self.assertTrue(claims_saved("Sure thing.\n\nI'll remind you to stretch at 5 PM."))
         self.assertTrue(claims_saved("Done, moved it to 5 pm."))
@@ -142,7 +142,7 @@ class CodeAnswerTests(unittest.TestCase):
         self.assertFalse(claims_saved("You changed the loop to a comprehension, nice."))
 
     def test_ellipses_stay_in_code(self) -> None:
-        from backend.services.response_formatter import format_luna_response
+        from server.services.response_formatter import format_luna_response
 
         out = format_luna_response("Well... fine.\n\n```python\ndef f(x=Depends(...)):\n    ...\n```")
         self.assertIn("Depends(...)", out)
@@ -151,14 +151,14 @@ class CodeAnswerTests(unittest.TestCase):
 
 class PhrasingTests(unittest.TestCase):
     def test_noun_first_requests_and_claims(self) -> None:
-        from backend.services.command_parser.schedule import wants_saved
+        from server.services.command_parser.schedule import wants_saved
 
         self.assertTrue(wants_saved("I have a meeting for my deep learning project at 6 p.m. Make sure to add that.", "Okay."))
         self.assertTrue(wants_saved("hi", "Got it — your meeting is scheduled for 6 PM."))
         self.assertTrue(wants_saved("thanks", "The task has been added."))
 
     def test_non_scheduling_messages_are_ignored(self) -> None:
-        from backend.services.command_parser.schedule import wants_saved
+        from server.services.command_parser.schedule import wants_saved
 
         self.assertFalse(wants_saved("make it shorter", "Here is a shorter version."))
         self.assertFalse(wants_saved("add a docstring to this function", "I've added a docstring."))
@@ -172,9 +172,9 @@ class VerifiedSaveTests(unittest.TestCase):
         return datetime.now().replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=1)
 
     def test_create_event_tool_converts_to_utc_and_updates_instead_of_duplicating(self) -> None:
-        from backend.models.database import CalendarEvent
-        from backend.services.time_utils import to_utc_naive
-        from backend.services.tool_runner.executor import execute_tool_call
+        from server.models.database import CalendarEvent
+        from server.services.time_utils import to_utc_naive
+        from server.services.tool_runner.executor import execute_tool_call
 
         db = _session_factory()()
         six = self._local_6pm()
@@ -197,15 +197,15 @@ class VerifiedSaveTests(unittest.TestCase):
         self.assertIn("7:00 PM", third)
 
     def test_event_tool_without_time_reports_failure(self) -> None:
-        from backend.services.tool_runner.executor import execute_tool_call
+        from server.services.tool_runner.executor import execute_tool_call
 
         db = _session_factory()()
         result = asyncio.run(execute_tool_call({"tool": "create_event", "args": {"title": "Call"}}, db, 1))
         self.assertIn("couldn't save", result)
 
     def test_tags_are_saved_before_the_reply_and_confirmed_from_the_db(self) -> None:
-        from backend.models.database import Task
-        from backend.services.chat_pipeline import stage_tools
+        from server.models.database import Task
+        from server.services.chat_pipeline import stage_tools
 
         db = _session_factory()()
         due = self._local_6pm().isoformat(timespec="minutes")
@@ -222,10 +222,10 @@ class FactExtractorSaveTests(unittest.TestCase):
 
     def test_extractor_skips_an_already_saved_meeting_and_converts_new_ones(self) -> None:
         import json as _json
-        from backend.models.database import CalendarEvent
-        from backend.services import fact_extractor
-        from backend.services.command_parser.commands import save_event
-        from backend.services.time_utils import to_utc_naive
+        from server.models.database import CalendarEvent
+        from server.services import fact_extractor
+        from server.services.command_parser.commands import save_event
+        from server.services.time_utils import to_utc_naive
 
         db = _session_factory()()
         six = (datetime.now() + timedelta(days=1)).replace(hour=18, minute=0, second=0, microsecond=0)

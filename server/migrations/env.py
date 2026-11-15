@@ -1,7 +1,7 @@
 """
 Alembic environment for Luna.
 
-Reads the database URL from Luna's settings (backend/config.py) so that
+Reads the database URL from Luna's settings (server/config.py) so that
 `alembic upgrade head` always targets the same database as the running app.
 
 Usage:
@@ -20,10 +20,10 @@ from sqlalchemy import engine_from_config, pool
 from alembic import context
 
 # Make sure Luna's backend package is importable
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from backend.config import settings
-from backend.models.database import Base, _resolve_db_url, _db_backend
+from server.config import settings
+from server.models.database import Base, _resolve_db_url, _db_backend
 
 # Alembic Config object — gives access to alembic.ini values
 config = context.config

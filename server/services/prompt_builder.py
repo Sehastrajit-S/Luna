@@ -6,16 +6,16 @@ import re as _re
 from datetime import datetime
 from pathlib import Path
 
-from backend.config import DATA_DIR, settings
-from backend.services.memory_manager import MemoryManager
-from backend.services.personality import PersonalityEngine
-from backend.services.activity_tracker import ActivityTracker
-from backend.services.tool_registry import get_tool_rules_for_prompt, get_tools_for_prompt
+from server.config import DATA_DIR, settings
+from server.services.memory_manager import MemoryManager
+from server.services.personality import PersonalityEngine
+from server.services.activity_tracker import ActivityTracker
+from server.services.tool_registry import get_tool_rules_for_prompt, get_tools_for_prompt
 
 
 def get_live_data_section() -> str:
     """Compact live data snapshot (weather, markets, top news) for system prompt injection."""
-    from backend.services.dashboard import markets, weather, news as _news_mod
+    from server.services.dashboard import markets, weather, news as _news_mod
     lines = []
 
     wx = weather.get_cached_weather()
@@ -54,7 +54,7 @@ def _load_style_examples(message: str | None) -> str:
     captured garbled transcripts, forbidden endings and one-off facts, and the
     model copied them.
     """
-    from backend.services.personality.style_examples import examples_prompt
+    from server.services.personality.style_examples import examples_prompt
     curated = examples_prompt(message or "")
     approved = _load_rlhf_examples()
     return "\n".join(part for part in (curated, approved) if part)
@@ -90,7 +90,7 @@ def _load_rlhf_examples() -> str:
 
 
 def _native_tools() -> bool:
-    from backend.services.llm.tool_calling import native_tools_supported
+    from server.services.llm.tool_calling import native_tools_supported
     return native_tools_supported()
 
 
@@ -192,7 +192,7 @@ def build_system_prompt(
                   "bathroom speaker (user says \"speaker 1\" or \"bathroom\"). Never just say you're switching — "
                   "the tool has to run or nothing changes.")
     try:
-        from backend.services.skill_manager import get_skills_prompt
+        from server.services.skill_manager import get_skills_prompt
         skills_section = get_skills_prompt(ui="electron", message=skill_hint)
     except Exception:
         skills_section = "No local skills are installed yet."
@@ -349,7 +349,7 @@ def build_cli_system_prompt(user_name: str, recent_context: str, ui: str = "cli"
     now = datetime.now()
     recent = recent_context.strip() if recent_context else "No recent context."
     try:
-        from backend.services.skill_manager import get_skills_prompt
+        from server.services.skill_manager import get_skills_prompt
         skills_section = get_skills_prompt(ui="cli", message=skill_hint)  # type: ignore[arg-type]
     except Exception:
         skills_section = ""

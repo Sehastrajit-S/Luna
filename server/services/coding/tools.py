@@ -6,8 +6,8 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from backend.config import DATA_DIR, settings
-from backend.services.coding.indexer import _INDEX_IGNORE
+from server.config import DATA_DIR, settings
+from server.services.coding.indexer import _INDEX_IGNORE
 
 WORKSPACE_ROOT = DATA_DIR / "workspace"
 
@@ -153,7 +153,7 @@ def tool_rename_file(old_path: str, new_path: str, root: Path | None = None) -> 
 
 async def tool_web_search(query: str) -> str:
     try:
-        from backend.services.web_tools import web_search
+        from server.services.web_tools import web_search
         return await web_search(query, max_results=5)
     except Exception as e:
         return f"error: {e}"
@@ -161,7 +161,7 @@ async def tool_web_search(query: str) -> str:
 
 async def tool_web_fetch(url: str) -> str:
     try:
-        from backend.services.web_tools import web_fetch
+        from server.services.web_tools import web_fetch
         return await web_fetch(url, max_chars=4000)
     except Exception as e:
         return f"error: {e}"

@@ -21,11 +21,11 @@ COPY requirements.docker.txt ./
 RUN pip install --no-cache-dir -r requirements.docker.txt
 
 # Application code
-COPY backend/ ./backend/
+COPY server/ ./server/
 
 # Web UI — the desktop app's renderer, served by FastAPI at "/"
-COPY desktop-app/src/renderer/ ./desktop-app/src/renderer/
-COPY desktop-app/resources/ ./desktop-app/resources/
+COPY interfaces/desktop/src/renderer/ ./interfaces/desktop/src/renderer/
+COPY interfaces/desktop/resources/ ./interfaces/desktop/resources/
 
 # Persistent data lives here — mount a named volume to this path
 RUN mkdir -p data
@@ -41,6 +41,6 @@ EXPOSE 8899
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8899/api/system/health')" || exit 1
 
-CMD ["python", "-m", "uvicorn", "backend.main:app", \
+CMD ["python", "-m", "uvicorn", "server.main:app", \
      "--host", "0.0.0.0", "--port", "8899", \
      "--log-level", "warning"]

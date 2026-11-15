@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
-from backend.services.spotify import spotify_service
+from server.services.spotify import spotify_service
 
 router = APIRouter(prefix="/api/spotify", tags=["spotify"])
 

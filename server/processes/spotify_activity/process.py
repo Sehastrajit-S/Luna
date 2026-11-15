@@ -1,7 +1,7 @@
 from apscheduler.triggers.interval import IntervalTrigger
 
-from backend.processes.registry import ProcessDef
-from backend.processes.spotify_activity import jobs
+from server.processes.registry import ProcessDef
+from server.processes.spotify_activity import jobs
 
 
 def register_scheduler(scheduler):

@@ -9,29 +9,29 @@ import json
 import logging
 import re
 
-from backend.config import settings
-from backend.services.command_parser import (
+from server.config import settings
+from server.services.command_parser import (
     parse_user_launch_request,
     parse_user_spotify_request,
     extract_direct_research_query,
     extract_direct_dataset_query,
 )
-from backend.services.command_parser.clock import answer_clock_question, parse_clock_question
-from backend.services.command_parser.research import (
+from server.services.command_parser.clock import answer_clock_question, parse_clock_question
+from server.services.command_parser.research import (
     extract_explicit_web_search_query,
     is_search_request,
     refers_to_own_content,
 )
-from backend.services.files import build_attachment_context
-from backend.services.skill_runtime import (
+from server.services.files import build_attachment_context
+from server.services.skill_runtime import (
     all_ask_replies,
     choose_skill_with_model,
     pick_search_skill,
     run_search_skill,
     run_web_search,
 )
-from backend.services.tool_runner import execute_tool_call, verify_tool_result
-from backend.services.chat_pipeline.context import ChatContext
+from server.services.tool_runner import execute_tool_call, verify_tool_result
+from server.services.chat_pipeline.context import ChatContext
 
 logger = logging.getLogger(__name__)
 
@@ -102,12 +102,12 @@ async def dispatch_direct_commands(ctx: ChatContext) -> None:
 
     # ── Several steps in one request → the agent loop, not a shortcut ─────────
     # A shortcut would answer the first step and silently drop the rest.
-    from backend.services.agent_loop.routing import is_multi_step
-    from backend.services.llm.tool_calling import native_tools_supported
+    from server.services.agent_loop.routing import is_multi_step
+    from server.services.llm.tool_calling import native_tools_supported
     if native_tools_supported() and is_multi_step(request):
         return
 
-    # ── Lookups: a matching skill (skills/*) or a grounded web search ─────────
+    # ── Lookups: a matching skill (server/skills/*) or a grounded web search ─────────
     # Answering these from the model alone produced invented results and URLs.
     # Explicit search phrasing may use any skill; otherwise only "strong"
     # skills (whose intent alone implies a lookup) route here, and not when the
@@ -118,7 +118,7 @@ async def dispatch_direct_commands(ctx: ChatContext) -> None:
     # "What's the news today?" has no topic to search for: today's headlines
     # come from the news feeds (daily_news in the agent loop). News *about*
     # something still goes to the news-search skill.
-    from backend.services.agent_loop.grounding import is_general_news
+    from server.services.agent_loop.grounding import is_general_news
     if skill is not None and skill.id == "news-search" and is_general_news(request) and native_tools_supported():
         return
     if explicit and skill is None:
@@ -159,7 +159,7 @@ async def dispatch_direct_commands(ctx: ChatContext) -> None:
 
     # ── Spotify ───────────────────────────────────────────────────────────────
     if not ctx.is_business:
-        from backend.services.spotify import spotify_service
+        from server.services.spotify import spotify_service
         spotify_track = None if ctx.cli else spotify_service.get_current()
         direct_spotify_cmd = parse_user_spotify_request(msg, spotify_track)
 
@@ -192,7 +192,7 @@ async def dispatch_direct_commands(ctx: ChatContext) -> None:
         if direct_launch_app:
             ctx.dispatched = True
             ctx.direct_command_type = "launch"
-            from backend.services.app_launcher import launch_app
+            from server.services.app_launcher import launch_app
             success, launch_message = launch_app(direct_launch_app)
             ctx.full_response = f"Opening {direct_launch_app}." if success else launch_message
             ctx.tool_succeeded = success
@@ -295,7 +295,7 @@ async def _search_answer_context(ctx: ChatContext, history: list[dict] | None, q
 
 async def _handle_spotify(cmd: dict, ctx: ChatContext) -> str:
     """Execute a Spotify command and return the response text."""
-    from backend.services.spotify import spotify_service
+    from server.services.spotify import spotify_service
 
     action = cmd["action"]
     if action == "play":
