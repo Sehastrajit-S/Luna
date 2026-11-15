@@ -51,8 +51,13 @@ class LLMSelectorTests(unittest.TestCase):
         settings.llm_fallback_provider = "openai-compatible"
         settings.openai_model = "openrouter/free"
         selector._capability_cache.clear()
+        self._tmp = __import__("tempfile").TemporaryDirectory()
+        self._override_patch = mock.patch.object(selector, "OVERRIDE_PATH", __import__("pathlib").Path(self._tmp.name) / "o.json")
+        self._override_patch.start()
 
     def tearDown(self) -> None:
+        self._override_patch.stop()
+        self._tmp.cleanup()
         for k, v in self.original.items():
             setattr(self.settings, k, v)
 
@@ -120,6 +125,54 @@ class LLMSelectorTests(unittest.TestCase):
         self._select({self.PC: [{"name": "qwen3:8b", "size": "8.2B", "caps": ["completion", "tools"]}]})
         self.assertEqual(self.settings.llm_provider, "ollama")
         self.assertEqual(self.selector.state.source, "ollama")
+
+    def _override(self, models, down=frozenset(), **body):
+        transport = _fake_ollama(models, set(down))
+        real_client = httpx.AsyncClient
+
+        def client_factory(*args, **kwargs):
+            kwargs["transport"] = transport
+            return real_client(*args, **kwargs)
+
+        with mock.patch.object(self.selector.httpx, "AsyncClient", side_effect=client_factory):
+            return asyncio.run(self.selector.set_override(**body))
+
+    def test_manual_choice_bypasses_ranking_until_auto(self) -> None:
+        models = {
+            self.PC: [{"name": "qwen3:8b", "size": "8.2B", "caps": ["completion", "tools"]}],
+            self.FRIEND: [{"name": "qwen3:14b", "size": "14.8B", "caps": ["completion", "tools"]}],
+        }
+        self._override(models, mode="ollama", server=self.PC, model="qwen3:8b")
+        self.assertEqual((self.settings.ollama_base_url, self.settings.ollama_model), (self.PC, "qwen3:8b"))
+        self.assertEqual(self.selector.status()["mode"], "manual")
+        # a later probe keeps the manual choice
+        self._select(models)
+        self.assertEqual(self.settings.ollama_model, "qwen3:8b")
+        self._override(models, mode="auto")
+        self.assertEqual(self.settings.ollama_model, "qwen3:14b")
+        self.assertEqual(self.selector.status()["mode"], "auto")
+
+    def test_manual_fallback_needs_api_key(self) -> None:
+        original = self.settings.openai_api_key
+        try:
+            self.settings.openai_api_key = ""
+            with self.assertRaises(ValueError):
+                self._override({}, mode="fallback")
+            self.settings.openai_api_key = "sk-test"
+            self._override({self.PC: [{"name": "qwen3:8b", "size": "8.2B", "caps": ["completion", "tools"]}]}, mode="fallback")
+            self.assertEqual(self.settings.llm_provider, "openai-compatible")
+        finally:
+            self.settings.openai_api_key = original
+
+    def test_manual_choice_rejects_unknown_server(self) -> None:
+        with self.assertRaises(ValueError):
+            self._override({}, mode="ollama", server="http://evil:11434", model="x")
+
+    def test_server_labels(self) -> None:
+        self.settings.llm_ollama_servers = f"My PC={self.PC}, {self.FRIEND}"
+        self.assertEqual(self.selector.servers(), [self.PC, self.FRIEND])
+        self.assertEqual(self.selector.server_label(self.PC), "My PC")
+        self.assertEqual(self.selector.server_label(self.FRIEND), "10.0.0.2")
 
 
 if __name__ == "__main__":

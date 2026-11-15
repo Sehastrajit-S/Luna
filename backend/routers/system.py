@@ -1,6 +1,6 @@
 import json
 import re
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Body, Header, HTTPException, Request
 from backend.models.schemas import AppLaunchRequest, StatusResponse
 from backend.services.app_launcher import launch_app, close_app, list_app_profiles, list_known_apps
 from backend.services.media_context import get_watching_context
@@ -297,4 +297,23 @@ async def health():
 async def llm_selection():
     """Which model the priority-based selector picked, and every candidate it saw."""
     from backend.services.llm import selector
+    return selector.status()
+
+
+@router.post("/llm-selection")
+async def set_llm_selection(
+    body: dict = Body(...),
+    x_luna_token: str | None = Header(default=None),
+):
+    """Manual model choice from the chat box: {"mode": "auto"} | {"mode": "ollama", "server", "model"} | {"mode": "fallback"}."""
+    from backend.services.llm import selector
+    from backend.services.settings_store import token_ok
+    if not token_ok(x_luna_token):
+        raise HTTPException(status_code=403, detail="Missing or invalid local access token.")
+    if not selector.enabled():
+        raise HTTPException(status_code=409, detail="Model auto-selection is off (llm_auto_select).")
+    try:
+        await selector.set_override(str(body.get("mode") or ""), str(body.get("server") or ""), str(body.get("model") or ""))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     return selector.status()

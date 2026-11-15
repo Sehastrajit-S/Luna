@@ -9,6 +9,9 @@ to ``llm_fallback_provider`` (for example openai-compatible → OpenRouter).
 The rest of Luna reads those settings at call time, so chat, the agent loop,
 the coding agent and the health route all follow the current choice.
 
+A manual choice (``set_override``) bypasses the ranking until it is cleared
+with mode "auto"; it is kept in data/llm_override.json across restarts.
+
 Ranking (best first):
 1. position in ``llm_model_preference`` (listed models beat unlisted ones),
 2. native tool calling support (Luna's agent loop relies on it),
@@ -18,6 +21,7 @@ Ranking (best first):
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import re
 import time
@@ -25,13 +29,14 @@ from dataclasses import dataclass, field
 
 import httpx
 
-from backend.config import settings
+from backend.config import DATA_DIR, settings
 
 logger = logging.getLogger(__name__)
 
 _PROBE_TIMEOUT = httpx.Timeout(4.0)
 _FAILURE_DEBOUNCE_SECONDS = 5.0
 _UNITS = {"K": 1e-6, "M": 1e-3, "B": 1.0, "T": 1e3}
+OVERRIDE_PATH = DATA_DIR / "llm_override.json"
 
 
 @dataclass(frozen=True)
@@ -44,7 +49,7 @@ class Candidate:
 
 @dataclass
 class SelectorState:
-    source: str = "static"            # static | ollama | fallback
+    source: str = "static"            # static | ollama | fallback | manual
     server: str = ""
     model: str = ""
     checked_at: float = 0.0
@@ -63,9 +68,80 @@ def _split(value: str) -> list[str]:
     return [item.strip() for item in (value or "").split(",") if item.strip()]
 
 
+def _server_entries() -> list[tuple[str, str]]:
+    """(label, url) pairs. Entries are 'url' or 'Label=url'."""
+    entries = []
+    for item in _split(settings.llm_ollama_servers):
+        label, _, url = item.rpartition("=") if "=" in item and not item.startswith("http") else ("", "", item)
+        url = url.strip().rstrip("/")
+        entries.append((label.strip() or _host(url), url))
+    return entries or [(_host(_startup_ollama_url), _startup_ollama_url.rstrip("/"))]
+
+
+def _host(url: str) -> str:
+    return re.sub(r"^https?://", "", url).split("/")[0].rsplit(":", 1)[0]
+
+
 def servers() -> list[str]:
-    configured = [s.rstrip("/") for s in _split(settings.llm_ollama_servers)]
-    return configured or [_startup_ollama_url.rstrip("/")]
+    return [url for _, url in _server_entries()]
+
+
+def server_label(url: str) -> str:
+    return dict((u, label) for label, u in _server_entries()).get(url, _host(url))
+
+
+# ── manual override ──────────────────────────────────────────────────────────
+
+def load_override() -> dict | None:
+    try:
+        data = json.loads(OVERRIDE_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return data if isinstance(data, dict) and data.get("mode") in {"ollama", "fallback"} else None
+
+
+def fallback_ready() -> bool:
+    p = settings.llm_fallback_provider.strip().lower()
+    if p == "openai-compatible":
+        return bool(settings.openai_api_key and settings.openai_base_url and settings.openai_model)
+    return True
+
+
+def fallback_label() -> str:
+    p = settings.llm_fallback_provider.strip().lower()
+    if p == "openai-compatible" and "openrouter.ai" in settings.openai_base_url:
+        return "OpenRouter"
+    return p
+
+
+async def set_override(mode: str, server: str = "", model: str = "") -> SelectorState:
+    """mode: auto (clear) | ollama (needs a configured server and a model it serves) | fallback."""
+    mode = (mode or "").strip().lower()
+    if mode == "auto":
+        OVERRIDE_PATH.unlink(missing_ok=True)
+    elif mode == "ollama":
+        server = (server or "").rstrip("/")
+        if server not in servers():
+            raise ValueError("Unknown Ollama server.")
+        if not model:
+            raise ValueError("Pick a model.")
+        _write_override({"mode": "ollama", "server": server, "model": model})
+    elif mode == "fallback":
+        if not fallback_ready():
+            raise ValueError(f"{fallback_label()} is not configured (missing API key).")
+        _write_override({"mode": "fallback"})
+    else:
+        raise ValueError("mode must be auto, ollama or fallback.")
+    if not state.checked_at:
+        return await select_now()
+    async with _lock:  # instant: reuse the last probe instead of waiting on offline servers
+        _apply_choice()
+    return state
+
+
+def _write_override(data: dict) -> None:
+    OVERRIDE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    OVERRIDE_PATH.write_text(json.dumps(data), encoding="utf-8")
 
 
 def parse_params(size: str) -> float:
@@ -144,7 +220,7 @@ async def probe_server(client: httpx.AsyncClient, server: str) -> list[Candidate
     return found
 
 
-def _apply(best: Candidate | None) -> None:
+def _apply(best: Candidate | None, manual: bool = False) -> None:
     previous = (state.source, state.server, state.model)
     if best is not None:
         settings.llm_provider = "ollama"
@@ -156,8 +232,13 @@ def _apply(best: Candidate | None) -> None:
         settings.llm_provider = fallback
         state.source, state.server = "fallback", ""
         state.model = settings.openai_model if fallback == "openai-compatible" else ""
+    if manual:
+        state.source = "manual"
     current = (state.source, state.server, state.model)
     if current != previous:
+        if manual:
+            logger.info("LLM selector: manual choice %s %s", settings.llm_provider, state.model)
+            return
         if best is not None:
             logger.info("LLM selector: using Ollama %s on %s (%.1fB, tools=%s)",
                         best.model, best.server, best.params_b, best.tools)
@@ -181,8 +262,19 @@ async def select_now() -> SelectorState:
             else:
                 candidates.extend(result)
         state.candidates, state.unreachable, state.checked_at = candidates, unreachable, time.time()
-        _apply(pick_best(candidates))
+        _apply_choice()
         return state
+
+
+def _apply_choice() -> None:
+    """Apply the manual override if there is one, else the best of the last probe."""
+    override = load_override()
+    if override and override["mode"] == "ollama":
+        _apply(Candidate(override["server"], str(override.get("model") or ""), 0.0, True), manual=True)
+    elif override:
+        _apply(None, manual=True)
+    else:
+        _apply(pick_best(state.candidates))
 
 
 def enabled() -> bool:
@@ -215,15 +307,24 @@ async def run_forever() -> None:
 
 
 def status() -> dict:
+    override = load_override()
     return {
         "auto_select": enabled(),
+        "mode": "manual" if override else "auto",
+        "override": override,
+        "provider": settings.llm_provider,
+        "fallback": {"provider": settings.llm_fallback_provider, "label": fallback_label(),
+                     "model": settings.openai_model, "ready": fallback_ready()},
+        "servers": [{"url": url, "label": label, "online": url not in state.unreachable}
+                    for label, url in _server_entries()],
         "source": state.source,
         "server": state.server,
         "model": state.model,
         "checked_at": state.checked_at,
         "unreachable": list(state.unreachable),
         "candidates": [
-            {"server": c.server, "model": c.model, "params_b": c.params_b, "tools": c.tools}
+            {"server": c.server, "server_label": server_label(c.server), "model": c.model,
+             "params_b": c.params_b, "tools": c.tools}
             for c in sorted(state.candidates, key=lambda c: rank_key(c, _split(settings.llm_model_preference), servers()))
         ],
     }
