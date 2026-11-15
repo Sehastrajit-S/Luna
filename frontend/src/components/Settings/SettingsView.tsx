@@ -19,6 +19,16 @@ const CODING_PROVIDERS = [
   ...PROVIDERS,
 ]
 
+const TTS_PROVIDERS = [
+  { value: 'edge',       label: 'Local (edge-tts — free)' },
+  { value: 'elevenlabs', label: 'ElevenLabs (cloud)' },
+]
+
+const STT_PROVIDERS = [
+  { value: 'whisper',    label: 'Local (Whisper — free)' },
+  { value: 'elevenlabs', label: 'ElevenLabs Scribe (cloud)' },
+]
+
 interface ProviderInfo {
   label: string
   configured: boolean
@@ -39,7 +49,13 @@ interface CodingSettings {
   mistral_model: string
   cohere_model: string
   nvidia_nim_model: string
+  tts_provider: string
+  stt_provider: string
+  elevenlabs_voice_id: string
+  elevenlabs_tts_model: string
+  elevenlabs_stt_model: string
   providers: Record<string, ProviderInfo>
+  voice_providers: Record<string, ProviderInfo>
 }
 
 function modelFieldFor(provider: string, s: CodingSettings): { key: string; value: string } {
@@ -128,6 +144,76 @@ function OllamaModelPicker({
         disabled={loading}
         className="p-2 rounded-lg border border-luna-border bg-luna-card hover:bg-luna-surface text-luna-dim hover:text-luna-text transition-colors"
         title="Refresh models"
+      >
+        <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+      </button>
+    </div>
+  )
+}
+
+function ElevenLabsVoicePicker({
+  value, onChange,
+}: {
+  value: string
+  onChange: (v: string) => void
+}) {
+  const [voices, setVoices] = useState<{ voice_id: string; name: string }[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const load = () => {
+    setLoading(true)
+    setError('')
+    api.getElevenLabsVoices()
+      .then(r => setVoices(r.voices ?? []))
+      .catch(() => setError('Could not fetch voices — check the ElevenLabs API key'))
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(() => { load() }, [])
+
+  if (voices.length === 0) {
+    return (
+      <div className="space-y-1">
+        <div className="flex gap-2">
+          <input
+            className="flex-1 bg-luna-card border border-luna-border rounded-lg px-3 py-2 text-sm text-luna-text focus:outline-none focus:border-luna-primary/60"
+            value={value}
+            onChange={e => onChange(e.target.value)}
+            placeholder="Voice ID, e.g. 21m00Tcm4TlvDq8ikWAM"
+          />
+          <button
+            onClick={load}
+            disabled={loading}
+            className="p-2 rounded-lg border border-luna-border bg-luna-card hover:bg-luna-surface text-luna-dim hover:text-luna-text transition-colors"
+            title="Fetch voices"
+          >
+            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+          </button>
+        </div>
+        {error && <p className="text-[11px] text-luna-dim">{error}</p>}
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex gap-2">
+      <div className="flex-1 relative">
+        <select
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          className="w-full appearance-none bg-luna-card border border-luna-border rounded-lg px-3 py-2 text-sm text-luna-text pr-8 focus:outline-none focus:border-luna-primary/60"
+        >
+          {!voices.some(v => v.voice_id === value) && <option value={value}>{value}</option>}
+          {voices.map(v => <option key={v.voice_id} value={v.voice_id}>{v.name}</option>)}
+        </select>
+        <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-luna-dim pointer-events-none" />
+      </div>
+      <button
+        onClick={load}
+        disabled={loading}
+        className="p-2 rounded-lg border border-luna-border bg-luna-card hover:bg-luna-surface text-luna-dim hover:text-luna-text transition-colors"
+        title="Refresh voices"
       >
         <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
       </button>
@@ -296,6 +382,60 @@ export function SettingsView() {
               onChange={e => set(codeModelField.key, e.target.value)}
             />
           </div>
+        )}
+      </section>
+
+      {/* ── Voice ────────────────────────────────────────────────────────── */}
+      <section className="space-y-4">
+        <h3 className="text-luna-text text-sm font-medium border-b border-luna-border pb-1.5">
+          Voice
+        </h3>
+
+        {/* TTS provider */}
+        <div className="space-y-1.5">
+          <label className="text-xs text-luna-dim font-medium uppercase tracking-wide">
+            Text-to-speech
+          </label>
+          <Select
+            value={(form.tts_provider ?? data.tts_provider) as string}
+            onChange={v => set('tts_provider', v)}
+            options={TTS_PROVIDERS}
+          />
+        </div>
+
+        {/* STT provider */}
+        <div className="space-y-1.5">
+          <label className="text-xs text-luna-dim font-medium uppercase tracking-wide">
+            Speech-to-text
+          </label>
+          <Select
+            value={(form.stt_provider ?? data.stt_provider) as string}
+            onChange={v => set('stt_provider', v)}
+            options={STT_PROVIDERS}
+          />
+        </div>
+
+        {((form.tts_provider ?? data.tts_provider) === 'elevenlabs' ||
+          (form.stt_provider ?? data.stt_provider) === 'elevenlabs') && (
+          <>
+            {!data.voice_providers.elevenlabs.configured && (
+              <p className="text-[11px] text-amber-400">
+                No ElevenLabs API key set — add elevenlabs_api_key to .env, then reload.
+              </p>
+            )}
+
+            {(form.tts_provider ?? data.tts_provider) === 'elevenlabs' && (
+              <div className="space-y-1.5">
+                <label className="text-xs text-luna-dim font-medium uppercase tracking-wide">
+                  ElevenLabs voice
+                </label>
+                <ElevenLabsVoicePicker
+                  value={(form.elevenlabs_voice_id ?? data.elevenlabs_voice_id) as string}
+                  onChange={v => set('elevenlabs_voice_id', v)}
+                />
+              </div>
+            )}
+          </>
         )}
       </section>
 

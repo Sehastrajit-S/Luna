@@ -6,11 +6,11 @@ import re as _re
 from datetime import datetime
 from pathlib import Path
 
-from backend.config import settings
+from backend.config import DATA_DIR, settings
 from backend.services.memory_manager import MemoryManager
 from backend.services.personality import PersonalityEngine
 from backend.services.activity_tracker import ActivityTracker
-from backend.services.tool_registry import get_tools_for_prompt
+from backend.services.tool_registry import get_tool_rules_for_prompt, get_tools_for_prompt
 
 
 def get_live_data_section() -> str:
@@ -47,9 +47,23 @@ def get_live_data_section() -> str:
     return "\n".join(lines)
 
 
+def _load_style_examples(message: str | None) -> str:
+    """Curated examples that fit this message, plus pairs the user approved.
+
+    Auto-saved pairs (a reward heuristic's guesses) are no longer shown: they
+    captured garbled transcripts, forbidden endings and one-off facts, and the
+    model copied them.
+    """
+    from backend.services.personality.style_examples import examples_prompt
+    curated = examples_prompt(message or "")
+    approved = _load_rlhf_examples()
+    return "\n".join(part for part in (curated, approved) if part)
+
+
 def _load_rlhf_examples() -> str:
+    """Pairs the user explicitly chose (training UI); auto-generated ones are skipped."""
     try:
-        pairs_file = Path("data/rlhf_pairs.json")
+        pairs_file = DATA_DIR / "rlhf_pairs.json"
         if not pairs_file.exists():
             return ""
 
@@ -59,10 +73,10 @@ def _load_rlhf_examples() -> str:
             return t.strip()
 
         pairs = _json.loads(pairs_file.read_text(encoding="utf-8"))
-        recent = [p for p in pairs if p.get("chosen")][-8:]
+        recent = [p for p in pairs if p.get("chosen") and not p.get("auto_generated")][-4:]
         if not recent:
             return ""
-        lines = ["\n## Preferred response examples (match this style and tone)"]
+        lines = ["\n## Replies the user picked as good (match this style and tone)"]
         for p in recent:
             msg = p["message"].strip()
             chosen = _clean(p["chosen"])
@@ -73,6 +87,16 @@ def _load_rlhf_examples() -> str:
         return "\n\n".join(lines)
     except Exception:
         return ""
+
+
+def _native_tools() -> bool:
+    from backend.services.llm.tool_calling import native_tools_supported
+    return native_tools_supported()
+
+
+def _tools_section() -> str:
+    """Native tool calling carries the schemas itself; the prompt only says when to use them."""
+    return get_tool_rules_for_prompt() if _native_tools() else get_tools_for_prompt()
 
 
 def _build_connected_section() -> str:
@@ -94,7 +118,11 @@ def _build_connected_section() -> str:
     lines.append("Do NOT use web_search or web_research for these — that is always wrong.")
     lines.append("")
 
-    if google_connected:
+    if google_connected and _native_tools():
+        lines.append("Google Workspace is connected. Mail, inbox, Gmail, calendar, Drive, Docs, Sheets, Slides, "
+                     "Tasks or Contacts → call google_workspace (e.g. service gmail, action search_messages, "
+                     "args {\"q\": \"\", \"maxResults\": 5}).")
+    elif google_connected:
         lines.append(
             "Google Workspace is connected. "
             "Any mention of mail, mails, email, emails, inbox, messages, Gmail, "
@@ -106,7 +134,9 @@ def _build_connected_section() -> str:
             '{"tool_call": {"tool": "google_workspace", "args": {"service": "gmail", "action": "search_messages", "args": {"q": "", "maxResults": 5}}, "speak": "Fetching your latest emails."}}'
         )
 
-    if microsoft_connected:
+    if microsoft_connected and _native_tools():
+        lines.append("Microsoft 365 is connected. Outlook, mail, OneDrive, Teams, Excel or To Do → call microsoft_workspace.")
+    elif microsoft_connected:
         lines.append(
             "Microsoft 365 is connected. "
             "Any mention of Outlook, mail, emails, inbox, OneDrive, Teams, Excel, To Do, or tasks → "
@@ -126,14 +156,15 @@ def build_system_prompt(
     watching_context: str,
     spotify_track: dict | None = None,
     state_context: str = "",
-    visual_context: str = "",
+    skill_hint: str | None = None,
 ) -> str:
     core_facts = memory.get_core_facts()
     agenda = memory.get_upcoming_agenda()
     activity_context = activity_tracker.format_for_prompt()
     now = datetime.now()
 
-    rlhf_examples = _load_rlhf_examples()
+    # skill_hint = recent user turns + this message (last); examples fit this message.
+    rlhf_examples = _load_style_examples((skill_hint or "")[-400:])
 
     facts_text = "\n".join(f"- {f}" for f in core_facts) if core_facts else "- Still learning about you."
     short_mems = relevant_memories.get("short_term", [])
@@ -146,17 +177,26 @@ def build_system_prompt(
     else:
         spotify_line = "nothing playing"
 
-    tools_section = get_tools_for_prompt()
+    tools_section = _tools_section()
+    if _native_tools():
+        schedule_lines = ("- To save a task or reminder: call create_task. To add a meeting or appointment: call create_event. "
+                          "Times are local, format YYYY-MM-DDTHH:MM.")
+        audio_example = "call switch_audio with device_name"
+    else:
+        schedule_lines = ("- To create a task: [TASK:title|due_date|priority]\n"
+                          "- To create a calendar event: [EVENT:title|datetime|duration_minutes]")
+        audio_example = ('call switch_audio tool — e.g. {"tool_call": {"tool": "switch_audio", "args": '
+                         '{"device_name": "speaker 1"}, "speak": "Switching to speaker 1."}}')
+    audio_line = (f"- To switch the audio output device: {audio_example}. Two devices: \"Speakers (Realtek(R) Audio)\" = "
+                  "PC speakers and headphones (user says \"PC\", \"headphones\", or \"realtek\"), \"Speaker 1 (2- 25609)\" = "
+                  "bathroom speaker (user says \"speaker 1\" or \"bathroom\"). Never just say you're switching — "
+                  "the tool has to run or nothing changes.")
     try:
         from backend.services.skill_manager import get_skills_prompt
-        skills_section = get_skills_prompt(ui="electron")
+        skills_section = get_skills_prompt(ui="electron", message=skill_hint)
     except Exception:
         skills_section = "No local skills are installed yet."
 
-    visual_section = (
-        f"\n## What Luna can see right now (via camera)\n{visual_context}"
-        if visual_context else ""
-    )
     live_data_section = get_live_data_section()
     connected_section = _build_connected_section()
 
@@ -232,7 +272,6 @@ Do not use ellipses (...), emojis, or dramatic language. No terms of endearment 
 
 ## Visible watching context
 {watching_context}
-{visual_section}
 ## What {user_name} is doing right now
 {activity_context}
 
@@ -255,12 +294,16 @@ Upcoming agenda:
 - If something is done, move on. Don't keep asking about it.
 - No formal endings — never say: "Let me know", "Is there anything else?", "I can help with that", "Need help with anything?", "How can I help?", "Anything else I can do?", "Feel free to ask".
 - Never invent details not in memory or context. If unsure, ask.
+- About the user themselves (their pets, family, job, health, preferences): answer only from what you know about them. If a detail isn't there, say you don't know it yet — never fill in a plausible guess (asked a dog's breed you were never told, say so; don't answer "mixed breed").
+- Only say you saved, remembered, forgot, scheduled or changed something when a tool did it and its result says so.
+- Your built-in knowledge stops at your training date. For anything that changes (latest versions, prices, who holds a role, results, news, release dates), look it up first, then answer from what you found and name the source. If the results disagree or don't answer it, say that instead of filling the gap.
+- Ask when you need to understand. If a request is missing something that changes the result — when a meeting is, which file or repo, which of two things they mean — ask one short, specific question instead of guessing. Don't ask when there's an obvious default or the answer is already in the conversation or your memory.
 - Do not use ellipses (...). Use a period or nothing.
 - You can launch apps, open websites, manage calendar and tasks, control Spotify, and interact with a live map.
 - To launch an app: [LAUNCH:app_name]
-- To open a URL: [BROWSE:https://...] — NEVER use BROWSE for weather, market prices, or stock data. Those are already in your "Right now" section. Use web_research for definitions/explainers/comparisons that need sources, and web_search for quick fresh lookup.
-- To create a task: [TASK:title|due_date|priority]
-- To create a calendar event: [EVENT:title|datetime|duration_minutes]
+- To close/quit a running app: use the close_app tool call (not a bracket tag) — it asks the user to confirm first since it can lose unsaved work. Never claim you closed or quit an app unless close_app actually ran and returned success — if you have no way to confirm it happened, say so instead of guessing.
+- To open a URL: [BROWSE:https://...] — NEVER use BROWSE for weather, market prices, or stock data. Those are already in your "Right now" section. Use web_search for fresh lookups. Never call web_research — deep research only runs when the user types /research <topic>.
+{schedule_lines}
 - To play music: [SPOTIFY:search query] — do it immediately, no confirmation needed.
 - To show a visual explanation widget: [WIDGET:kind|title|body]. Rules:
   * ALWAYS add a widget when you are explaining how something works, what something is, or why something happens — e.g. "how does X work", "explain X", "what is X", "why does X happen". This is mandatory for any scientific, technical, historical, or conceptual topic.
@@ -285,7 +328,6 @@ Upcoming agenda:
     - "what is DNA" → [WIDGET:model3d|DNA Helix|Double Helix:Two strands wound around each other; Base Pairs:A-T and G-C pairs encode genetic information; Nucleotides:Sugar, phosphate, and base building blocks; Replication:Unzips and copies itself during cell division]
     - "explain quantum entanglement" → [WIDGET:tabs|Quantum Entanglement|What it is:Two particles share quantum state regardless of distance; How it works:Measuring one instantly defines the other's state; Misconception:Cannot transmit information faster than light; Real use:Quantum cryptography and computing]
     - "black hole vs neutron star" → [WIDGET:compare|Black Hole vs Neutron Star|Black Hole:No solid surface, infinite density singularity, nothing escapes; Neutron Star:Dense but finite, neutrons packed solid, can have jets]
-  * When the camera shows the user is tired or low-energy, prefer summary or flashcards over model3d.
 - Currently playing on Spotify: {spotify_line}
 - If the user says "play it again" or "replay", use [SPOTIFY:] with only the title and main artist.
 - Map commands — use these whenever the user wants to see a location, find something nearby, or get directions:
@@ -295,7 +337,7 @@ Upcoming agenda:
   - Get driving directions: [MAP:route:destination] — e.g. [MAP:route:Times Square New York]
   - Use conversation context to resolve references. If the user says "show me where that is" after mentioning a restaurant, use that restaurant name. If they say "take me there", route to the place just discussed.
   - IMPORTANT: Never output a bracket command as your entire response. Always say something natural first, then append the command. Example: "Sure, finding coffee shops near you. [MAP:search:coffee shops]" — never just "[MAP:search:coffee shops]" alone.
-- To switch the audio output device: call switch_audio tool — e.g. {{"tool_call": {{"tool": "switch_audio", "args": {{"device_name": "speaker 1"}}, "speak": "Switching to speaker 1."}}}}. Two devices: "Speakers (Realtek(R) Audio)" = PC speakers and headphones (user says "PC", "headphones", or "realtek"), "Speaker 1 (2- 25609)" = bathroom speaker (user says "speaker 1" or "bathroom"). Never just say you're switching — you must emit the tool_call or nothing changes.
+{audio_line}
 - Job searching: when {user_name} wants to look for jobs, open LinkedIn with: [BROWSE:https://www.linkedin.com/jobs/search-results/?keywords=new+grad+cs&geoId=103644278&distance=0.0&f_AL=true&f_TPR=r3600]
 - Away mode: append [AWAY] in two situations: (1) when {user_name} explicitly says they are leaving or going to sleep — e.g. "I'm leaving", "heading out", "going to work", "brb", "gotta go", "going to bed", "good night", "off to sleep"; (2) when you are giving the final farewell in a departure/bedtime exchange — e.g. you say "Sleep well", "Rest well", "Good night", "Sweet dreams", or any terminal send-off after they confirmed they're going. Do NOT trigger for: thank-yous, casual replies, questions, arrival phrases ("I'm home", "I'm back"), or anything ambiguous. If in doubt, do not append [AWAY].
 - Never say you're an AI or mention your underlying technology.
@@ -303,12 +345,12 @@ Upcoming agenda:
 """
 
 
-def build_cli_system_prompt(user_name: str, recent_context: str, ui: str = "cli") -> str:
+def build_cli_system_prompt(user_name: str, recent_context: str, ui: str = "cli", skill_hint: str | None = None) -> str:
     now = datetime.now()
     recent = recent_context.strip() if recent_context else "No recent context."
     try:
         from backend.services.skill_manager import get_skills_prompt
-        skills_section = get_skills_prompt(ui="cli")  # type: ignore[arg-type]
+        skills_section = get_skills_prompt(ui="cli", message=skill_hint)  # type: ignore[arg-type]
     except Exception:
         skills_section = ""
     skills_block = f"\n## Skills\n{skills_section}\n" if skills_section and "No local" not in skills_section else ""
@@ -341,7 +383,7 @@ def build_business_system_prompt(
         "concise":      "extremely brief — bullet points and one-liners preferred",
     }
     tone = tone_map.get(settings.business_tone, tone_map["professional"])
-    tools_section = get_tools_for_prompt()
+    tools_section = _tools_section()
 
     return f"""You are an AI assistant for {biz}.{desc}
 Current date and time: {now.strftime('%A, %B %d, %Y — %I:%M %p')}.

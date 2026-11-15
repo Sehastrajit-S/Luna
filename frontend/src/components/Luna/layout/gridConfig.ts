@@ -2,7 +2,7 @@ import type { LayoutItem } from 'react-grid-layout'
 
 export type { LayoutItem }
 
-export const LAYOUT_KEY = 'luna-dashboard-layout-v2'
+export const LAYOUT_KEY = 'luna-dashboard-layout-v3'
 export const COLS = 12
 export const ROWS = 10
 
@@ -10,11 +10,9 @@ export const ROWS = 10
 export const DEFAULT_LAYOUT: LayoutItem[] = [
   { i: 'news',      x: 0, y: 0, w: 3, h: 5 },
   { i: 'youtube',   x: 0, y: 5, w: 3, h: 5 },
-  { i: 'weather',   x: 3, y: 0, w: 3, h: 2 },
-  { i: 'awareness', x: 6, y: 0, w: 3, h: 2 },
+  { i: 'weather',   x: 3, y: 0, w: 6, h: 2 },
   { i: 'console',   x: 3, y: 8, w: 6, h: 2 },
-  { i: 'camera',    x: 9, y: 0, w: 3, h: 4 },
-  { i: 'market',    x: 9, y: 4, w: 3, h: 6 },
+  { i: 'market',    x: 9, y: 0, w: 3, h: 10 },
 ]
 
 export function loadLayout(): LayoutItem[] {

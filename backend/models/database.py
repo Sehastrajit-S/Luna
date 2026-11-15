@@ -90,6 +90,44 @@ class Message(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     sentiment_score = Column(Float, nullable=True)  # -1 to 1
     conversation = relationship("Conversation", back_populates="messages")
+    attachments = relationship("Attachment", back_populates="message", order_by="Attachment.created_at")
+
+
+class ConversationArtifact(Base):
+    """Something Luna produced in a conversation that later turns build on —
+    today, code blocks. Kept outside the chat history so it survives context
+    fitting and summaries (like files on disk for a coding agent)."""
+    __tablename__ = "conversation_artifacts"
+    id = Column(Integer, primary_key=True, index=True)
+    conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=False, index=True)
+    message_id = Column(Integer, ForeignKey("messages.id"), nullable=True)
+    turn = Column(Integer, nullable=True)                      # user turn number it answered
+    kind = Column(String, nullable=False, default="code")
+    language = Column(String, nullable=True)
+    names = Column(String, nullable=True)                      # "encode_base62, decode_base62"
+    title = Column(String, nullable=True)                      # the request it answered, shortened
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class Attachment(Base):
+    """A file the user attached in chat. Bytes and extracted text live under
+    data/uploads/<id>/ (see services/files); this row is the index."""
+    __tablename__ = "attachments"
+    id = Column(String, primary_key=True)                       # uuid4 hex
+    conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=True, index=True)
+    message_id = Column(Integer, ForeignKey("messages.id"), nullable=True, index=True)
+    filename = Column(String, nullable=False)
+    mime_type = Column(String, nullable=False)
+    kind = Column(String, nullable=False)                       # pdf | docx | pptx | spreadsheet | csv | text | image
+    size_bytes = Column(Integer, nullable=False)
+    status = Column(String, nullable=False, default="ready")    # ready | error
+    error = Column(Text, nullable=True)
+    page_count = Column(Integer, nullable=True)                 # pages / slides / sheets / rows
+    token_estimate = Column(Integer, nullable=True)
+    summary_line = Column(String, nullable=True)                # "PDF · 12 pages"
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    message = relationship("Message", back_populates="attachments")
 
 
 class Fact(Base):

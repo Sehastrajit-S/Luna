@@ -6,6 +6,7 @@ import json
 import logging
 import re
 from datetime import datetime, timedelta
+from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Optional
 
@@ -13,6 +14,7 @@ import httpx
 from sqlalchemy.orm import Session
 from backend.services.llm import ollama
 from backend.services.memory_manager import MemoryManager
+from backend.services.command_parser.commands import find_open_task, find_upcoming_event, save_event, save_task
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +28,35 @@ _EXTRACTION_TRIGGER_RE = re.compile(
     r'i meant|correction|i said|i\'m actually|i am actually)\b',
     re.IGNORECASE,
 )
+
+
+_ROLE_RE = re.compile(r"^(User|Luna): ", re.MULTILINE)
+
+
+def _user_text(conversation_text: str) -> str:
+    """Only what the user wrote (messages can span lines). Facts are about the
+    user and must come from the user: quoting Luna's own "your meeting is
+    scheduled for next Tuesday" stored a wrong claim as a fact."""
+    parts = _ROLE_RE.split(conversation_text or "")
+    # split → [before, role, text, role, text, ...]
+    return "\n".join(parts[i + 1] for i in range(1, len(parts) - 1, 2) if parts[i] == "User")
+
+
+def _quote_is_grounded(quote: str, conversation_text: str, min_ratio: float = 0.8) -> bool:
+    """
+    Check that an extracted fact's supporting quote actually appears (fuzzy
+    match, tolerant of whitespace/case) in the source conversation — a cheap,
+    deterministic backstop against the model inventing facts with no basis
+    in what was actually said.
+    """
+    quote = re.sub(r"\s+", " ", (quote or "").strip().lower())
+    if len(quote) < 4:
+        return False
+    text = re.sub(r"\s+", " ", conversation_text.lower())
+    if quote in text:
+        return True
+    match = SequenceMatcher(None, quote, text).find_longest_match(0, len(quote), 0, len(text))
+    return (match.size / len(quote)) >= min_ratio
 
 
 def _should_trigger_extraction(message: str) -> bool:
@@ -86,7 +117,10 @@ Memory type — classify by how long the fact remains relevant:
 
 Rules:
 - Only extract clearly stated facts, not inferences
+- Only from the User's lines — never from Luna's replies (the "quote" must be the user's words)
 - Each fact should be a complete, standalone sentence about the user
+- Keep every detail the user gave: names, ages, breeds, models, amounts, places. "my dog Quillon is a 3 year
+  old border collie" → "User's dog Quillon is a 3-year-old border collie", not "User has a dog named Quillon"
 - Omit anything vague or uncertain
 - Return [] if nothing new was learned
 - Max 8 fact items per extraction
@@ -98,12 +132,19 @@ NEVER extract:
 - Specific dated to-dos unless they reveal a recurring habit
 - Location unless it is the user's established home/city/country
 - Anything Luna did — only extract facts about the USER
+- Meetings, reminders and tasks as facts — those are calendar items (use the actions below), not memories
+- Requests to forget something — that is not a new fact
 - Vague project references without substance ("working on a project")
 
 For "persistent" and "short" facts, include "expires_in_days": <number>.
 For "long" facts, omit expires_in_days.
 
-Fact format: {"category": "personal", "content": "User's name is Alex", "confidence": 0.95, "memory_type": "long"}
+Every fact MUST include a "quote" field: the exact substring from the conversation
+below that directly supports it. If you cannot point to actual words that support
+a fact, do not include that fact — this is how you avoid inventing things that
+were never said.
+
+Fact format: {"category": "personal", "content": "User's name is Alex", "quote": "my name is Alex", "confidence": 0.95, "memory_type": "long"}
 
 --- CALENDAR & TASK ACTIONS ---
 If the user mentions a SPECIFIC upcoming appointment or meeting with an explicit date AND time,
@@ -119,9 +160,12 @@ Today's date is provided in the prompt — use it to resolve "tomorrow", "this F
 
 {_extraction_examples}"""
 
-SUMMARIZE_SYSTEM = """Summarize this conversation between Luna and the user in 2-3 sentences.
-Focus on: what the user shared, what was decided or discussed, any emotional moments.
-Write in third person. Be concise and factual."""
+SUMMARIZE_SYSTEM = """Summarize this conversation between Luna and the user. It replaces the older messages, so anything you leave out is forgotten.
+Write two parts:
+Facts: a bullet list of every specific the user gave or asked Luna to remember, copied exactly: names, numbers, amounts, dates, codes, IDs, places, decisions, preferences, open tasks. Facts say what is true or decided ("Database: PostgreSQL"), never what the user asked about. Keep every fact from the earlier summary unless the recent messages replaced it.
+Discussed: the topics covered, in order, one short line each.
+If an earlier summary is given, merge it with the recent messages so the result covers the whole conversation; keep facts that still matter and drop ones that were superseded.
+Write in third person. No commentary. At most 250 words."""
 
 EMOTIONAL_ARC_SYSTEM = """In one sentence, describe the user's emotional state and primary focus from this conversation.
 Format: "User felt [emotion] about [topic/situation]."
@@ -173,22 +217,11 @@ async def extract_facts_from_conversation(
                     duration = int(item.get("duration_minutes") or 60)
                     if not title or not dt_str:
                         continue
-                    dt = datetime.fromisoformat(dt_str)
-                    if dt <= datetime.now():
-                        continue  # skip past events
-                    # Deduplicate: skip if same title already exists
-                    existing = (
-                        db.query(CalendarEvent)
-                        .filter(CalendarEvent.title == title)
-                        .first()
-                    )
-                    if not existing:
-                        end_dt = dt + timedelta(minutes=duration)
-                        db.add(CalendarEvent(
-                            title=title,
-                            start_datetime=dt,
-                            end_datetime=end_dt,
-                        ))
+                    if datetime.fromisoformat(dt_str) <= datetime.now():
+                        continue  # skip past events (the model writes local time)
+                    # Only add what the chat didn't already save; same save path as
+                    # the chat (local → UTC, reworded titles match the same event).
+                    if not find_upcoming_event(db, title) and save_event(db, title, dt_str, duration):
                         db.commit()
                         events_created.append(title)
                         stored.append(item)
@@ -204,14 +237,10 @@ async def extract_facts_from_conversation(
                     priority = item.get("priority", "medium")
                     if not title:
                         continue
-                    due = datetime.fromisoformat(due_str) if due_str else None
-                    existing = (
-                        db.query(Task)
-                        .filter(Task.title == title, Task.completed == False)
-                        .first()
-                    )
-                    if not existing:
-                        db.add(Task(title=title, due_date=due, priority=priority))
+                    if due_str:
+                        datetime.fromisoformat(due_str)          # reject malformed dates
+                    if not find_open_task(db, title):
+                        save_task(db, title, due_str or None, priority)
                         db.commit()
                         tasks_created.append(title)
                         stored.append(item)
@@ -232,6 +261,12 @@ async def extract_facts_from_conversation(
                     expires_in_days = float(expires_in_days)
                 except (TypeError, ValueError):
                     expires_in_days = None
+
+            quote = item.get("quote", "")
+            if not _quote_is_grounded(quote, _user_text(conversation_text)):
+                logger.debug("Rejecting ungrounded fact (no matching quote): %r", content)
+                continue
+
             if len(content) > 10:
                 await memory.store_fact(
                     content, category, conversation_id, confidence,
@@ -275,6 +310,36 @@ async def extract_emotional_arc(conversation_text: str) -> str:
     return ""
 
 
+SESSION_FACTS_SYSTEM = """You list what later messages in this conversation will depend on.
+From the messages, extract specific facts and decisions: names, chosen tools or technologies, numbers and limits
+(sizes, times, budgets, versions), requirements, and choices made, including a recommendation the assistant made
+that the user didn't reject.
+Each item is one short standalone statement with its subject, e.g. "Project name: Snip", "Cache: Redis, 24-hour TTL",
+"Code generation: counter-based (assistant's recommendation)".
+Only what is stated explicitly. No questions, no requests ("user asked for..."), no explanations.
+Output only a JSON array of strings, at most 8. Output [] if there is nothing."""
+
+
+async def extract_session_facts(conversation_text: str) -> list[str]:
+    """Facts and decisions a conversation builds on, for its append-only working state."""
+    try:
+        raw = await ollama.complete(prompt=conversation_text, system=SESSION_FACTS_SYSTEM, temperature=0.0)
+    except (httpx.HTTPError, OSError, ValueError) as e:
+        logger.warning("Session fact extraction failed: %s", e)
+        return []
+    match = re.search(r"\[.*\]", raw or "", re.DOTALL)
+    try:
+        items = json.loads(match.group(0)) if match else []
+    except ValueError:
+        return []
+    facts = []
+    for item in items if isinstance(items, list) else []:
+        text = " ".join(str(item).split())
+        if 3 <= len(text) <= 160 and not re.match(r"(?i)(?:the\s+)?user\s+(?:asked|requested|wants\s+to\s+know)", text):
+            facts.append(text)
+    return facts[:8]
+
+
 async def summarize_conversation(conversation_text: str) -> str:
     try:
         return await ollama.complete(
@@ -294,8 +359,13 @@ async def extract_user_name(conversation_text: str) -> Optional[str]:
             system=USER_NAME_SYSTEM,
             temperature=0.0,
         )
-        name = name.strip().strip('"').strip("'")
-        if name and name.lower() != "unknown" and len(name) < 50:
+        name = name.strip().strip("\"'.,!").strip()
+        # Only a short name the user actually wrote — never "unknown." (the model's
+        # "no name" answer) or the assistant's own name.
+        user_lines = " ".join(line for line in conversation_text.splitlines() if line.startswith("User:"))
+        if (name and len(name.split()) <= 3 and len(name) < 40
+                and name.lower() not in {"unknown", "none", "luna", "user", "friend", "n/a"}
+                and re.search(rf"\b{re.escape(name)}\b", user_lines, re.IGNORECASE)):
             return name
     except (httpx.HTTPError, OSError, ValueError) as e:
         logger.warning("User name extraction failed: %s", e)

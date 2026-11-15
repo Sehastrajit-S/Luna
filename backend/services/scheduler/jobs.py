@@ -8,22 +8,15 @@ from backend.services.scheduler.notifications import send_windows_notification, 
 
 _VISION_CHECKIN_SYSTEM = (
     "You are Luna, a quiet and attentive AI companion. "
-    "You have a live picture of what this person is doing and what is happening in their world. "
-    "You initiate conversation naturally — brief, warm, grounded in what you actually observe. "
+    "You have a live picture of what this person is working on and what is happening in their world. "
+    "You initiate conversation naturally — brief, warm, grounded in what you actually know. "
     "You are not a data dashboard. You speak like a present, perceptive person would — "
     "when there's something genuinely worth saying. One clear observation is enough."
 )
 
 _VISION_CHECKIN_PROMPT = """\
-━━ WHAT YOU SEE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━ CONTEXT ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-RIGHT NOW
-{visual}
-
-OVER THE SESSION
-{history}
-
-CONTEXT
 Time: {time_str}, {day_name} — quiet {quiet_min}
 
 RECENT CONVERSATION (what they've been working on / thinking about)
@@ -51,7 +44,6 @@ ONE clear reason is enough to speak. You do not need multiple signals.
 SPEAK when any of these are true:
   → They've been at it for a while — acknowledge what they're working on naturally
   → There's recent conversation you can follow up on or continue
-  → You see something visually that's worth a brief comment (focus, fatigue, activity)
   → A market move, headline, or event touches something they care about or mentioned
   → It's been a long quiet stretch and a light check-in fits
 
@@ -65,7 +57,7 @@ Reply with SILENT or 1 message (≤ 18 words, conversational, no prefix, no quot
 
 def vision_aware_checkin():
     """
-    Every few minutes, pull full live context (vision, weather, market, news,
+    Every few minutes, pull full live context (weather, market, news,
     calendar, conversation) and let the LLM decide whether the specific moment
     warrants Luna initiating. Pushes immediately to the SSE bus.
     """
@@ -103,12 +95,6 @@ def vision_aware_checkin():
             since_min = (now - last_proactive.sent_at.replace(tzinfo=None)).total_seconds() / 60
             if since_min < 15:
                 return
-
-        # ── Vision ────────────────────────────────────────────────────────────
-        from backend.services.vision import get_visual_context
-        vis = get_visual_context()
-        visual_raw  = vis.raw     if vis and vis.raw     else "No camera data available."
-        visual_hist = vis.history if vis and vis.history else "No session trend yet."
 
         # ── Weather ───────────────────────────────────────────────────────────
         from backend.services.dashboard import weather as _weather, markets as _markets
@@ -173,8 +159,6 @@ def vision_aware_checkin():
         prompt = _VISION_CHECKIN_PROMPT.format(
             time_str=local_now.strftime("%I:%M %p"),
             day_name=local_now.strftime("%A"),
-            visual=visual_raw,
-            history=visual_hist,
             weather=weather_str,
             market=market_str,
             news=news_str,
@@ -217,26 +201,50 @@ def vision_aware_checkin():
         db.close()
 
 
+# (kind, id, stage, scheduled time) already announced — each reminder fires once.
+_announced: set[tuple] = set()
+REMIND_BEFORE_MIN = 15
+
+
+def _announce(db: Session, key: tuple, message: str, reason: str) -> None:
+    if key in _announced:
+        return
+    _announced.add(key)
+    send_windows_notification("Luna", message)
+    proactive_queue.append(message)
+    db.add(ProactiveLog(message=message, reason=reason))
+
+
 def check_upcoming_events():
-    """Check for events starting within the next hour and notify."""
+    """Runs every minute: events get a heads-up 15 minutes before and a nudge
+    at start time; tasks get a nudge when they fall due. Each fires once.
+    Stored times are UTC."""
     db: Session = SessionLocal()
     try:
         now = datetime.utcnow()
-        soon = now + timedelta(hours=1)
         events = (
             db.query(CalendarEvent)
-            .filter(
-                CalendarEvent.start_datetime >= now,
-                CalendarEvent.start_datetime <= soon,
-            )
+            .filter(CalendarEvent.start_datetime >= now - timedelta(minutes=2),
+                    CalendarEvent.start_datetime <= now + timedelta(minutes=REMIND_BEFORE_MIN))
             .all()
         )
         for event in events:
-            minutes = int((event.start_datetime - now).total_seconds() / 60)
-            msg = f"Heads up — '{event.title}' starts in {minutes} minutes."
-            send_windows_notification("Luna", msg)
-            proactive_queue.append(msg)
-            db.add(ProactiveLog(message=msg, reason="upcoming_event"))
+            minutes = round((event.start_datetime - now).total_seconds() / 60)
+            if minutes <= 1:
+                _announce(db, ("event", event.id, "start", event.start_datetime),
+                          f"'{event.title}' is starting now.", "event_start")
+            else:
+                _announce(db, ("event", event.id, "before", event.start_datetime),
+                          f"Heads up — '{event.title}' starts in {minutes} minutes.", "upcoming_event")
+
+        due = (
+            db.query(Task)
+            .filter(Task.completed == False,  # noqa: E712
+                    Task.due_date >= now - timedelta(minutes=2), Task.due_date <= now + timedelta(minutes=1))
+            .all()
+        )
+        for task in due:
+            _announce(db, ("task", task.id, "due", task.due_date), f"Reminder: '{task.title}' is due now.", "task_due")
         db.commit()
     finally:
         db.close()
@@ -260,6 +268,18 @@ def check_overdue_tasks():
             proactive_queue.append(msg)
             db.add(ProactiveLog(message=msg, reason="overdue_tasks"))
             db.commit()
+    finally:
+        db.close()
+
+
+def sync_spotify_activity():
+    """Reconcile the tracked 'listening' activity with real Spotify playback state."""
+    db: Session = SessionLocal()
+    try:
+        from backend.services.activity_tracker import ActivityTracker
+        ActivityTracker(db).sync_spotify_activity()
+    except Exception as e:
+        print(f"[activity] Spotify sync failed: {e}")
     finally:
         db.close()
 

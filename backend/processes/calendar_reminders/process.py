@@ -6,7 +6,7 @@ from backend.processes.calendar_reminders import jobs
 
 
 def register_scheduler(scheduler):
-    scheduler.add_job(jobs.check_upcoming_events, IntervalTrigger(minutes=15), id="events")
+    scheduler.add_job(jobs.check_upcoming_events, IntervalTrigger(minutes=1), id="events")  # reminders at -15 min, start, and task due times
     scheduler.add_job(jobs.check_overdue_tasks, CronTrigger(hour=8, minute=0), id="tasks")
     scheduler.add_job(jobs.morning_greeting, CronTrigger(hour=8, minute=1), id="morning")
 

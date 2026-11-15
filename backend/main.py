@@ -10,14 +10,17 @@ from backend.config import settings
 from backend.models.database import init_db, Base, engine
 from backend.services.activity_tracker import Activity
 from backend.services.scheduler import luna_scheduler
-from backend.routers import chat, memory, calendar, system, voice as voice_router, spotify as spotify_router, state as state_router, train as train_router, sleep as sleep_router, vision as vision_router, luna as luna_router, agent as agent_router, channels as channels_router, admin as admin_router, workspace_integrations as workspace_integrations_router
+from backend.routers import chat, memory, calendar, system, voice as voice_router, spotify as spotify_router, state as state_router, train as train_router, sleep as sleep_router, luna as luna_router, agent as agent_router, channels as channels_router, admin as admin_router, workspace_integrations as workspace_integrations_router
 from backend.routers.proactive import router as proactive_router
 from backend.routers.coding import router as coding_router
 from backend.routers.observe import router as observe_router
 from backend.routers.health_integrations import router as health_router
 from backend.routers.skills import router as skills_router
+from backend.routers.files import router as files_router
+from backend.routers.settings import router as settings_router
 from backend.middleware.rate_limit import RateLimitMiddleware
-from backend.middleware.logging_middleware import RequestIDMiddleware, configure_logging
+from backend.middleware.logging_middleware import RequestIDMiddleware
+from backend.core.logging import configure_logging
 from backend.processes.registry import start_lifecycle_processes, stop_lifecycle_processes
 from backend.services.telemetry import tracer
 from backend.models.database import SessionLocal
@@ -31,13 +34,21 @@ async def lifespan(app: FastAPI):
     # Init DB (creates all tables including Activity)
     Base.metadata.create_all(bind=engine)
     init_db()
+    # Local access token for settings writes (read by the desktop app's main process).
+    from backend.services.settings_store import local_api_token
+    local_api_token()
     tracer.init(SessionLocal)
-    luna_scheduler.start()
-    start_lifecycle_processes()
+    # Test/eval instances run without reminders, check-ins and other jobs that
+    # would notify the real user.
+    jobs = settings.background_jobs_enabled
+    if jobs:
+        luna_scheduler.start()
+        start_lifecycle_processes()
     yield
     await tracer.flush()
-    luna_scheduler.stop()
-    stop_lifecycle_processes()
+    if jobs:
+        luna_scheduler.stop()
+        stop_lifecycle_processes()
 
 
 app = FastAPI(
@@ -56,6 +67,9 @@ app.add_middleware(RateLimitMiddleware)
 # allow_origins=["*"] + allow_credentials=True is invalid per the CORS spec
 # and creates CSRF exposure when JWT auth is active.  Use an explicit origin list.
 _DEFAULT_ORIGINS = [
+    # Electron loads the desktop renderer from file://, which browsers expose
+    # to the API as the opaque `null` origin.
+    "null",
     "http://localhost:5173",
     "http://localhost:8899",
     "http://127.0.0.1:5173",
@@ -79,6 +93,7 @@ app.add_middleware(
         "X-Volume",
         "X-Speech-Speed",
         "X-Speech-Duration",
+        "X-Luna-Token",
     ],
 )
 
@@ -93,7 +108,6 @@ app.include_router(spotify_router.router)
 app.include_router(state_router.router)
 app.include_router(train_router.router)
 app.include_router(sleep_router.router)
-app.include_router(vision_router.router)
 app.include_router(luna_router.router)
 app.include_router(agent_router.router)
 app.include_router(channels_router.router)
@@ -104,15 +118,25 @@ app.include_router(health_router)
 app.include_router(coding_router)
 app.include_router(proactive_router)
 app.include_router(skills_router)
+app.include_router(files_router)
+app.include_router(settings_router)
 
 # Serve Office Add-in static files at /addin/office/
 office_addin_dir = Path(__file__).parent.parent / "office-addin"
 if office_addin_dir.exists():
     app.mount("/addin/office", StaticFiles(directory=str(office_addin_dir)), name="office-addin")
 
-# Serve React frontend (production build)
+# Serve the browser UI: the desktop app's renderer, so web and desktop are one UI.
+# The renderer links its images as ../../resources/…, which resolves to /resources/.
+web_ui_dir = Path(settings.web_ui_dir)
 frontend_dist = Path(settings.frontend_dist)
-if frontend_dist.exists():
+if (web_ui_dir / "index.html").exists():
+    web_ui_resources = Path(settings.web_ui_resources)
+    if web_ui_resources.exists():
+        app.mount("/resources", StaticFiles(directory=str(web_ui_resources)), name="web-ui-resources")
+    app.mount("/", StaticFiles(directory=str(web_ui_dir), html=True), name="web-ui")
+# Fallback: React frontend (production build)
+elif frontend_dist.exists():
     app.mount("/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="assets")
 
     @app.get("/{full_path:path}", include_in_schema=False)

@@ -1,14 +1,35 @@
 """LLM-based tool result summarisation for chat pipeline."""
+from datetime import datetime
 
 
-async def verify_tool_result(tool_name: str, args: dict, result: str, user_message: str = "") -> str:
-    """Ask the LLM to produce a natural-language summary of the tool result."""
+async def verify_tool_result(tool_name: str, args: dict, result: str, user_message: str = "",
+                             context: str = "", guidelines: str = "") -> str:
+    """Ask the LLM to produce a natural-language summary of the tool result.
+
+    context: what the user already shared (recent turns, attached documents) —
+    needed for follow-ups like "links for these" or "which fits me best".
+    guidelines: the matching skill's answer instructions (skills/<id>/SKILL.md).
+    """
     from backend.services.llm import ollama
     from backend.services.response_formatter import ensure_references
 
     if tool_name in ("web_search", "web_research", "web_fetch", "browser_read"):
         query_hint = user_message or args.get("query") or args.get("url", "")
+        # Follow-ups ("I mean the new one") only make sense with the resolved query.
+        searched = args.get("queries") or ([args["query"]] if args.get("query") else [])
+        if user_message and searched and "; ".join(searched).strip().lower() != user_message.strip().lower():
+            query_hint = f"{user_message}\n(Searched for: {'; '.join(searched)})"
+        # This call does not see the main system prompt, so without the clock it
+        # trusts whatever date a web page mentions ("today is Thursday").
+        now = datetime.now()
+        context_block = f"What the user has already shared (use it to tailor the answer):\n{context}\n\n" if context else ""
+        if guidelines:
+            # Use-case specifics come from the skill, never from this file.
+            context_block += f"How to answer this kind of request:\n{guidelines[:2500]}\n\n"
         prompt = (
+            f"Current local date and time: {now:%A, %B} {now.day}, {now.year}, {now:%I:%M %p}. "
+            "Treat this as ground truth; never take today's date or day from the web results.\n\n"
+            f"{context_block}"
             f"The user asked: {query_hint}\n\n"
             f"Web results:\n{result}\n\n"
             "Answer the user's question thoroughly. Rules:\n"
@@ -17,8 +38,18 @@ async def verify_tool_result(tool_name: str, args: dict, result: str, user_messa
             "- Do NOT say 'according to' or 'based on' — just answer directly\n"
             "- For news queries: list each story with a one-sentence summary\n"
             "- For comparison/explanation queries: give a clear structured answer\n"
+            "- LINKS: only use URLs that appear in the web results above, copied exactly. Never invent, guess or "
+            "shorten a URL. Put each item's link next to it as a markdown link: **[Item name](URL)**\n"
+            "- One entry per result: never list the same link twice. Skip results that don't match what was "
+            "asked for (e.g. generic search or listing pages when the user wants specific items)\n"
+            "- If an item the user asked about has no matching result, say you couldn't find a link for it "
+            "instead of substituting a different page\n"
+            "- When the user asks for a judgment (fit, ranking, recommendation), base it on what they shared and "
+            "the specific result, and say briefly why\n"
             "- End with a References section preserving ALL numbered source URLs from the results\n"
-            "- If results are empty or unhelpful, say so and suggest rephrasing"
+            "- If results are empty or unhelpful, say so and suggest rephrasing\n"
+            "- Talk to the user directly (\"you\", \"your\"). Never narrate them in the third person (\"The user is "
+            "asking…\") and don't title the answer after the task (\"# Product Search: …\"); start with the answer"
         )
         full = ""
         async for token in ollama.stream_chat(
@@ -26,7 +57,7 @@ async def verify_tool_result(tool_name: str, args: dict, result: str, user_messa
             "You are Luna, a sharp personal AI. Write well-structured markdown. Be specific and complete.",
         ):
             full += token
-        return ensure_references(full.strip(), result)[:5000]
+        return ensure_references(full.strip(), result)[:9000]
 
     if tool_name == "dataset_search":
         query_hint = user_message or args.get("query", "")

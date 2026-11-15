@@ -7,7 +7,8 @@ import os
 import tempfile
 from fastapi import APIRouter
 from fastapi import UploadFile, File
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, Response, StreamingResponse
+from pydantic import BaseModel, Field
 
 from backend.services.voice import voice_service, VoiceState
 
@@ -67,6 +68,91 @@ def away_off():
     return {"ok": True}
 
 
+MAX_DICTATION_BYTES = 25 * 1024 * 1024   # ~25 min of Opus; far beyond a chat message
+_AUDIO_SUFFIXES = {".webm", ".ogg", ".opus", ".wav", ".m4a", ".mp4", ".mp3", ".flac", ".aac"}
+
+
+@router.post("/transcribe")
+async def transcribe_audio(audio: UploadFile = File(...)):
+    """Dictation for the chat box: audio in, text out (local open-source STT).
+
+    The desktop app records WebM/Opus in the browser engine and posts it here;
+    the transcript goes into the message box for the user to review and send.
+    """
+    from backend.services.stt import stt
+
+    suffix = os.path.splitext(audio.filename or "")[1].lower()
+    if suffix not in _AUDIO_SUFFIXES:
+        suffix = ".webm"
+    size = 0
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as f:
+        audio_path = f.name
+        while chunk := await audio.read(1024 * 1024):
+            size += len(chunk)
+            if size > MAX_DICTATION_BYTES:
+                break
+            f.write(chunk)
+    try:
+        if size == 0:
+            return JSONResponse({"error": "No audio was recorded."}, status_code=400)
+        if size > MAX_DICTATION_BYTES:
+            return JSONResponse({"error": "That recording is too long."}, status_code=413)
+        try:
+            result = await asyncio.to_thread(stt.transcribe_file, audio_path)
+        except Exception as e:
+            return JSONResponse({"error": f"Transcription failed: {e}"}, status_code=500)
+        return {
+            "text": result.text,
+            "duration_s": round(result.duration_s, 2),
+            "elapsed_ms": result.elapsed_ms,
+            "model": result.model,
+            "device": result.device,
+        }
+    finally:
+        try:
+            os.unlink(audio_path)
+        except OSError:
+            pass
+
+
+MAX_SPEAK_CHARS = 2000
+
+
+class SpeakRequest(BaseModel):
+    text: str = Field(..., min_length=1, max_length=MAX_SPEAK_CHARS)
+
+
+@router.post("/speak")
+async def speak_text(body: SpeakRequest):
+    """Voice mode for the chat box: text in, MP3 out (same engines as the voice loop).
+
+    Uses ElevenLabs when configured, otherwise edge-tts. Playback happens in the
+    client so it can be interrupted when the user starts talking.
+    """
+    text = body.text.strip()
+    if not text:
+        return JSONResponse({"error": "Nothing to say."}, status_code=400)
+    mp3_path = await asyncio.to_thread(voice_service._synthesize, text)
+    if not mp3_path:
+        return JSONResponse({"error": "Speech synthesis is unavailable — check the TTS settings."}, status_code=503)
+    try:
+        with open(mp3_path, "rb") as f:
+            audio = f.read()
+    finally:
+        try:
+            os.unlink(mp3_path)
+        except OSError:
+            pass
+    return Response(content=audio, media_type="audio/mpeg", headers={"Cache-Control": "no-store"})
+
+
+@router.get("/stt-status")
+async def stt_status():
+    from backend.config import settings
+    from backend.services.stt import stt
+    return {"provider": settings.stt_provider, "model": settings.stt_model, "loaded": stt.loaded}
+
+
 @router.post("/mobile")
 async def mobile_voice(audio: UploadFile = File(...)):
     suffix = ".webm"
@@ -89,6 +175,30 @@ async def mobile_voice(audio: UploadFile = File(...)):
             os.unlink(audio_path)
         except OSError:
             pass
+
+
+@router.get("/elevenlabs-voices")
+async def elevenlabs_voices():
+    """List available ElevenLabs voices for the configured API key."""
+    from backend.config import settings
+    if not settings.elevenlabs_api_key:
+        return JSONResponse({"error": "elevenlabs_api_key is not set"}, status_code=400)
+
+    import httpx
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(8.0)) as client:
+            r = await client.get(
+                "https://api.elevenlabs.io/v1/voices",
+                headers={"xi-api-key": settings.elevenlabs_api_key},
+            )
+            r.raise_for_status()
+            voices = [
+                {"voice_id": v.get("voice_id"), "name": v.get("name")}
+                for v in r.json().get("voices", [])
+            ]
+            return {"voices": voices}
+    except Exception as exc:
+        return JSONResponse({"error": str(exc)}, status_code=502)
 
 
 @router.get("/vosk-status")

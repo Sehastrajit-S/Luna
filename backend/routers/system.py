@@ -2,7 +2,7 @@ import json
 import re
 from fastapi import APIRouter, Request
 from backend.models.schemas import AppLaunchRequest, StatusResponse
-from backend.services.app_launcher import launch_app, list_app_profiles, list_known_apps
+from backend.services.app_launcher import launch_app, close_app, list_app_profiles, list_known_apps
 from backend.services.media_context import get_watching_context
 from backend.services.scheduler import proactive_queue
 from backend.services import system_controls as sc
@@ -24,6 +24,12 @@ def launch_application(req: AppLaunchRequest):
     return StatusResponse(status="ok" if success else "error", message=message)
 
 
+@router.post("/close", response_model=StatusResponse)
+def close_application(req: AppLaunchRequest):
+    success, message = close_app(req.name)
+    return StatusResponse(status="ok" if success else "error", message=message)
+
+
 @router.get("/apps")
 def get_apps():
     return {"apps": list_known_apps()}
@@ -32,6 +38,39 @@ def get_apps():
 @router.get("/apps/profiles")
 def get_app_profiles():
     return list_app_profiles()
+
+
+@router.get("/github/repos")
+async def github_repositories():
+    """List repositories for the Capabilities panel."""
+    from backend.services import github
+    try:
+        return {"repos": await github.list_repos()}
+    except Exception as exc:
+        return {"repos": [], "error": str(exc)}
+
+
+@router.get("/dev-dashboard")
+async def dev_dashboard(refresh: bool = False):
+    """Local checkout status + GitHub repo pulse for the dashboard (cached ~3 min)."""
+    from backend.services.dev_dashboard import dashboard
+    return await dashboard(force=refresh)
+
+
+@router.get("/github/activity")
+async def github_activity():
+    """Return contribution, PR, and comment-review data for the home widget."""
+    from backend.services import github
+    try:
+        repo = github.default_repo()
+        prs = await github.list_prs(repo, state="open", limit=10)
+        commits = await github.list_commits(repo, per_page=30)
+        comments = []
+        for pr in prs[:5]:
+            comments.extend(await github.list_pr_comments(repo, pr["number"], limit=5))
+        return {"repo": repo, "contributions": commits, "prs": prs, "comments": comments[:12]}
+    except Exception as exc:
+        return {"contributions": [], "prs": [], "comments": [], "error": str(exc)}
 
 
 @router.get("/watching")

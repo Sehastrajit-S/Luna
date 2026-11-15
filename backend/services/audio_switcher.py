@@ -6,10 +6,12 @@ import json
 import warnings
 from pathlib import Path
 
+from backend.config import DATA_DIR
+
 # Suppress pycaw COMError warnings for missing properties
 warnings.filterwarnings("ignore", message="COMError")
 
-_PREFS_FILE = Path("data/audio_prefs.json")
+_PREFS_FILE = DATA_DIR / "audio_prefs.json"
 _POLICY_CLSID = "{870AF99C-171D-4F9E-AF0D-E63DF40C2BC9}"
 _POLICY_IID   = "{F8679F50-850A-41CF-9C72-430F290290C8}"
 

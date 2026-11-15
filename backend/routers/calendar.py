@@ -1,6 +1,7 @@
 from datetime import datetime
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+from backend.services.time_utils import to_utc_naive
 from backend.models.database import get_db, Task, CalendarEvent
 from backend.models.schemas import (
     TaskOut, TaskCreate, EventOut, EventCreate, StatusResponse
@@ -19,7 +20,9 @@ def list_tasks(completed: bool = None, db: Session = Depends(get_db)):
 
 @router.post("/tasks", response_model=TaskOut)
 def create_task(task: TaskCreate, db: Session = Depends(get_db)):
-    t = Task(**task.model_dump())
+    data = task.model_dump()
+    data["due_date"] = to_utc_naive(data.get("due_date"))    # stored as UTC
+    t = Task(**data)
     db.add(t)
     db.commit()
     db.refresh(t)
@@ -45,6 +48,14 @@ def delete_task(task_id: int, db: Session = Depends(get_db)):
     return StatusResponse(status="ok")
 
 
+def _event_fields(event: EventCreate) -> dict:
+    data = event.model_dump()
+    for key in ("start_datetime", "end_datetime"):
+        if key in data:
+            data[key] = to_utc_naive(data[key])   # stored as UTC; naive input = local time
+    return data
+
+
 @router.get("/events", response_model=list[EventOut])
 def list_events(upcoming_only: bool = False, db: Session = Depends(get_db)):
     q = db.query(CalendarEvent)
@@ -55,7 +66,7 @@ def list_events(upcoming_only: bool = False, db: Session = Depends(get_db)):
 
 @router.post("/events", response_model=EventOut)
 def create_event(event: EventCreate, db: Session = Depends(get_db)):
-    e = CalendarEvent(**event.model_dump())
+    e = CalendarEvent(**_event_fields(event))
     db.add(e)
     db.commit()
     db.refresh(e)
@@ -66,7 +77,7 @@ def create_event(event: EventCreate, db: Session = Depends(get_db)):
 def update_event(event_id: int, event: EventCreate, db: Session = Depends(get_db)):
     e = db.query(CalendarEvent).filter_by(id=event_id).first()
     if e:
-        for k, v in event.model_dump().items():
+        for k, v in _event_fields(event).items():
             setattr(e, k, v)
         db.commit()
         db.refresh(e)

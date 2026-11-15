@@ -2,6 +2,22 @@
   "id": "document-drafter",
   "name": "Document Drafter",
   "description": "Draft, revise, and save structured documents with citations when needed.",
-  "permissions": ["workspace", "web"],
-  "tools": ["workspace_write", "workspace_read", "web_research", "web_fetch"]
+  "permissions": [
+    "workspace",
+    "web"
+  ],
+  "tools": [
+    "workspace_write",
+    "workspace_read",
+    "web_research",
+    "web_fetch"
+  ],
+  "keywords": [
+    "draft",
+    "memo",
+    "report",
+    "proposal",
+    "letter",
+    "essay"
+  ]
 }

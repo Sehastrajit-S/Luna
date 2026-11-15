@@ -4,7 +4,7 @@ Use this skill when the user asks to review, improve, tailor, score, or rewrite 
 
 Workflow:
 
-1. If the resume is in Luna's workspace, read it with `workspace_read`. If the user pasted text, work from that text.
+1. If the resume is attached to the chat, its text is already in the `<documents>` block — review it directly, without announcing that you'll read it. If it's in Luna's workspace, read it with `workspace_read`. If the user pasted text, work from that text.
 2. If a target job or company is provided, use `web_research` or `web_fetch` to inspect the role, company, and key requirements.
 3. Evaluate the resume on:
    - Role fit and missing keywords.

@@ -49,6 +49,33 @@ async def web_search(query: str, max_results: int = 6) -> str:
         return f"Search failed: {e}"
 
 
+_RESULT_RE = re.compile(r"^\[\d+\] (.+?)\nSnippet: (.*?)\nURL: (\S*)", re.MULTILINE | re.DOTALL)
+
+
+async def multi_web_search(queries: list[str], max_results_each: int = 4, check_links: bool = True) -> str:
+    """Run one or more searches, drop results whose pages are gone, and merge
+    them with one continuous numbering grouped by query. Domain-free: skills
+    add site-specific checks through the skill runtime."""
+    from backend.services.skill_runtime import sources
+
+    per_query = max_results_each if len(queries) > 1 else 6
+    collected: list = []
+    seen: set[str] = set()
+    for query in queries:
+        raw = await web_search(query, max_results=per_query)
+        for title, snippet, url in _RESULT_RE.findall(raw):
+            url = url.strip()
+            if url and url not in seen:
+                seen.add(url)
+                collected.append(sources.Result(query, title.strip(), " ".join(snippet.split()), url))
+    if not collected:
+        return "No results found."
+    removed = 0
+    if check_links:
+        collected, removed = await sources.drop_dead(collected)
+    return sources.format_results(collected, queries, removed)
+
+
 def _extract_reference_urls(search_result: str, limit: int = 3) -> list[str]:
     urls = []
     for match in re.finditer(r"^URL:\s*(https?://\S+)", search_result, re.MULTILINE):

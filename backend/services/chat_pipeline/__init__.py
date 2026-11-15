@@ -8,7 +8,7 @@ independently testable and the overall flow easy to reason about.
 Stages:
 1. persist     — Save user message, create/get conversation
 2. context     — Build memory, personality, state, visual context
-3. dispatch    — Fast-path regex commands (Spotify, launch, face, Gmail, research)
+3. dispatch    — Fast-path regex commands (Spotify, launch, Gmail, research)
 4. generate    — LLM streaming (with planning + coding agent delegation)
 5. tools       — Parse tool calls from LLM output, execute them
 6. finalize    — Emit SSE events, persist assistant message, queue background tasks

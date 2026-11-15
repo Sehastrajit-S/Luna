@@ -13,6 +13,7 @@ from backend.services.scheduler.jobs import (
     mine_behavioral_patterns,
     proactive_commitment_followup,
     vision_aware_checkin,
+    sync_spotify_activity,
 )
 from backend.services.scheduler.service import LunaScheduler, luna_scheduler
 
@@ -31,6 +32,7 @@ __all__ = [
     "mine_behavioral_patterns",
     "proactive_commitment_followup",
     "vision_aware_checkin",
+    "sync_spotify_activity",
     "LunaScheduler",
     "luna_scheduler",
 ]

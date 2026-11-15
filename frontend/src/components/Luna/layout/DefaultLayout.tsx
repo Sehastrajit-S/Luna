@@ -14,10 +14,8 @@ import { ExpandedOverlay } from '../shared/ExpandedOverlay'
 import { Corners } from '../shared/Corners'
 import { NewsList } from '../widgets/NewsWidget'
 import { YoutubeIframe } from '../widgets/YoutubeWidget'
-import { CameraFeed } from '../widgets/CameraWidget'
 import { StocksList } from '../widgets/StocksWidget'
 import { WeatherWidget } from '../widgets/WeatherWidget'
-import { AwarenessWidget } from '../widgets/AwarenessWidget'
 import { OrbCluster } from '../widgets/OrbWidget'
 import { LunaMessages, LunaDataBrief } from '../widgets/ConsoleWidget'
 import { COLS, ROWS, DEFAULT_LAYOUT, loadLayout, saveLayout } from './gridConfig'
@@ -26,7 +24,6 @@ const EXPANDED_TITLES: Record<string, string> = {
   youtube: 'DW NEWS LIVE',
   market:  'MARKET',
   news:    'NEWS FEED',
-  camera:  'CAMERA',
   weather: 'WEATHER',
 }
 
@@ -34,7 +31,6 @@ function ExpandedContent({ id }: { id: string }) {
   if (id === 'youtube') return <YoutubeIframe muted={false} />
   if (id === 'market')  return <StocksList large />
   if (id === 'news')    return <NewsList />
-  if (id === 'camera')  return <CameraFeed />
   if (id === 'weather') return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}><WeatherWidget /></div>
   return null
 }
@@ -142,12 +138,6 @@ export function DefaultLayout({
             </GridPanel>
           </div>
 
-          <div key="awareness" style={{ overflow: 'hidden' }}>
-            <GridPanel title="AWARENESS">
-              <AwarenessWidget />
-            </GridPanel>
-          </div>
-
           <div key="console" style={{ overflow: 'hidden' }}>
             <div style={{ border: `1px solid ${P.border}`, background: P.bg, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative', height: '100%' }}>
               <Corners />
@@ -163,12 +153,6 @@ export function DefaultLayout({
                 </div>
               </div>
             </div>
-          </div>
-
-          <div key="camera" style={{ overflow: 'hidden' }}>
-            <HUDPanel id="camera" title="CAMERA" expanded={expanded === 'camera'} onExpand={setExpanded}>
-              <CameraFeed />
-            </HUDPanel>
           </div>
 
           <div key="market" style={{ overflow: 'hidden' }}>

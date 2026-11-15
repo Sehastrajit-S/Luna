@@ -83,11 +83,6 @@ interface AppState {
   enterAwayMode: () => void
   exitAwayMode: () => void
 
-  // Face tracking
-  faceTrackingEnabled: boolean
-  enableFaceTracking: () => void
-  disableFaceTracking: () => void
-
   // Dynamic explanation widget
   dynamicWidget: { kind: string; title: string; body: string } | null
   openDynamicWidget: (w: { kind: string; title: string; body: string }) => void
@@ -191,10 +186,6 @@ export const useStore = create<AppState>((set) => ({
   awayMode: false,
   enterAwayMode: () => set({ awayMode: true }),
   exitAwayMode: () => set({ awayMode: false }),
-
-  faceTrackingEnabled: false,
-  enableFaceTracking: () => set({ faceTrackingEnabled: true }),
-  disableFaceTracking: () => set({ faceTrackingEnabled: false }),
 
   dynamicWidget: null,
   openDynamicWidget: (dynamicWidget) => set({ dynamicWidget }),

@@ -71,5 +71,5 @@ export interface Activity {
   progress_notes: { note: string; ts: string }[]
 }
 
-export type View = 'chat' | 'memory' | 'calendar' | 'activities' | 'agent' | 'train' | 'sleep' | 'extract' | 'settings'
+export type View = 'focus' | 'chat' |'memory' | 'calendar' | 'activities' | 'agent' | 'train' | 'sleep' | 'extract' | 'settings'
 export type MoodType = 'happy' | 'playful' | 'thoughtful' | 'excited' | 'concerned' | 'warm' | 'neutral' | 'curious' | 'melancholic'

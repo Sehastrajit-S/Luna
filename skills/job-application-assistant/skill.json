@@ -2,6 +2,21 @@
   "id": "job-application-assistant",
   "name": "Job Application Assistant",
   "description": "Tailor resumes, draft cover letters, compare job posts, and prepare application materials.",
-  "permissions": ["workspace", "web"],
-  "tools": ["web_research", "web_fetch", "workspace_read", "workspace_write"]
+  "permissions": [
+    "workspace",
+    "web"
+  ],
+  "tools": [
+    "web_research",
+    "web_fetch",
+    "workspace_read",
+    "workspace_write"
+  ],
+  "keywords": [
+    "cover letter",
+    "job post",
+    "job description",
+    "application",
+    "apply"
+  ]
 }

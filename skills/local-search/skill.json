@@ -1,0 +1,65 @@
+{
+  "id": "local-search",
+  "name": "Local Places",
+  "description": "Find restaurants, cafes, shops, services and things to do in a specific place, with ratings and links.",
+  "permissions": [
+    "web"
+  ],
+  "tools": [
+    "web_search"
+  ],
+  "keywords": [
+    "restaurant",
+    "restaurants",
+    "cafe",
+    "coffee",
+    "bar",
+    "brunch",
+    "dinner",
+    "near",
+    "nearby",
+    "hotel",
+    "gym",
+    "dentist",
+    "things to do"
+  ],
+  "search": {
+    "order": 40,
+    "strong": true,
+    "intents": [
+      "\\b(?:restaurants?|caf(?:e|é)s?|coffee\\s+shops?|bars?|pubs?|bakeries|brunch\\s+spots?|pizza|sushi|tacos)\\s+(?:in|near|around|close\\s+to)\\b",
+      "\\bnear\\s+me\\b|\\bnearby\\b|\\bin\\s+my\\s+area\\b",
+      "\\b(?:things\\s+to\\s+do|places\\s+to\\s+(?:eat|visit|go|stay)|hotels?|gyms?|dentists?|doctors?|salons?|barbers?|museums?|parks?)\\s+(?:in|near|around)\\b",
+      "\\bopen\\s+now\\b"
+    ],
+    "slots": {
+      "places": "up to 2 kinds of places from the request, e.g. [\"ramen restaurant\"] for 'good ramen'",
+      "location": "the city, neighborhood or address the user named, or \"\"",
+      "preferences": "cuisine, price, vibe, hours or other preferences they mentioned, or \"\""
+    },
+    "fan_out": "places",
+    "grounded": [
+      "location"
+    ],
+    "requires": {
+      "any": [
+        "slot:location"
+      ],
+      "ask": "Where should I look? Tell me a city or neighborhood (or say \"near me\" and I'll use your home city)."
+    },
+    "queries": [
+      "{item} {preferences} {location} (site:yelp.com OR site:tripadvisor.com OR site:opentable.com)",
+      "best {item} {preferences} in {location}",
+      "{item} {location} recommendations site:reddit.com"
+    ],
+    "max_items": 2,
+    "per_query": 6,
+    "drop_urls": [
+      "youtube\\.com",
+      "tiktok\\.com",
+      "yelp\\.com/search",
+      "tripadvisor\\.com/Search",
+      "[?&](?:find_desc|find_loc|q)="
+    ]
+  }
+}

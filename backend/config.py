@@ -8,6 +8,12 @@ DATA_DIR = Path(os.getenv("LUNA_DATA_DIR", str(BASE_DIR / "data")))
 DATA_DIR.mkdir(exist_ok=True)
 (DATA_DIR / "backups").mkdir(exist_ok=True)
 
+# Model downloads (faster-whisper via Hugging Face; anything using torch
+# hub) default to the user's home on C:. Keep them next to Luna's data unless
+# the machine already points them somewhere.
+os.environ.setdefault("HF_HOME", str(DATA_DIR / "models" / "huggingface"))
+os.environ.setdefault("TORCH_HOME", str(DATA_DIR / "models" / "torch"))
+
 
 def _read_env_value(path: Path, key: str) -> str | None:
     if not path.exists():
@@ -65,6 +71,27 @@ class Settings(BaseSettings):
     ollama_model: str = "qwen2.5:7b"
     ollama_embed_model: str = "nomic-embed-text"
 
+    # Context window (tokens) for chat requests. Requests are fitted to it
+    # explicitly (services/llm/context_window.py) instead of letting the model
+    # server truncate silently. Sent to Ollama as a fixed num_ctx — Ollama
+    # reloads the model whenever num_ctx changes between requests.
+    llm_context_window: int = 16384
+    llm_max_output_tokens: int = 1024
+    # Agent loop: native tool calling, repeated model → tools → model steps.
+    # Off falls back to the single-shot pipeline (tool JSON parsed from text).
+    agent_loop_enabled: bool = True
+    # Scheduler + lifecycle processes (reminders, check-ins). Off for test instances.
+    background_jobs_enabled: bool = True
+    # One local JSONL line per chat turn (route, tools, rule decisions) to train a router.
+    decision_log_enabled: bool = True
+    agent_max_steps: int = 10
+    agent_tool_result_chars: int = 6000      # per tool result sent back to the model
+    agent_confirm_timeout_s: int = 120       # how long a risky tool waits for approval
+
+    # Vision model for attached images (Ollama). If it isn't pulled, the next
+    # installed one of qwen2.5vl → llama3.2-vision → gemma3 → moondream is used.
+    vision_model: str = "qwen2.5vl:7b"
+
     # OpenAI / OpenAI-compatible (LM Studio, Jan.ai, llama.cpp, OpenRouter, etc.)
     openai_base_url: str = "https://api.openai.com/v1"
     openai_api_key: str = ""
@@ -98,6 +125,23 @@ class Settings(BaseSettings):
 
     # Embedding provider: ollama | openai-compatible
     embedding_provider: str = "ollama"
+
+    # ── Voice: STT & TTS ──────────────────────────────────────────────────────
+    # tts_provider: edge (free, local, default) | elevenlabs (cloud, higher quality, paid)
+    tts_provider: str = "edge"
+    # stt_provider: whisper (free, local, default) | elevenlabs (cloud Scribe model)
+    stt_provider: str = "whisper"
+    # Local STT (faster-whisper). distil-large-v3.5: best English accuracy in the
+    # Whisper family at ~0.8 GB VRAM; distil-small.en is the CPU fallback.
+    stt_model: str = "distil-large-v3.5"
+    stt_cpu_model: str = "distil-small.en"
+    stt_language: str = "en"
+    # elevenlabs.io → Profile → API keys
+    elevenlabs_api_key: str = ""
+    # elevenlabs.io → Voices → pick a voice → copy its Voice ID (default = "Rachel")
+    elevenlabs_voice_id: str = "21m00Tcm4TlvDq8ikWAM"
+    elevenlabs_tts_model: str = "eleven_turbo_v2_5"
+    elevenlabs_stt_model: str = "scribe_v1"
 
     # ── Coding agent ───────────────────────────────────────────────────────────
     # coding_provider: which LLM provider to use for the coding agent.
@@ -140,6 +184,9 @@ class Settings(BaseSettings):
     # ── Paths ─────────────────────────────────────────────────────────────────
     chroma_path: str = str(DATA_DIR / "chroma")
     frontend_dist: str = str(BASE_DIR / "frontend" / "dist")
+    # Browser UI: the same renderer the desktop app loads, served at "/".
+    web_ui_dir: str = str(BASE_DIR / "desktop-app" / "src" / "renderer")
+    web_ui_resources: str = str(BASE_DIR / "desktop-app" / "resources")
 
     # ── Memory ────────────────────────────────────────────────────────────────
     max_conversation_history: int = 30

@@ -1,0 +1,96 @@
+{
+  "id": "product-search",
+  "name": "Product Search",
+  "description": "Find and compare products to buy — expert reviews, current prices at retailers, and owner opinions — within the user's budget and needs.",
+  "permissions": [
+    "web"
+  ],
+  "tools": [
+    "web_search"
+  ],
+  "keywords": [
+    "buy",
+    "purchase",
+    "price",
+    "cheapest",
+    "deal",
+    "deals",
+    "discount",
+    "review",
+    "reviews",
+    "budget",
+    "recommend",
+    "best"
+  ],
+  "search": {
+    "order": 30,
+    "strong": true,
+    "intents": [
+      "\\b(?:buy|purchase|shopping\\s+for)\\b",
+      "\\b(?:cheapest|best\\s+deals?|deals?\\s+on|on\\s+sale|discount\\s+on)\\b",
+      "\\b(?:best|top|good)\\s+[\\w\\s-]{2,40}?\\s+(?:under|below|for\\s+less\\s+than|around)\\s+\\$?\\d",
+      "\\bwhere\\s+(?:can|to|should)\\s+(?:i\\s+)?buy\\b",
+      "\\b(?:worth\\s+buying|should\\s+i\\s+(?:buy|get))\\b",
+      "\\bprice\\s+of\\s+(?:a|an|the)\\s+\\w"
+    ],
+    "slots": {
+      "products": "up to 3 products or product types from the request, with model names if given, e.g. [\"noise cancelling headphones\"]",
+      "budget": "the price limit the user gave (e.g. 'under $200'), or \"\"",
+      "needs": "key requirements the user mentioned (use, features, size), or \"\""
+    },
+    "fan_out": "products",
+    "grounded": [
+      "budget"
+    ],
+    "queries": [
+      "best {item} {needs} {budget} review (site:rtings.com OR site:nytimes.com/wirecutter OR site:tomsguide.com OR site:theverge.com OR site:pcmag.com)",
+      "{item} {budget} (site:amazon.com OR site:walmart.com OR site:target.com OR site:bhphotovideo.com OR site:newegg.com)",
+      "{item} {needs} recommendation site:reddit.com"
+    ],
+    "max_items": 3,
+    "per_query": 6,
+    "recency": "y",
+    "drop_urls": [
+      "youtube\\.com",
+      "/s\\?k=",
+      "/search\\b",
+      "[?&](?:q|query|st)="
+    ],
+    "check_links": true,
+    "dead_phrases": [
+      "currently unavailable",
+      "this item is no longer available",
+      "product is no longer available",
+      "no longer sold"
+    ],
+    "cards": {
+      "max": 5,
+      "require_image": true,
+      "keep_urls": [
+        "amazon\\.[a-z.]+/(?:[^/]+/)?(?:dp|gp/product)/[A-Z0-9]{10}",
+        "walmart\\.com/ip/",
+        "target\\.com/p/",
+        "bestbuy\\.com/(?:site|product)/",
+        "bhphotovideo\\.com/c/product/",
+        "newegg\\.com/(?:[^/]+/)?p/",
+        "ebay\\.com/itm/",
+        "costco\\.com/.+\\.product\\.",
+        "homedepot\\.com/p/",
+        "lowes\\.com/pd/",
+        "ikea\\.com/[a-z]{2}/[a-z]{2}/p/",
+        "apple\\.com/shop/(?:buy|product)/"
+      ],
+      "image_patterns": [
+        "id=\"landingImage\"[^>]*?data-old-hires=\"(https[^\"]+)\"",
+        "id=\"landingImage\"[^>]*?src=\"(https[^\"]+)\"",
+        "\"hiRes\":\"(https[^\"]+)\""
+      ],
+      "price_patterns": [
+        "class=\"a-offscreen\">\\s*\\$([\\d,]+\\.\\d{2})",
+        "\"priceAmount\":\\s*([\\d.]+)"
+      ],
+      "lookup": "\"{name}\" (site:amazon.com OR site:walmart.com OR site:target.com OR site:bhphotovideo.com OR site:newegg.com)",
+      "names": "specific product models (brand + model)"
+    }
+  }
+}

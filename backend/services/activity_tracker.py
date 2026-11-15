@@ -25,6 +25,10 @@ _CATEGORY_MAX_HOURS: dict[str | None, float] = {
     None:            3,   # default
 }
 
+# Marker in Activity.description identifying rows created from real Spotify
+# playback state (as opposed to a text-guessed "the user said 'play X'").
+SPOTIFY_ACTIVITY_MARKER = "spotify_playback"
+
 
 class Activity(Base):
     __tablename__ = "activities"
@@ -178,7 +182,9 @@ class ActivityTracker:
                     activity.completed_at = datetime.utcnow()
 
             if note and update_type != "none":
-                notes = activity.progress_notes or []
+                # Build a new list object — a plain JSON column won't detect
+                # an in-place mutation reassigned to the same list reference.
+                notes = list(activity.progress_notes or [])
                 notes.append({"note": note, "ts": datetime.utcnow().isoformat()})
                 activity.progress_notes = notes
 
@@ -187,6 +193,71 @@ class ActivityTracker:
             return update_type
         except Exception:
             return "none"
+
+    def sync_spotify_activity(self) -> Optional[Activity]:
+        """
+        Reconcile the tracked 'listening' activity with actual Spotify
+        playback state — unlike process_message/check_progress, this doesn't
+        guess from chat text, it reads what's really playing right now and
+        opens/updates/closes the activity to match.
+        """
+        from backend.services.spotify import spotify_service
+
+        if not spotify_service.is_connected:
+            return None
+
+        current = spotify_service.get_current()
+        existing = (
+            self.db.query(Activity)
+            .filter(
+                Activity.status == "in_progress",
+                Activity.description == SPOTIFY_ACTIVITY_MARKER,
+            )
+            .order_by(Activity.last_updated.desc())
+            .first()
+        )
+
+        if not current or not current.get("is_playing"):
+            if existing:
+                existing.status = "done"
+                existing.completed_at = datetime.utcnow()
+                existing.last_updated = datetime.utcnow()
+                notes = list(existing.progress_notes or [])
+                notes.append({"note": "Playback stopped.", "ts": datetime.utcnow().isoformat()})
+                existing.progress_notes = notes
+                self.db.commit()
+            return None
+
+        title = f"Listening to {current['title']} by {current['artist']}"
+
+        if existing and existing.title == title:
+            existing.last_updated = datetime.utcnow()
+            self.db.commit()
+            return existing
+
+        if existing:
+            existing.status = "done"
+            existing.completed_at = datetime.utcnow()
+            notes = list(existing.progress_notes or [])
+            notes.append({"note": "Song changed.", "ts": datetime.utcnow().isoformat()})
+            existing.progress_notes = notes
+
+        duration_ms = current.get("duration_ms") or 0
+        activity = Activity(
+            title=title,
+            description=SPOTIFY_ACTIVITY_MARKER,
+            status="in_progress",
+            category="entertainment",
+            estimated_duration_minutes=round(duration_ms / 60000) if duration_ms else None,
+            progress_notes=[{
+                "note": f"Started playing {current['title']} by {current['artist']}",
+                "ts": datetime.utcnow().isoformat(),
+            }],
+        )
+        self.db.add(activity)
+        self.db.commit()
+        self.db.refresh(activity)
+        return activity
 
     def _find_similar_activity(self, title: str) -> Optional[Activity]:
         title_lower = title.lower()
@@ -201,7 +272,7 @@ class ActivityTracker:
             activity.status = data["status"]
             if data["status"] == "done":
                 activity.completed_at = datetime.utcnow()
-        notes = activity.progress_notes or []
+        notes = list(activity.progress_notes or [])
         notes.append({"note": message[:200], "ts": datetime.utcnow().isoformat()})
         activity.progress_notes = notes
         activity.last_updated = datetime.utcnow()

@@ -44,13 +44,6 @@
       "problemMatcher": []
     },
     {
-      "label": "LUNA: Electron",
-      "type": "shell",
-      "command": "npm run luna -- electron",
-      "isBackground": true,
-      "problemMatcher": []
-    },
-    {
       "label": "LUNA: Check",
       "type": "shell",
       "command": "npm run luna -- check",

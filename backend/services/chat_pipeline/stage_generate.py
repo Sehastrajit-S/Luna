@@ -8,6 +8,8 @@ import re
 
 from backend.config import settings
 from backend.services.llm import ollama
+from backend.services.llm.context_window import fit_context
+from backend.services.files import build_attachment_context
 from backend.services.command_parser import is_coding_request
 from backend.services.coding_agent import stream_coding_agent
 from backend.services.task_planner import is_complex_task, generate_plan, TaskPlan
@@ -34,15 +36,19 @@ async def generate(ctx: ChatContext) -> None:
     conv_id = ctx.conv.id
 
     # ── Crew Mode (multi-agent orchestration) fast-path ───────────────────────
-    if is_crew_request(ctx.user_message) and not ctx.is_business:
+    from backend.services.llm.tool_calling import native_tools_supported
+    explicit_only = native_tools_supported()      # with the agent loop, only an explicit ask
+    if is_crew_request(ctx.user_message, explicit_only=explicit_only) and not ctx.is_business and not ctx.attachment_ids:
         ctx.voice_streamed = True
         ctx.had_tool_call = True
+        ctx.route = "crew"
         await _run_crew_mode(ctx)
         return
 
     # ── Coding agent fast-path ────────────────────────────────────────────────
-    if is_coding_request(ctx.user_message) and not ctx.is_business:
+    if is_coding_request(ctx.user_message) and not ctx.is_business and not ctx.attachment_ids:
         ctx.voice_streamed = True
+        ctx.route = "coding_agent"
         async for event in stream_coding_agent(ctx.messages, auto_confirm_shell=False):
             etype = event.get("type")
             if etype == "token":
@@ -86,10 +92,23 @@ async def generate(ctx: ChatContext) -> None:
         else:
             plan = None
 
+    step_messages = await attach_documents(ctx, step_messages)
+
+    # ── Context budget ────────────────────────────────────────────────────────
+    # Fit explicitly (pinned system prompt + latest message, old tool output
+    # clipped, older turns → rolling summary) so the model server never
+    # truncates the request on its own, however long the conversation gets.
+    fitted = fit_context(
+        ctx.system_prompt, step_messages,
+        context_window=settings.llm_context_window,
+        max_output_tokens=settings.llm_max_output_tokens,
+        summary=ctx.conversation_summary,
+    )
+
     # ── LLM streaming ─────────────────────────────────────────────────────────
     try:
         async for token in ollama.stream_chat(
-            step_messages, ctx.system_prompt,
+            fitted.messages, fitted.system_prompt,
             num_ctx=None, num_predict=None,
             temperature=0.5 if ctx.cli else 0.7,
         ):
@@ -115,6 +134,53 @@ async def generate(ctx: ChatContext) -> None:
             ctx.emit_sse({"type": "plan_done", "summary": plan.progress_summary()})
         else:
             ctx.emit_sse({"type": "plan_progress", "step": plan.current, "total": plan.total})
+
+
+async def attach_documents(ctx: ChatContext, messages: list[dict]) -> list[dict]:
+    """Every file in the conversation stays available (not just this turn's):
+    small ones in full, large ones as the excerpts relevant to this message.
+    The block rides on the latest user message, which fit_context pins."""
+    try:
+        documents = await build_attachment_context(
+            ctx.db, ctx.conv.id, ctx.user_message, current_ids=ctx.attachment_ids,
+        )
+    except Exception as e:
+        logger.error("Building attachment context failed: %s", e, exc_info=True)
+        documents = ""
+        if ctx.attachment_ids:
+            ctx.emit_sse({"type": "error", "message": "I couldn't read the attached file(s)."})
+    ctx.document_context = documents
+    if documents and messages:
+        messages = messages[:-1] + [{**messages[-1], "content": documents + messages[-1]["content"]}]
+    return messages
+
+
+# Work on files in the coding workspace — what the coding agent's tools are for.
+_WORKSPACE_WORK_RE = re.compile(
+    r"\b(?:workspace|files?|folders?|director(?:y|ies)|repo(?:sitory)?|codebase|my project)\b"
+    r"|\brun\s+(?:the\s+)?(?:tests?|script|code)\b|\bsave\s+(?:it|this|that)\b"
+    # A file name — but not a framework name that looks like one ("Node.js", "Next.js").
+    r"|\b(?!(?:node|next|nuxt|vue|three|d3|express|nest|ember|react|angular|chart|socket|alpine|solid|svelte"
+    r"|backbone|moment|p5|tensorflow|brain|anime|video|pixi|babylon|leaflet)\.js\b)[\w-]+\."
+    r"(?:py|js|ts|tsx|jsx|json|md|html|css|go|rs|java|cs|cpp|sh)\b",
+    re.IGNORECASE,
+)
+
+
+def uses_special_agent(ctx: ChatContext) -> bool:
+    """Crew and coding requests that run their own agents (see generate).
+
+    With the agent loop, only explicit crew requests and coding work on
+    workspace files leave the chat. Coding questions and snippets stay in the
+    loop, where the conversation (and its summary) is in view.
+    """
+    if ctx.is_business or ctx.attachment_ids:
+        return False
+    from backend.services.llm.tool_calling import native_tools_supported
+    if native_tools_supported():
+        return (is_crew_request(ctx.user_message, explicit_only=True)
+                or (is_coding_request(ctx.user_message) and bool(_WORKSPACE_WORK_RE.search(ctx.user_message))))
+    return is_crew_request(ctx.user_message) or is_coding_request(ctx.user_message)
 
 
 # ── Crew Mode helper ─────────────────────────────────────────────────────────

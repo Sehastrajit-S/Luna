@@ -21,19 +21,47 @@ def _auth_headers() -> dict:
     return h
 
 
-def _raise_github_error(response: httpx.Response, repo: str = "") -> None:
+class GitHubError(RuntimeError):
+    """kind: suspended | invalid_token | rate_limited | forbidden | not_found | upstream"""
+
+    def __init__(self, kind: str, message: str):
+        super().__init__(message)
+        self.kind = kind
+
+
+def github_error(response: httpx.Response, repo: str = "") -> GitHubError | None:
+    """Classify a failed response from GitHub's own message, not just the status code."""
+    if response.status_code < 400:
+        return None
+    try:
+        message = str(response.json().get("message", ""))
+    except ValueError:
+        message = response.text[:200]
+    lower = message.lower()
+    target = repo or "the repository"
+    if "suspended" in lower:
+        return GitHubError("suspended", "The GitHub account this token belongs to is suspended, so GitHub rejects "
+                                        "every request made with it. Create a token from an active account and "
+                                        "paste it in Settings › Integrations › GitHub token.")
     if response.status_code == 401:
-        raise RuntimeError(
-            "GitHub token was rejected (401). Replace github_token with a valid token, "
-            "then run /connect_app github so Luna reloads it. Classic tokens need repo scope; "
-            f"fine-grained tokens need access to {repo or 'the target repository'} with Pull requests read permission."
-        )
+        return GitHubError("invalid_token", "GitHub rejected the token (invalid, expired or revoked). Create a new "
+                                            "token and paste it in Settings › Integrations › GitHub token.")
+    if response.status_code == 429 or (response.status_code == 403 and (
+            response.headers.get("x-ratelimit-remaining") == "0" or "rate limit" in lower)):
+        return GitHubError("rate_limited", "GitHub's rate limit was hit; try again in a few minutes.")
     if response.status_code == 403:
-        raise RuntimeError(
-            "GitHub token is authenticated but not allowed for this request (403). "
-            f"Grant access to {repo or 'the target repository'} and Pull requests read permission."
-        )
-    response.raise_for_status()
+        return GitHubError("forbidden", f"The token can't access this on {target} ({message or '403'}). For a "
+                                        "fine-grained token, add the repository and the needed read permissions "
+                                        "(Contents, Pull requests, Issues, Actions).")
+    if response.status_code == 404:
+        return GitHubError("not_found", f"{target} wasn't found — check the name, or give the token access if it's private.")
+    return GitHubError("upstream", f"GitHub returned {response.status_code}: {message or 'unexpected error'}")
+
+
+def _raise_github_error(response: httpx.Response, repo: str = "") -> None:
+    error = github_error(response, repo)
+    if error:
+        raise error
 
 
 def default_repo() -> str:
@@ -74,6 +102,32 @@ async def list_repos(per_page: int = 30) -> list[dict]:
             }
             for repo in r.json()
         ]
+
+
+async def list_commits(repo: str, per_page: int = 30) -> list[dict]:
+    repo = repo or default_repo()
+    if not repo:
+        raise ValueError("GitHub repository is not configured")
+    async with httpx.AsyncClient(timeout=10) as client:
+        r = await client.get(
+            f"{_BASE}/repos/{repo}/commits",
+            headers=_auth_headers(),
+            params={"per_page": per_page},
+        )
+        _raise_github_error(r, repo)
+        return [{"sha": c["sha"], "message": c["commit"]["message"].splitlines()[0], "url": c["html_url"]} for c in r.json()]
+
+
+async def list_pr_comments(repo: str, number: int, limit: int = 20) -> list[str]:
+    repo = repo or default_repo()
+    async with httpx.AsyncClient(timeout=10) as client:
+        r = await client.get(
+            f"{_BASE}/repos/{repo}/issues/{number}/comments",
+            headers=_auth_headers(),
+            params={"per_page": limit, "sort": "updated"},
+        )
+        _raise_github_error(r, repo)
+        return [str(c.get("body") or "").strip() for c in r.json() if str(c.get("body") or "").strip()]
 
 
 async def list_issues(repo: str, state: str = "open", limit: int = 20) -> list[dict]:

@@ -1,16 +1,4 @@
-# ── Stage 1: Build React/Vite frontend ────────────────────────────────────────
-FROM node:20-slim AS frontend-build
-
-WORKDIR /build
-
-COPY frontend/package*.json ./
-RUN npm install --prefer-offline
-
-COPY frontend/ ./
-RUN npm run build
-
-
-# ── Stage 2: Luna backend ──────────────────────────────────────────────────────
+# ── Luna backend + web UI ──────────────────────────────────────────────────────
 FROM python:3.11-slim
 
 LABEL org.opencontainers.image.title="L.U.N.A."
@@ -35,8 +23,9 @@ RUN pip install --no-cache-dir -r requirements.docker.txt
 # Application code
 COPY backend/ ./backend/
 
-# Built React SPA — FastAPI serves it as static files from /app/frontend/dist
-COPY --from=frontend-build /build/dist ./frontend/dist
+# Web UI — the desktop app's renderer, served by FastAPI at "/"
+COPY desktop-app/src/renderer/ ./desktop-app/src/renderer/
+COPY desktop-app/resources/ ./desktop-app/resources/
 
 # Persistent data lives here — mount a named volume to this path
 RUN mkdir -p data

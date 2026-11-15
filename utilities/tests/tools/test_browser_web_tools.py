@@ -80,35 +80,46 @@ class BrowserWebToolTests(unittest.IsolatedAsyncioTestCase):
     def test_direct_research_query_detection_handles_citations_typo(self) -> None:
         from backend.services.command_parser import extract_direct_research_query as _extract_direct_research_query
 
-        query = _extract_direct_research_query("research what is SEC and include the sitations")
+        query = _extract_direct_research_query("/research what is SEC and include the sitations")
         self.assertEqual(query, "what is SEC")
 
-    def test_direct_research_query_detection_handles_citations_without_research_word(self) -> None:
+    def test_direct_research_query_requires_slash_command(self) -> None:
         from backend.services.command_parser import extract_direct_research_query as _extract_direct_research_query
 
-        query = _extract_direct_research_query("what is SEC with citations")
-        self.assertEqual(query, "what is SEC")
+        for prompt in (
+            "what is SEC with citations",
+            "research what is SEC and cite the references",
+            "what's the latest news on the EU AI Act",
+            "compare gpt and claude models",
+            "what song is playing right now",
+            "/researcher notes",
+            "/research",
+            "/research   ",
+            "hey",
+        ):
+            with self.subTest(prompt=prompt):
+                self.assertIsNone(_extract_direct_research_query(prompt))
 
     def test_direct_research_query_detection_strips_cite_references(self) -> None:
         from backend.services.command_parser import extract_direct_research_query as _extract_direct_research_query
 
-        query = _extract_direct_research_query("research what is SEC and cite the references")
+        query = _extract_direct_research_query("/research what is SEC and cite the references")
         self.assertEqual(query, "what is SEC")
 
     def test_direct_research_query_detection_ten_prompt_smoke(self) -> None:
         from backend.services.command_parser import extract_direct_research_query as _extract_direct_research_query
 
         cases = {
-            "research what is SEC and cite the references": "what is SEC",
-            "research on how to find defects in solar panels": "how to find defects in solar panels",
-            "research on how to find the effiency of the pumps in swimming pools and water useage across the USA through NAIP imagery": "how to find the effiency of the pumps in swimming pools and water useage across the USA through NAIP imagery",
-            "what is SEC with citations": "what is SEC",
-            "what is SEC with references": "what is SEC",
-            "find out about NAIP imagery and include sources": "NAIP imagery",
-            "look up pool pump weighted energy factor with references": "pool pump weighted energy factor",
-            "investigate solar panel microcrack detection and provide citations": "solar panel microcrack detection",
-            "source-backed comparison of pool pump WEF and electricity usage": "source-backed comparison of pool pump WEF and electricity usage",
-            "hey": None,
+            "/research what is SEC and cite the references": "what is SEC",
+            "/research on how to find defects in solar panels": "how to find defects in solar panels",
+            "/research how to find the effiency of the pumps in swimming pools and water useage across the USA through NAIP imagery": "how to find the effiency of the pumps in swimming pools and water useage across the USA through NAIP imagery",
+            "/research what is SEC with citations": "what is SEC",
+            "/Research what is SEC with references": "what is SEC",
+            "/research find out about NAIP imagery and include sources": "NAIP imagery",
+            "/research look up pool pump weighted energy factor with references": "pool pump weighted energy factor",
+            "/research investigate solar panel microcrack detection and provide citations": "solar panel microcrack detection",
+            "  /research source-backed comparison of pool pump WEF": "source-backed comparison of pool pump WEF",
+            "/research github copilot pricing": "github copilot pricing",
         }
         for prompt, expected in cases.items():
             with self.subTest(prompt=prompt):

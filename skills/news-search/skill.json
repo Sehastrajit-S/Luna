@@ -1,0 +1,42 @@
+{
+  "id": "news-search",
+  "name": "News",
+  "description": "Get the latest news on a topic, company, person or event from recent news coverage, with dates and sources.",
+  "permissions": [
+    "web"
+  ],
+  "tools": [
+    "web_search"
+  ],
+  "keywords": [
+    "news",
+    "headlines",
+    "latest",
+    "breaking",
+    "announced",
+    "update",
+    "happening"
+  ],
+  "search": {
+    "order": 50,
+    "strong": true,
+    "intents": [
+      "\\bnews\\b",
+      "\\bheadlines?\\b",
+      "\\blatest\\s+(?:on|about|with|from|developments?|updates?)\\b",
+      "\\bwhat(?:'s|\\s+is)\\s+(?:happening|going\\s+on|new)\\s+(?:with|in|at)\\b",
+      "\\bbreaking\\b"
+    ],
+    "slots": {
+      "topics": "up to 3 specific names or subjects from the request to get news about, e.g. [\"Nvidia\"] for 'latest news on Nvidia'"
+    },
+    "fan_out": "topics",
+    "queries": [
+      "{item}"
+    ],
+    "backend": "news",
+    "recency": "w",
+    "max_items": 3,
+    "per_query": 8
+  }
+}

@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime, timezone
 from typing import Optional, List
 
@@ -15,12 +15,26 @@ class BaseSchema(BaseModel):
         }
 
 
+class AttachmentOut(BaseSchema):
+    id: str
+    filename: str
+    mime_type: str
+    kind: str
+    size_bytes: int
+    status: str
+    error: Optional[str] = None
+    page_count: Optional[int] = None
+    token_estimate: Optional[int] = None
+    summary_line: Optional[str] = None
+
+
 class MessageOut(BaseSchema):
     id: int
     role: str
     content: str
     created_at: datetime
     sentiment_score: Optional[float] = None
+    attachments: List[AttachmentOut] = []
 
 
 class ConversationOut(BaseSchema):
@@ -39,6 +53,7 @@ class ConversationDetail(ConversationOut):
 class ChatRequest(BaseModel):
     message: str
     conversation_id: Optional[int] = None
+    attachment_ids: List[str] = Field(default_factory=list, max_length=10)
 
 
 class FactOut(BaseSchema):

@@ -2,6 +2,19 @@
   "id": "resume-checker",
   "name": "Resume Checker",
   "description": "Review resumes against a role, improve bullets, find gaps, and produce ATS-friendly revisions.",
-  "permissions": ["workspace", "web"],
-  "tools": ["workspace_read", "workspace_write", "web_research", "web_fetch"]
+  "permissions": [
+    "workspace",
+    "web"
+  ],
+  "tools": [
+    "workspace_read",
+    "workspace_write",
+    "web_research",
+    "web_fetch"
+  ],
+  "keywords": [
+    "resume",
+    "cv",
+    "ats"
+  ]
 }

@@ -141,3 +141,26 @@ async def get_news() -> list[dict]:
     if time.time() - _news_ts > NEWS_TTL or not _news_cache:
         await refresh_news()
     return _news_cache
+
+
+_TOPIC_STOPWORDS = {"the", "news", "today", "todays", "today's", "latest", "headlines", "about", "on", "in", "of", "and"}
+
+
+async def daily_news(topic: str = "", limit: int = 8) -> str:
+    """Today's headlines for the `daily_news` tool: numbered, with source and link,
+    optionally only those about a topic. Links come straight from the feeds."""
+    limit = max(1, min(int(limit or 8), 20))
+    items = await get_news()
+    if not items:
+        return "Error: no news feeds could be reached right now."
+    words = [w for w in re.findall(r"[a-z0-9']+", (topic or "").lower()) if w not in _TOPIC_STOPWORDS and len(w) > 1]
+    if words:
+        items = [i for i in items if any(re.search(rf"\b{re.escape(w)}", i["title"].lower()) for w in words)]
+        if len(items) < 3:
+            found = "".join(f"\n- {i['title']} — {i['source']} ({i['link']})" for i in items)
+            return (f"Today's top headlines have {len(items)} item(s) about “{topic}”.{found}\n"
+                    "For more, look it up with the news-search skill (use_skill) or web_search.")
+    lines = [f"{n}. {i['title']} — {i['source']}" + (f" ({i['link']})" if i.get("link") else "")
+             for n, i in enumerate(items[:limit], 1)]
+    heading = f"Today's headlines about “{topic}”" if words else "Today's top headlines"
+    return f"{heading} ({time.strftime('%A %d %B')}):\n" + "\n".join(lines)

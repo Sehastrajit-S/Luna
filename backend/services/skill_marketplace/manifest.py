@@ -43,7 +43,7 @@ ALLOWED_PERMISSIONS = frozenset({
     "tasks",         # read/write task list
     "memory",        # store/retrieve facts
     "spotify",       # play/pause/queue music
-    "vision",        # screen + camera awareness
+    "vision",        # screen awareness
     "github",        # GitHub API calls
     "google",        # Google Workspace (Gmail, Drive, Calendar)
     "microsoft",     # Microsoft 365 (Outlook, OneDrive, Teams)

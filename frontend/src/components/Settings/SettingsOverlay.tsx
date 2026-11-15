@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, LayoutDashboard, Puzzle, CheckCircle, AlertCircle, RefreshCw, Save, ChevronDown, Eye, Download, Volume2, Keyboard, Mic, Camera, Sun, Moon, Server } from 'lucide-react'
+import { X, LayoutDashboard, Puzzle, CheckCircle, AlertCircle, RefreshCw, Save, ChevronDown, Download, Volume2, Keyboard, Mic, Sun, Moon, Server } from 'lucide-react'
 import { siAnthropic, siMistralai, siNvidia, siOllama } from 'simple-icons'
 import { useStore } from '../../store'
-import { api, streamMoondreamInstall, streamVoskInstall, getApiBase, initApiBase } from '../../api/client'
+import { api, streamVoskInstall, getApiBase, initApiBase } from '../../api/client'
 import { IntegrationStore, INTEGRATIONS } from './IntegrationStore'
-import { getSelectedCameraDeviceId, setCameraDevice } from '../../services/cameraStream'
 import { isMobile, setServerUrl, getServerUrl } from '../../platform'
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
@@ -39,13 +38,25 @@ const PROVIDERS_LIST = isMobile
   : ALL_PROVIDERS
 const CODING_PROVIDERS = [{ value: '', label: 'Same as chat' }, ...PROVIDERS_LIST]
 
+const TTS_PROVIDERS = [
+  { value: 'edge',       label: 'Local (edge-tts — free)' },
+  { value: 'elevenlabs', label: 'ElevenLabs (cloud)' },
+]
+const STT_PROVIDERS = [
+  { value: 'whisper',    label: 'Local (Whisper — free)' },
+  { value: 'elevenlabs', label: 'ElevenLabs Scribe (cloud)' },
+]
+
 interface ProviderInfo { label: string; configured: boolean }
 interface CodingSettings {
   llm_provider: string; coding_provider: string; effective_coding_provider: string
   coding_model: string; coding_max_iterations: number; coding_shell_timeout: number
   ollama_model: string; anthropic_model: string; groq_model: string; google_model: string
   openai_model: string; mistral_model: string; cohere_model: string; nvidia_nim_model: string
+  tts_provider: string; stt_provider: string
+  elevenlabs_voice_id: string; elevenlabs_tts_model: string; elevenlabs_stt_model: string
   providers: Record<string, ProviderInfo>
+  voice_providers: Record<string, ProviderInfo>
 }
 
 function modelKey(provider: string) {
@@ -188,6 +199,55 @@ function OllamaModelPicker({ value, onChange }: { value: string; onChange: (v: s
   )
 }
 
+function ElevenLabsVoicePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [voices, setVoices]   = useState<{ voice_id: string; name: string }[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError]     = useState('')
+
+  const load = () => {
+    setLoading(true); setError('')
+    api.getElevenLabsVoices()
+      .then(r => setVoices(r.voices ?? []))
+      .catch(() => setError('Could not fetch voices — check the ElevenLabs API key'))
+      .finally(() => setLoading(false))
+  }
+  useEffect(() => { load() }, [])
+
+  const refreshBtn = (
+    <button onClick={load} disabled={loading}
+      className="p-2 rounded-lg border border-luna-border bg-luna-card hover:bg-luna-surface text-luna-dim transition-colors shrink-0">
+      <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+    </button>
+  )
+
+  if (voices.length === 0) {
+    return (
+      <div className="space-y-1.5">
+        <div className="flex gap-2">
+          <input className="flex-1 bg-luna-card border border-luna-border rounded-lg px-3 py-2 text-sm text-luna-text focus:outline-none focus:border-luna-primary/60"
+            value={value} onChange={e => onChange(e.target.value)} placeholder="Voice ID, e.g. 21m00Tcm4TlvDq8ikWAM" />
+          {refreshBtn}
+        </div>
+        {error && <p className="text-[11px] text-luna-dim">{error}</p>}
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex gap-2">
+      <div className="flex-1 relative">
+        <select value={value} onChange={e => onChange(e.target.value)}
+          className="w-full appearance-none bg-luna-card border border-luna-border rounded-lg px-3 py-2 text-sm text-luna-text pr-8 focus:outline-none focus:border-luna-primary/60">
+          {!voices.some(v => v.voice_id === value) && <option value={value}>{value}</option>}
+          {voices.map(v => <option key={v.voice_id} value={v.voice_id}>{v.name}</option>)}
+        </select>
+        <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-luna-dim pointer-events-none" />
+      </div>
+      {refreshBtn}
+    </div>
+  )
+}
+
 function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
   return (
     <button onClick={onClick}
@@ -240,91 +300,21 @@ function IntegrationsTab() {
   )
 }
 
-function MoondreamSection() {
-  const [status, setStatus] = useState<{ moondream_installed: boolean; ollama_available: boolean } | null>(null)
-  const [installing, setInstalling] = useState(false)
-  const [lines, setLines]   = useState<string[]>([])
-  const [done, setDone]     = useState(false)
-  const [installErr, setInstallErr] = useState('')
-  const logRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => { api.getVisionStatus().then(setStatus).catch(() => {}) }, [done])
-
-  useEffect(() => {
-    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight
-  }, [lines])
-
-  const install = async () => {
-    setInstalling(true); setLines([]); setDone(false); setInstallErr('')
-    try {
-      for await (const chunk of streamMoondreamInstall()) {
-        if (chunk.error) { setInstallErr(chunk.error); break }
-        if (chunk.line)  setLines(prev => [...prev.slice(-60), chunk.line!])
-        if (chunk.done)  { setDone(true); break }
-      }
-    } catch (e: any) {
-      setInstallErr(String(e?.message ?? e))
-    } finally {
-      setInstalling(false)
-    }
-  }
-
-  const installed   = status?.moondream_installed
-  const ollamaReady = status?.ollama_available
-
-  return (
-    <section className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Eye size={14} className="text-luna-dim" />
-        <h3 className="text-luna-text font-semibold text-sm">Vision Model</h3>
-      </div>
-      <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-luna-card border border-luna-border">
-        <div className="flex items-center gap-3">
-          <span className={`w-2 h-2 rounded-full ${installed ? 'bg-green-400' : 'bg-luna-dim'}`} />
-          <div>
-            <p className="text-sm text-luna-text">moondream</p>
-            <p className="text-[11px] text-luna-dim">
-              {!ollamaReady ? 'Ollama not reachable' : installed ? 'Ready — Luna can see your screen' : 'Not installed — vision features inactive'}
-            </p>
-          </div>
-        </div>
-        {!installed && ollamaReady && (
-          <button
-            onClick={install}
-            disabled={installing}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-luna-primary/20 border border-luna-primary/40 text-luna-accent text-xs font-medium hover:bg-luna-primary/30 transition-colors disabled:opacity-50"
-          >
-            <Download size={11} />
-            {installing ? 'Installing…' : 'Install'}
-          </button>
-        )}
-      </div>
-
-      {(installing || lines.length > 0) && (
-        <div
-          ref={logRef}
-          className="rounded-lg bg-black/40 border border-luna-border p-3 h-28 overflow-y-auto font-mono text-[10px] text-luna-dim space-y-0.5"
-        >
-          {lines.map((l, i) => <p key={i}>{l}</p>)}
-          {installing && <p className="text-luna-primary animate-pulse">▌</p>}
-        </div>
-      )}
-      {done && !installErr && <p className="text-green-400 text-xs flex items-center gap-1.5"><CheckCircle size={12} />moondream installed — vision is now active</p>}
-      {installErr && <p className="text-red-400 text-xs flex items-center gap-1.5"><AlertCircle size={12} />{installErr}</p>}
-    </section>
-  )
-}
-
 function ModelsTab() {
-  const [data, setData]     = useState<CodingSettings | null>(null)
-  const [form, setForm]     = useState<Partial<CodingSettings>>({})
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved]   = useState(false)
-  const [err, setErr]       = useState('')
+  const [data, setData]         = useState<CodingSettings | null>(null)
+  const [form, setForm]         = useState<Partial<CodingSettings>>({})
+  const [envCfg, setEnvCfg]     = useState<Record<string, string>>({})
+  const [elevenKey, setElevenKey] = useState('')
+  const [saving, setSaving]     = useState(false)
+  const [saved, setSaved]       = useState(false)
+  const [err, setErr]           = useState('')
 
   const load = () => {
     setErr('')
     api.getCodingSettings().then(s => { setData(s); setForm(s) }).catch(() => setErr('Failed to load — is the backend running?'))
+    window.electronAPI?.getEnvConfig?.().then(res => {
+      if (res?.ok && res.config) { setEnvCfg(res.config); setElevenKey(res.config.elevenlabs_api_key ?? '') }
+    })
   }
 
   useEffect(() => { load() }, [])
@@ -333,9 +323,23 @@ function ModelsTab() {
 
   const save = async () => {
     setSaving(true); setErr('')
-    try { await api.updateCodingSettings(form as Record<string, unknown>); setSaved(true); setTimeout(() => setSaved(false), 2500) }
-    catch { setErr('Save failed.') }
-    finally { setSaving(false) }
+    try {
+      await api.updateCodingSettings(form as Record<string, unknown>)
+      if (window.electronAPI?.saveEnvConfig && elevenKey !== (envCfg.elevenlabs_api_key ?? '')) {
+        // Send only the changed key — writeEnv reads the current file fresh from disk
+        // and merges into that, so this must not resend a stale envCfg snapshot that
+        // would stomp the tts_provider/stt_provider fields just written above.
+        const patch = { elevenlabs_api_key: elevenKey }
+        const res = await window.electronAPI.saveEnvConfig(patch)
+        if (!res?.ok) throw new Error(res?.error ?? 'Failed to save ElevenLabs key')
+        setEnvCfg(prev => ({ ...prev, ...patch }))
+      }
+      setSaved(true); setTimeout(() => setSaved(false), 2500)
+    } catch (e: any) {
+      setErr(e?.message ?? 'Save failed.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   if (!data) return (
@@ -353,8 +357,6 @@ function ModelsTab() {
 
   return (
     <div className="max-w-xl space-y-6">
-      {!isMobile && <MoondreamSection />}
-
       <section className="space-y-4">
         <h3 className="text-luna-text font-semibold text-sm">Chat Model</h3>
         <div className="space-y-1.5">
@@ -407,6 +409,42 @@ function ModelsTab() {
               onChange={e => set('coding_shell_timeout', parseInt(e.target.value, 10) || 120)} />
           </div>
         </div>
+      </section>
+
+      <section className="space-y-4">
+        <h3 className="text-luna-text font-semibold text-sm">Voice</h3>
+        <div className="space-y-1.5">
+          <label className="text-xs text-luna-dim font-medium uppercase tracking-wide">Text-to-speech</label>
+          <SelectField value={(form.tts_provider ?? data.tts_provider ?? 'edge') as string}
+            onChange={v => set('tts_provider', v)} options={TTS_PROVIDERS} />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs text-luna-dim font-medium uppercase tracking-wide">Speech-to-text</label>
+          <SelectField value={(form.stt_provider ?? data.stt_provider ?? 'whisper') as string}
+            onChange={v => set('stt_provider', v)} options={STT_PROVIDERS} />
+        </div>
+
+        {((form.tts_provider ?? data.tts_provider) === 'elevenlabs' ||
+          (form.stt_provider ?? data.stt_provider) === 'elevenlabs') && (
+          <>
+            <div className="space-y-1.5">
+              <label className="text-xs text-luna-dim font-medium uppercase tracking-wide">ElevenLabs API key</label>
+              <input type="password" autoComplete="off"
+                className="w-full bg-luna-card border border-luna-border rounded-lg px-3 py-2 text-sm text-luna-text focus:outline-none focus:border-luna-primary/60"
+                value={elevenKey} onChange={e => setElevenKey(e.target.value)} placeholder="sk_…" />
+              <p className="text-[11px] text-luna-dim">elevenlabs.io → Profile → API keys</p>
+            </div>
+            {(form.tts_provider ?? data.tts_provider) === 'elevenlabs' && (
+              <div className="space-y-1.5">
+                <label className="text-xs text-luna-dim font-medium uppercase tracking-wide">Voice</label>
+                <ElevenLabsVoicePicker
+                  value={(form.elevenlabs_voice_id ?? data.elevenlabs_voice_id) as string}
+                  onChange={v => set('elevenlabs_voice_id', v)}
+                />
+              </div>
+            )}
+          </>
+        )}
       </section>
 
       <div className="flex items-center gap-3 pt-2">
@@ -870,19 +908,11 @@ function ControlsTab() {
   const [inCurrent, setInCurrent]   = useState('')
   const [inBusy, setInBusy]         = useState(false)
 
-  const [camDevices, setCamDevices] = useState<{ id: string; name: string }[]>([])
-  const [camCurrent, setCamCurrent] = useState(getSelectedCameraDeviceId() ?? '')
-
   useEffect(() => {
     fetch(`${base}/api/system/audio-devices`).then(r => r.json())
       .then(d => { setOutDevices(d.devices ?? []); setOutCurrent(d.current ?? '') }).catch(() => {})
     fetch(`${base}/api/system/audio-input-devices`).then(r => r.json())
       .then(d => { setInDevices(d.devices ?? []); setInCurrent(d.current ?? '') }).catch(() => {})
-    navigator.mediaDevices.enumerateDevices().then(devs => {
-      const cams = devs.filter(d => d.kind === 'videoinput').map(d => ({ id: d.deviceId, name: d.label || `Camera ${d.deviceId.slice(0, 6)}` }))
-      setCamDevices(cams)
-      if (!getSelectedCameraDeviceId() && cams.length > 0) setCamCurrent(cams[0].id)
-    }).catch(() => {})
   }, [base])
 
   const switchOutput = async (id: string) => {
@@ -899,11 +929,6 @@ function ControlsTab() {
       await fetch(`${base}/api/system/audio-input-device`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ device_id: id }) })
     } catch {}
     setInBusy(false)
-  }
-
-  const switchCamera = (id: string) => {
-    setCamCurrent(id)
-    setCameraDevice(id || null)
   }
 
   const SHORTCUTS = [
@@ -933,14 +958,6 @@ function ControlsTab() {
       </section>
 
       {!isMobile && <VoskSection />}
-
-      <section className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Camera size={14} className="text-luna-dim" />
-          <h3 className="text-luna-text font-semibold text-sm">Camera</h3>
-        </div>
-        <DeviceSelect value={camCurrent} onChange={switchCamera} options={camDevices} />
-      </section>
 
       <section className="space-y-3">
         <div className="flex items-center gap-2">

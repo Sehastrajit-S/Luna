@@ -2,6 +2,7 @@
   "id": "research",
   "name": "Research",
   "description": "Search, read, compare, and summarize public web sources.",
+  "trigger": "/research",
   "permissions": ["web"],
   "tools": ["web_search", "web_research", "web_fetch", "browser_read", "browser_open"]
 }

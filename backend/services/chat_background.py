@@ -3,18 +3,20 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from pathlib import Path
 
 from sqlalchemy.orm import Session
 
-from backend.config import settings
-from backend.models.database import Conversation, get_db
+from backend.config import DATA_DIR, settings
+from backend.models.database import Conversation, Message, get_db
 from backend.services.memory_manager import MemoryManager
 from backend.services.personality import PersonalityEngine, compute_implicit_reward
 from backend.services.activity_tracker import ActivityTracker
 from backend.services.fact_extractor import (
     extract_facts_from_conversation,
     extract_emotional_arc,
+    extract_session_facts,
     summarize_conversation,
     extract_user_name,
     format_conversation_for_extraction,
@@ -23,11 +25,35 @@ from backend.services.fact_extractor import (
 
 logger = logging.getLogger(__name__)
 
+# Rolling summary (compaction) every this many new messages. Last summarized
+# message count per conversation; after a restart the first check re-summarizes.
+SUMMARY_EVERY = 10
+_summarized_at: dict[int, int] = {}
+
+
+_NOT_A_STYLE_EXAMPLE_RE = re.compile(
+    # Replies about live state or failures are facts of one moment, not style:
+    # saved as "preferred examples" they get parroted instead of calling tools.
+    r"\b(?:can(?:'|no)?t|couldn'?t|unable|not able|failed|error|doesn'?t support|not available)\b"
+    r"|\b(?:volume|brightness|battery|clipboard|inbox|e-?mails?|calendar|tasks?|reminders?|repos?|files?)\b"
+    r"|\d+\s?%|https?://|<!--luna-cards",
+    re.IGNORECASE,
+)
+MAX_EXAMPLE_MESSAGE_CHARS = 300
+
+
+def _is_style_example(user_message: str, luna_response: str) -> bool:
+    return (len(user_message) <= MAX_EXAMPLE_MESSAGE_CHARS
+            and not _NOT_A_STYLE_EXAMPLE_RE.search(user_message)
+            and not _NOT_A_STYLE_EXAMPLE_RE.search(luna_response))
+
 
 def _auto_save_rlhf_pair(user_message: str, luna_response: str, mood: str) -> None:
     """Persist a high-reward (message, response) pair to the RLHF training file."""
+    if not _is_style_example(user_message, luna_response):
+        return
     try:
-        path = Path("data/rlhf_pairs.json")
+        path = DATA_DIR / "rlhf_pairs.json"
         pairs = json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
 
         for p in pairs:
@@ -52,18 +78,20 @@ def _auto_save_rlhf_pair(user_message: str, luna_response: str, mood: str) -> No
 
 async def track_activity_bg(message: str, conversation_id: int) -> None:
     """Background: track user activity after response is sent."""
+    db = next(get_db())
     try:
-        db = next(get_db())
         tracker = ActivityTracker(db)
         await tracker.process_message(message, conversation_id)
         active = tracker.get_current_activities()
         for act in active:
             await tracker.check_progress(message, act)
-        db.close()
+        tracker.sync_spotify_activity()
     except (OSError, RuntimeError) as e:
         logger.warning("Activity tracking failed for conv %d: %s", conversation_id, e)
     except Exception as e:
         logger.error("Unexpected error in track_activity_bg: %s", e, exc_info=True)
+    finally:
+        db.close()                               # also on errors: a failed run used to keep its connection
 
 
 async def post_conversation_processing(
@@ -75,8 +103,13 @@ async def post_conversation_processing(
     tool_succeeded: bool = False,
     task_completed: bool = False,
     user_interrupted_tts: bool = False,
+    skip_llm_work: bool = False,
 ) -> None:
-    """Background: extract facts, compute RL reward, update personality."""
+    """Background: extract facts, compute RL reward, update personality.
+
+    skip_llm_work: for small talk ("hi", "thanks") only the heuristic reward
+    runs — there is nothing to extract, summarize, or classify.
+    """
     try:
         memory = MemoryManager(db)
         personality = PersonalityEngine(db)
@@ -117,6 +150,9 @@ async def post_conversation_processing(
                 if trigger_msg:
                     _auto_save_rlhf_pair(trigger_msg, prev_luna_response, personality.get_state().current_mood)
 
+        if skip_llm_work:
+            return
+
         conv = db.query(Conversation).filter_by(id=conversation_id).first()
         if conv:
             on_interval = (conv.message_count % settings.fact_extraction_interval == 0)
@@ -138,14 +174,30 @@ async def post_conversation_processing(
                 quick_text = format_conversation_for_extraction(msgs)
                 await extract_facts_from_conversation(quick_text, db, conversation_id, memory)
 
-            if conv.message_count > 0 and conv.message_count % 10 == 0:
+            # Count stored messages, not conv.message_count: that counter races with
+            # the next turn and could skip every multiple of 10 (no summary ever).
+            total = db.query(Message).filter(Message.conversation_id == conversation_id).count()
+            if total - _summarized_at.get(conversation_id, 0) >= SUMMARY_EVERY and total >= SUMMARY_EVERY:
+                _summarized_at[conversation_id] = total
                 msgs = memory.get_recent_conversation(conversation_id, 20)
                 conv_text = format_conversation_for_extraction(msgs)
+                # Rolling summary (compaction): fold the previous summary in so
+                # it keeps covering turns that have left the context window.
+                if conv.summary:
+                    conv_text = f"Earlier summary: {conv.summary}\n\nRecent messages:\n{conv_text}"
                 summary = await summarize_conversation(conv_text)
                 if summary:
                     conv.summary = summary
                     db.commit()
                     await memory.store_conversation_summary(summary, conversation_id)
+
+                # Decisions go into the append-only working state as well: a
+                # summary rewritten every 10 messages drops old facts, this doesn't.
+                recent_text = format_conversation_for_extraction(msgs)
+                facts = await extract_session_facts(recent_text)
+                if facts:
+                    from backend.services.session_state import add_session_facts
+                    add_session_facts(db, conversation_id, facts)
 
                 arc = await extract_emotional_arc(conv_text)
                 if arc:
@@ -162,3 +214,8 @@ async def post_conversation_processing(
             "post_conversation_processing failed for conv %d: %s",
             conversation_id, e, exc_info=True,
         )
+    finally:
+        # This runs after the response, on the request's session, which the
+        # request already closed; our queries reopened a connection. Release it,
+        # or each turn leaks one and the pool (5 + 10) eventually times out.
+        db.close()

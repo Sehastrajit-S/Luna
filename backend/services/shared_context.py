@@ -7,8 +7,10 @@ from pathlib import Path
 from threading import Lock
 from typing import Any
 
+from backend.config import DATA_DIR
 
-_PATH = Path("data/shared_context.json")
+
+_PATH = DATA_DIR / "shared_context.json"
 _LOCK = Lock()
 
 

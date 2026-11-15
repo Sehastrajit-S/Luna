@@ -1,5 +1,6 @@
 """LLMClient — unified streaming + completion interface over all providers."""
 import logging
+import logging
 from typing import AsyncGenerator
 
 import httpx
@@ -22,6 +23,7 @@ from backend.services.llm.providers import (
     _openai_headers,
 )
 
+logger = logging.getLogger(__name__)
 logger = logging.getLogger(__name__)
 
 
@@ -156,17 +158,22 @@ class LLMClient:
 
     async def embed(self, text: str) -> list[float]:
         if settings.embedding_provider.strip().lower() == "openai-compatible":
-            if not settings.openai_api_key:
-                return []
-            async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-                r = await client.post(
-                    f"{settings.openai_base_url.rstrip('/')}/embeddings",
-                    headers=_openai_headers(settings.openai_api_key),
-                    json={"model": settings.openai_embed_model, "input": text},
-                )
-                r.raise_for_status()
-                data = r.json()
-                return data.get("data", [{}])[0].get("embedding", [])
+            if settings.openai_api_key:
+                try:
+                    async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
+                        r = await client.post(
+                            f"{settings.openai_base_url.rstrip('/')}/embeddings",
+                            headers=_openai_headers(settings.openai_api_key),
+                            json={"model": settings.openai_embed_model, "input": text},
+                        )
+                        r.raise_for_status()
+                        data = r.json()
+                        return data.get("data", [{}])[0].get("embedding", [])
+                except httpx.HTTPError as exc:
+                    # Memory is an enhancement, not a reason to lose chat.
+                    # Fall through to the local embedding model when the
+                    # hosted provider is rate-limited or unavailable.
+                    logger.warning("OpenAI embeddings unavailable; using local fallback: %s", exc)
 
         async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
             r = await client.post(

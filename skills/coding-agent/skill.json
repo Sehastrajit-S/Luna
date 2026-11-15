@@ -2,12 +2,30 @@
   "id": "coding-agent",
   "name": "Coding Agent",
   "description": "Ollama-powered coding assistant: write, read, search, and run code in the workspace via a ReAct loop.",
-  "permissions": ["workspace", "shell", "confirm-shell-commands"],
+  "permissions": [
+    "workspace",
+    "shell",
+    "confirm-shell-commands"
+  ],
   "tools": [
     "code_read_file",
     "code_write_file",
     "code_list_files",
     "code_search",
     "code_run_shell"
+  ],
+  "keywords": [
+    "code",
+    "bug",
+    "debug",
+    "refactor",
+    "function",
+    "script",
+    "repo",
+    "python",
+    "javascript",
+    "typescript",
+    "compile",
+    "stack trace"
   ]
 }

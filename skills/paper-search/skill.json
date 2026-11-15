@@ -1,0 +1,76 @@
+{
+  "id": "paper-search",
+  "name": "Paper Search",
+  "description": "Find research papers and preprints on a topic (arXiv, OpenReview, ACL Anthology, Semantic Scholar, PubMed, journals) with links to the actual papers.",
+  "permissions": [
+    "web"
+  ],
+  "tools": [
+    "web_search"
+  ],
+  "keywords": [
+    "paper",
+    "papers",
+    "preprint",
+    "arxiv",
+    "research",
+    "study",
+    "studies",
+    "literature",
+    "citation",
+    "publication",
+    "survey"
+  ],
+  "search": {
+    "order": 20,
+    "strong": true,
+    "intents": [
+      "\\b(?:research\\s+)?papers?\\s+(?:on|about|for|that|related|in)\\b",
+      "\\b(?:preprints?|arxiv|openreview|journal\\s+articles?|peer[-\\s]reviewed|literature\\s+(?:on|review)|survey\\s+papers?)\\b",
+      "\\b(?:studies|publications?|citations?|references)\\s+(?:on|about|for)\\b",
+      "\\b(?:state\\s+of\\s+the\\s+art|sota)\\s+(?:in|on|for)\\b"
+    ],
+    "slots": {
+      "topics": "up to 3 research topics from the request, phrased as a researcher would, e.g. [\"retrieval augmented generation\"]",
+      "years": "a year or range the user asked for (e.g. '2024', '2023-2025'), or \"\"",
+      "venue": "a conference/journal the user named (e.g. NeurIPS, ACL, Nature), or \"\""
+    },
+    "fan_out": "topics",
+    "grounded": [
+      "years",
+      "venue"
+    ],
+    "queries": [
+      "{item} {venue} {years} (site:arxiv.org OR site:openreview.net OR site:aclanthology.org OR site:semanticscholar.org)",
+      "{item} {venue} {years} (site:pubmed.ncbi.nlm.nih.gov OR site:nature.com OR site:dl.acm.org OR site:ieeexplore.ieee.org OR site:sciencedirect.com)",
+      "{item} {venue} {years} paper pdf"
+    ],
+    "max_items": 3,
+    "per_query": 6,
+    "keep_urls": [
+      "arxiv\\.org/(?:abs|pdf|html)/",
+      "openreview\\.net/(?:forum|pdf)\\?id=",
+      "aclanthology\\.org/[\\w.-]+\\d",
+      "semanticscholar\\.org/paper/",
+      "pubmed\\.ncbi\\.nlm\\.nih\\.gov/\\d+",
+      "ncbi\\.nlm\\.nih\\.gov/pmc/articles/",
+      "nature\\.com/articles/",
+      "dl\\.acm\\.org/doi/",
+      "ieeexplore\\.ieee\\.org/(?:abstract/)?document/",
+      "sciencedirect\\.com/science/article/",
+      "(?:bio|med)rxiv\\.org/content/",
+      "doi\\.org/10\\.",
+      "proceedings\\.(?:neurips|mlr)\\.(?:cc|press)/",
+      "papers\\.nips\\.cc/paper",
+      "jmlr\\.org/papers/",
+      "springer\\.com/(?:article|chapter)/",
+      "\\.pdf(?:$|\\?)"
+    ],
+    "drop_urls": [
+      "youtube\\.com",
+      "/search\\b",
+      "[?&]q="
+    ],
+    "check_links": true
+  }
+}

@@ -29,7 +29,7 @@ class TaskCalendarToolTests(unittest.IsolatedAsyncioTestCase):
             self.db,
             0,
         )
-        self.assertIn("created", result)
+        self.assertIn("Added", result)
         self.assertEqual(self.db.query(Task).count(), 1)
 
     async def test_create_event_tool_uses_database_session(self) -> None:
@@ -48,7 +48,7 @@ class TaskCalendarToolTests(unittest.IsolatedAsyncioTestCase):
             self.db,
             0,
         )
-        self.assertIn("created", result)
+        self.assertIn("Added", result)
         self.assertEqual(self.db.query(CalendarEvent).count(), 1)
 
 

@@ -9,7 +9,8 @@
  */
 
 import { spawn, spawnSync, execSync } from 'node:child_process'
-import { existsSync, rmSync, copyFileSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, rmSync, copyFileSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs'
+import { randomBytes } from 'node:crypto'
 import { tmpdir, platform } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { createInterface } from 'node:readline/promises'
@@ -71,23 +72,23 @@ const COMMANDS = {
   // ── Development ──
   dev: {
     group: 'Dev',
-    summary: 'Start Vite + Electron for desktop development',
+    summary: 'Same as web: backend + desktop UI in the browser',
     run: () => npm(['run', 'dev', ...rest]),
   },
   'dev:lan': {
     group: 'Dev',
-    summary: 'Start dev mode with Vite exposed on your LAN',
+    summary: 'Same as web:lan',
     run: () => npm(['run', 'dev:lan', ...rest]),
   },
   web: {
     group: 'Dev',
-    summary: 'Start backend + browser UI without Electron',
-    run: () => npm(['run', 'web', ...rest]),
+    summary: 'Start the backend and open the desktop UI in a browser',
+    run: () => webUi(),
   },
   'web:lan': {
     group: 'Dev',
-    summary: 'Start browser UI on your LAN for phones and tablets',
-    run: () => npm(['run', 'web:lan', ...rest]),
+    summary: 'Serve the desktop UI on your LAN for phones and tablets',
+    run: () => webUi({ lan: true }),
   },
   backend: {
     group: 'Dev',
@@ -96,13 +97,8 @@ const COMMANDS = {
   },
   frontend: {
     group: 'Dev',
-    summary: 'Start only the Vite dev server',
+    summary: 'Start only the Vite dev server (mobile React UI)',
     run: () => npm(['run', 'dev', '--workspace=frontend', ...rest]),
-  },
-  electron: {
-    group: 'Dev',
-    summary: 'Start only the Electron shell',
-    run: () => npm(['start', '--workspace=electron', ...rest]),
   },
 
   // ── Docker ──
@@ -148,11 +144,6 @@ const COMMANDS = {
     summary: 'Build the React frontend',
     run: () => npm(['run', 'build', ...rest]),
   },
-  dist: {
-    group: 'Build',
-    summary: 'Build frontend + package Electron for Windows',
-    run: () => npm(['run', 'dist', ...rest]),
-  },
 
   // ── Diagnostics ──
   doctor: {
@@ -176,6 +167,11 @@ const COMMANDS = {
     group: 'Diagnostics',
     summary: 'Check if the running Luna backend is healthy',
     run: healthCheck,
+  },
+  log: {
+    group: 'Diagnostics',
+    summary: 'Tail data/logs/luna.log live (luna log [--all])',
+    run: () => logCli(rest),
   },
   status: {
     group: 'Diagnostics',
@@ -305,6 +301,31 @@ function help(exitCode = 0) {
     console.log()
   }
   process.exit(exitCode)
+}
+
+// ── Browser UI ────────────────────────────────────────────────────────────────
+// The backend serves the desktop app's renderer at "/". Settings writes need the
+// local token in data/local_api_token; the link carries it in the URL fragment,
+// which browsers never send to the server.
+function localApiToken() {
+  const dataDir = process.env.LUNA_DATA_DIR || join(root, 'data')
+  const tokenPath = join(dataDir, 'local_api_token')
+  if (!existsSync(tokenPath)) {
+    mkdirSync(dataDir, { recursive: true })
+    writeFileSync(tokenPath, randomBytes(32).toString('base64url'), 'utf8')
+  }
+  return readFileSync(tokenPath, 'utf8').trim()
+}
+
+function webUi({ lan = false } = {}) {
+  const port = readEnvFile().port || '8899'
+  if (lan) process.env.HOST = '0.0.0.0'
+  const link = `http://localhost:${port}/#token=${encodeURIComponent(localApiToken())}`
+  console.log()
+  console.log(`  ${c.bold}Luna web UI${c.reset}  ${c.cyan}${link}${c.reset}`)
+  if (lan) console.log(`  ${c.dim}On other devices: http://<this-pc-ip>:${port}  (saving settings asks for the token)${c.reset}`)
+  console.log()
+  python(['backend/server.py', ...rest])
 }
 
 // ── Runners ───────────────────────────────────────────────────────────────────
@@ -446,7 +467,7 @@ async function setup() {
     console.log()
     console.log(`  Admin:  ${c.cyan}POST /api/admin/users${c.reset} to create per-user JWT tokens`)
   } else {
-    console.log(`  Start Luna:  ${c.cyan}luna dev${c.reset}       (desktop with Electron)`)
+    console.log(`  Start Luna:  ${c.cyan}luna dev${c.reset}       (backend + web UI)`)
     console.log(`               ${c.cyan}luna docker${c.reset}    (any device via Docker)`)
     console.log(`               ${c.cyan}luna backend${c.reset}   (API only)`)
   }
@@ -549,6 +570,28 @@ async function healthCheck() {
   } catch (e) {
     err(`Not reachable: ${e.message}`)
     process.exit(1)
+  }
+}
+
+// ── Log ───────────────────────────────────────────────────────────────────────
+function logCli(args = []) {
+  const logPath = join(root, 'data', 'logs', 'luna.log')
+  if (!existsSync(logPath)) {
+    err(`No log file yet at ${logPath}`)
+    err('Start the backend first (luna backend / npm run dev) — it creates the file on startup.')
+    process.exit(1)
+  }
+
+  const showAll = hasArg(args, '--all')
+  info(`Tailing ${logPath} (Ctrl+C to stop)${showAll ? '' : ' — last 100 lines'}\n`)
+
+  if (isWin) {
+    const cmd = showAll
+      ? `Get-Content -Path "${logPath}" -Wait`
+      : `Get-Content -Path "${logPath}" -Tail 100 -Wait`
+    run('powershell.exe', ['-NoProfile', '-Command', cmd])
+  } else {
+    run('tail', showAll ? ['-n', '+1', '-f', logPath] : ['-n', '100', '-f', logPath])
   }
 }
 
@@ -1114,6 +1157,14 @@ ${c.reset}  Large Unified Nexus Mind AI
     }
   } finally {
     rl.close()
+    // Explicit exit — without this, the spawned backend's open stdio pipes
+    // keep Node's event loop alive and the CLI just hangs after /exit/quit
+    // instead of actually terminating (Ctrl+C works because SIGINT already
+    // does this same cleanup+exit; typing the command never did).
+    if (_backendProc) {
+      try { _backendProc.kill() } catch {}
+    }
+    process.exit(0)
   }
 }
 

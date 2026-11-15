@@ -36,11 +36,16 @@ _DOMAIN_PAIRS = [
 _MIN_WORDS = 12
 
 
-def is_crew_request(message: str) -> bool:
+def is_crew_request(message: str, explicit_only: bool = False) -> bool:
     """
     Return True if the message should be handled by the multi-agent Crew.
 
     Conservative: returns False for short or single-domain messages.
+    explicit_only: only an explicit ask ("use crew mode", "orchestrate agents")
+    counts. The agent loop handles ordinary multi-step requests with the
+    conversation in view; the word-pair heuristic misfired on phrases like
+    "code word" + "quick check" and sent recall questions to a crew that has
+    no conversation history.
     """
     if not message or not isinstance(message, str):
         return False
@@ -50,6 +55,8 @@ def is_crew_request(message: str) -> bool:
     # Strong crew keyword → always fire
     if any(re.search(p, lower) for p in _CREW_TRIGGERS):
         return True
+    if explicit_only:
+        return False
 
     # Length floor for everything else
     if len(message.split()) < _MIN_WORDS:

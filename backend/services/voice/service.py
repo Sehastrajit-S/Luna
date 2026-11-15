@@ -13,6 +13,7 @@ from typing import Callable
 
 import numpy as np
 
+from backend.services.stt import stt
 from backend.services.voice.models import VoiceState
 
 
@@ -23,7 +24,7 @@ class VoiceService:
     VOSK_URL      = "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip"
     VOSK_DIR      = Path("data/vosk-model")
 
-    SILENCE_LIMIT   = 20
+    SILENCE_LIMIT   = 6      # chunks of trailing silence before cutting off (6 * 0.25s = 1.5s)
     MAX_CHUNKS      = 480
     RMS_THRESHOLD   = 200
     PRE_SPEECH_WAIT = 240
@@ -36,7 +37,6 @@ class VoiceService:
         self._thread: threading.Thread | None = None
         self._stop                            = threading.Event()
         self._vosk_model                      = None
-        self._whisper                         = None
         self._models_ready                    = False
         self._pygame_ready                    = False
         self.enabled                          = False
@@ -106,37 +106,11 @@ class VoiceService:
             self._download_vosk()
         from vosk import Model
         self._vosk_model = Model(str(self.VOSK_DIR))
-        from faster_whisper import WhisperModel
-        try:
-            self._whisper = WhisperModel("base", device="cuda", compute_type="float16")
-            print("[voice] Whisper running on GPU (base/float16)")
-        except Exception:
-            self._whisper = WhisperModel("tiny", device="cpu", compute_type="int8")
-            print("[voice] Whisper running on CPU (tiny/int8 fallback)")
-        self._warmup_whisper()
+        # Speech-to-text is the shared local engine (backend/services/stt.py),
+        # the same one the desktop mic button and mobile endpoint use.
+        stt.ensure_loaded()
         self._init_pygame()
         self._models_ready = True
-
-    def _warmup_whisper(self):
-        from faster_whisper import WhisperModel
-        silence = np.zeros(self.SAMPLE_RATE, dtype=np.int16).tobytes()
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
-            wpath = f.name
-        try:
-            with wave.open(wpath, "wb") as wf:
-                wf.setnchannels(1); wf.setsampwidth(2)
-                wf.setframerate(self.SAMPLE_RATE); wf.writeframes(silence)
-            list(self._whisper.transcribe(wpath, language="en", beam_size=1)[0])
-            print("[voice] Whisper warmed up.")
-        except Exception as e:
-            print(f"[voice] Whisper warmup failed ({e}) -> falling back to CPU")
-            self._whisper = WhisperModel("tiny", device="cpu", compute_type="int8")
-            print("[voice] Whisper running on CPU (tiny/int8)")
-        finally:
-            try:
-                os.unlink(wpath)
-            except OSError:
-                pass
 
     def _init_pygame(self):
         try:
@@ -227,7 +201,7 @@ class VoiceService:
                             set_away(False)
                             self._fire_ui_event({"type": "away", "action": "off"})
                             try:
-                                self._speak_edge("Welcome back, Sahaas!")
+                                self._speak("Welcome back, Sahaas!")
                             except Exception:
                                 pass
                         self._on_wake(audio_q)
@@ -371,7 +345,7 @@ class VoiceService:
             })
             if transcript.lower().strip('.,!? ') in _WELCOME_BACK:
                 try:
-                    self._speak_edge("Welcome back, Sahaas!")
+                    self._speak("Welcome back, Sahaas!")
                 except Exception:
                     pass
                 return
@@ -441,6 +415,33 @@ class VoiceService:
 
     # ── STT ───────────────────────────────────────────────────────────────────
 
+    def _transcribe_elevenlabs(self, audio_path: str) -> str:
+        import httpx
+        from backend.config import settings
+
+        with open(audio_path, "rb") as f:
+            resp = httpx.post(
+                "https://api.elevenlabs.io/v1/speech-to-text",
+                headers={"xi-api-key": settings.elevenlabs_api_key},
+                data={"model_id": settings.elevenlabs_stt_model},
+                files={"file": (os.path.basename(audio_path), f, "audio/wav")},
+                timeout=30.0,
+            )
+        resp.raise_for_status()
+        return resp.json().get("text", "").strip()
+
+    def _transcribe_local(self, audio_path: str) -> str:
+        return stt.transcribe_file(audio_path).text
+
+    def _transcribe_path(self, audio_path: str) -> str:
+        from backend.config import settings
+        if settings.stt_provider == "elevenlabs" and settings.elevenlabs_api_key:
+            try:
+                return self._transcribe_elevenlabs(audio_path)
+            except Exception as e:
+                print(f"[voice] ElevenLabs STT failed ({e}), falling back to Whisper")
+        return self._transcribe_local(audio_path)
+
     def _transcribe(self, audio_bytes: bytes) -> str:
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
             wav_path = f.name
@@ -448,19 +449,13 @@ class VoiceService:
             with wave.open(wav_path, "wb") as wf:
                 wf.setnchannels(1); wf.setsampwidth(2)
                 wf.setframerate(self.SAMPLE_RATE); wf.writeframes(audio_bytes)
-            segments, _ = self._whisper.transcribe(
-                wav_path, language="en", beam_size=1, best_of=1,
-            )
-            return " ".join(s.text for s in segments).strip()
+            return self._transcribe_path(wav_path)
         finally:
             os.unlink(wav_path)
 
     def transcribe_file(self, audio_path: str) -> str:
         self._ensure_models()
-        segments, _ = self._whisper.transcribe(
-            audio_path, language="en", beam_size=1, best_of=1,
-        )
-        return " ".join(s.text for s in segments).strip()
+        return self._transcribe_path(audio_path)
 
     def collect_response_text(self, text: str) -> str:
         import httpx
@@ -490,8 +485,6 @@ class VoiceService:
                                     from backend.services.away_state import set_away
                                     set_away(True)
                                 self._fire_ui_event({"type": "away", "action": action})
-                            elif cmd.get("type") == "face":
-                                self._fire_ui_event({"type": "face", "action": cmd.get("action", "on")})
                             elif cmd.get("type") == "widget":
                                 self._fire_ui_event({"type": "widget", "kind": cmd.get("kind", "summary"), "title": cmd.get("title", "Visual"), "body": cmd.get("body", "")})
                         continue
@@ -559,8 +552,6 @@ class VoiceService:
                                             from backend.services.away_state import set_away
                                             set_away(True)
                                         self._fire_ui_event({"type": "away", "action": action})
-                                    elif cmd.get("type") == "face":
-                                        self._fire_ui_event({"type": "face", "action": cmd.get("action", "on")})
                                     elif cmd.get("type") == "widget":
                                         self._fire_ui_event({
                                             "type": "widget",
@@ -592,23 +583,55 @@ class VoiceService:
 
         threading.Thread(target=_llm_producer, daemon=True, name="luna-llm").start()
 
+        # Synthesis runs in its own thread, decoupled from playback: while one
+        # sentence is being spoken, the next one's audio is already being
+        # synthesized in the background instead of waiting its turn — this is
+        # what actually cuts the "taking a lot of time to speak back" latency
+        # for multi-sentence replies, since synth time overlaps playback time
+        # instead of stacking after it.
+        audio_q: queue.Queue[tuple[str, str | None] | None] = queue.Queue()
+
+        def _tts_synthesizer():
+            from backend.services.tool_runner import strip_tool_call_json
+            while True:
+                sentence = sentence_q.get()
+                if sentence is None or self._stop.is_set():
+                    audio_q.put(None)
+                    return
+                clean = strip_tool_call_json(sentence)
+                clean = re.sub(r"\[(?:LAUNCH|TASK|EVENT|SPOTIFY|BROWSE|MAP|WIDGET):[^\]]+\]", "", clean).strip()
+                if not clean:
+                    continue
+                try:
+                    mp3_path = self._synthesize(clean)
+                except Exception as e:
+                    print(f"[voice] TTS synth failed: {e}")
+                    mp3_path = None
+                audio_q.put((clean, mp3_path))
+
+        threading.Thread(target=_tts_synthesizer, daemon=True, name="luna-tts-synth").start()
+
         self._set_state(VoiceState.SPEAKING)
         spoken: list[str] = []
         while True:
-            sentence = sentence_q.get()
-            if sentence is None:
+            item = audio_q.get()
+            if item is None:
                 break
             if self._stop.is_set():
                 break
-            from backend.services.tool_runner import strip_tool_call_json
-            clean = strip_tool_call_json(sentence)
-            clean = re.sub(r"\[(?:LAUNCH|TASK|EVENT|SPOTIFY|BROWSE|MAP|WIDGET):[^\]]+\]", "", clean).strip()
-            if not clean:
-                continue
+            clean, mp3_path = item
             spoken.append(clean)
-            try:
-                self._speak_edge(clean)
-            except Exception:
+            if mp3_path:
+                try:
+                    self._play_mp3(mp3_path)
+                finally:
+                    try:
+                        os.unlink(mp3_path)
+                    except OSError:
+                        pass
+            else:
+                # Every synth engine failed for this sentence — last-resort
+                # inline speak (blocking, no pipelining, but rare).
                 try:
                     self._speak_pyttsx3(clean)
                 except Exception as e:
@@ -627,55 +650,143 @@ class VoiceService:
 
     _barge_in_triggered: bool = False
 
-    def _speak_edge(self, text: str):
-        import edge_tts
-        import pygame
+    def _speak(self, text: str):
+        from backend.config import settings
+
+        engines = []
+        if settings.tts_provider == "elevenlabs" and settings.elevenlabs_api_key:
+            engines.append(self._speak_elevenlabs)
+        engines.append(self._speak_edge)
+        engines.append(self._speak_pyttsx3)
+
+        last_exc: Exception | None = None
+        for engine in engines:
+            try:
+                engine(text)
+                return
+            except Exception as e:
+                last_exc = e
+        if last_exc:
+            print(f"[voice] TTS failed: {last_exc}")
+
+    def _synthesize(self, text: str) -> str | None:
+        """Synthesize text to a temp mp3 path (caller deletes it), no playback.
+        Tries ElevenLabs first if configured, falls back to edge-tts. Returns
+        None if every engine failed (caller falls back to inline pyttsx3)."""
+        from backend.config import settings
 
         text = self._tts_normalize(text)
+        if settings.tts_provider == "elevenlabs" and settings.elevenlabs_api_key:
+            try:
+                return self._synthesize_elevenlabs(text)
+            except Exception as e:
+                print(f"[voice] ElevenLabs TTS failed ({e}), falling back to edge-tts")
+        try:
+            return self._synthesize_edge(text)
+        except Exception as e:
+            print(f"[voice] edge-tts failed: {e}")
+            return None
+
+    def _play_mp3(self, mp3_path: str):
+        import pygame
+
         self._barge_in_triggered = False
+        if not pygame.mixer.get_init():
+            pygame.mixer.init()
+        pygame.mixer.music.load(mp3_path)
+        pygame.mixer.music.play()
+
+        try:
+            import sounddevice as sd
+
+            def _barge_check():
+                CHUNK = 1024
+                with sd.RawInputStream(
+                    samplerate=self.SAMPLE_RATE, channels=1,
+                    dtype="int16", blocksize=CHUNK,
+                ) as stream:
+                    while pygame.mixer.music.get_busy() and not self._stop.is_set():
+                        data, _ = stream.read(CHUNK)
+                        rms = float(np.sqrt(np.mean(
+                            np.frombuffer(bytes(data), dtype=np.int16).astype(np.float32) ** 2
+                        )))
+                        if rms > self.RMS_THRESHOLD * 1.5:
+                            self._barge_in_triggered = True
+                            pygame.mixer.music.stop()
+                            break
+
+            barge_thread = threading.Thread(target=_barge_check, daemon=True)
+            barge_thread.start()
+        except Exception:
+            pass
+
+        while pygame.mixer.music.get_busy():
+            if self._stop.is_set() or self._barge_in_triggered:
+                pygame.mixer.music.stop()
+                break
+            time.sleep(0.05)
+
+    def _synthesize_elevenlabs(self, text: str) -> str:
+        """Raw ElevenLabs synthesis — expects already-normalized text, returns mp3 path."""
+        import httpx
+        from backend.config import settings
+
+        resp = httpx.post(
+            f"https://api.elevenlabs.io/v1/text-to-speech/{settings.elevenlabs_voice_id}",
+            headers={"xi-api-key": settings.elevenlabs_api_key, "Accept": "audio/mpeg"},
+            json={"text": text, "model_id": settings.elevenlabs_tts_model},
+            # Fail fast on network trouble rather than hanging up to 30s before
+            # falling back to edge-tts — a short sentence should synthesize
+            # well within this.
+            timeout=httpx.Timeout(connect=5.0, read=12.0, write=8.0, pool=5.0),
+        )
+        resp.raise_for_status()
+        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
+            mp3 = f.name
+            f.write(resp.content)
+        return mp3
+
+    def _synthesize_edge(self, text: str) -> str:
+        """Raw edge-tts synthesis — expects already-normalized text, returns mp3 path."""
+        import edge_tts
+
         loop = asyncio.new_event_loop()
         with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
             mp3 = f.name
         try:
             loop.run_until_complete(
-                edge_tts.Communicate(text, "en-US-AriaNeural").save(mp3)
+                # Defaults are connect_timeout=10, receive_timeout=60 — a single
+                # stalled connection could hang the whole reply for a minute.
+                edge_tts.Communicate(
+                    text, "en-US-AriaNeural",
+                    connect_timeout=5, receive_timeout=15,
+                ).save(mp3)
             )
-            if not pygame.mixer.get_init():
-                pygame.mixer.init()
-            pygame.mixer.music.load(mp3)
-            pygame.mixer.music.play()
-
-            try:
-                import sounddevice as sd
-
-                def _barge_check():
-                    CHUNK = 1024
-                    with sd.RawInputStream(
-                        samplerate=self.SAMPLE_RATE, channels=1,
-                        dtype="int16", blocksize=CHUNK,
-                    ) as stream:
-                        while pygame.mixer.music.get_busy() and not self._stop.is_set():
-                            data, _ = stream.read(CHUNK)
-                            rms = float(np.sqrt(np.mean(
-                                np.frombuffer(bytes(data), dtype=np.int16).astype(np.float32) ** 2
-                            )))
-                            if rms > self.RMS_THRESHOLD * 1.5:
-                                self._barge_in_triggered = True
-                                pygame.mixer.music.stop()
-                                break
-
-                barge_thread = threading.Thread(target=_barge_check, daemon=True)
-                barge_thread.start()
-            except Exception:
-                pass
-
-            while pygame.mixer.music.get_busy():
-                if self._stop.is_set() or self._barge_in_triggered:
-                    pygame.mixer.music.stop()
-                    break
-                time.sleep(0.05)
+            return mp3
         finally:
             loop.close()
+
+    def _speak_elevenlabs(self, text: str):
+        text = self._tts_normalize(text)
+        mp3 = self._synthesize_elevenlabs(text)
+        try:
+            self._play_mp3(mp3)
+        finally:
+            try:
+                os.unlink(mp3)
+            except OSError:
+                pass
+
+    def _speak_edge(self, text: str):
+        text = self._tts_normalize(text)
+        mp3 = self._synthesize_edge(text)
+        try:
+            self._play_mp3(mp3)
+        finally:
+            try:
+                os.unlink(mp3)
+            except OSError:
+                pass
             try:
                 os.unlink(mp3)
             except OSError:

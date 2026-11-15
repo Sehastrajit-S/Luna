@@ -62,9 +62,6 @@ def parse_commands(response: str, user_message: str = "") -> list[dict]:
     for match in re.finditer(r"\[LAUNCH:([^\]]+)\]", response):
         commands.append({"type": "launch", "app": match.group(1).strip()})
 
-    for match in re.finditer(r"\[FACE:(on|off)\]", response, re.IGNORECASE):
-        commands.append({"type": "face", "action": match.group(1).lower()})
-
     for match in re.finditer(r"\[WIDGET:([^|\]]+)\|([^|\]]+)\|([^\]]+)\]", response):
         commands.append({
             "type": "widget",
@@ -92,10 +89,149 @@ def parse_commands(response: str, user_message: str = "") -> list[dict]:
     return commands
 
 
+def _parse_local(value: str | None):
+    """The model writes wall-clock local times; the database stores UTC."""
+    from datetime import datetime
+    from backend.services.time_utils import to_utc_naive
+
+    if not value:
+        return None
+    try:
+        return to_utc_naive(datetime.fromisoformat(value.strip()))
+    except ValueError:
+        return None
+
+
+_TITLE_STOPWORDS = frozenset(
+    "the a an my our your for with about of to and at on in meeting call task event reminder".split()
+)
+
+
+def _title_words(title: str) -> set[str]:
+    return {w for w in re.findall(r"[a-z0-9]+", (title or "").lower()) if w not in _TITLE_STOPWORDS}
+
+
+def _same_title(a: str, b: str) -> bool:
+    """"Deep learning project meeting" and "meeting for my deep learning project"
+    are the same item — the model rewords titles between turns."""
+    if a.strip().lower() == b.strip().lower():
+        return True
+    wa, wb = _title_words(a), _title_words(b)
+    if not wa or not wb:
+        return False
+    return len(wa & wb) / min(len(wa), len(wb)) >= 0.75 and len(wa & wb) >= min(2, len(wa), len(wb))
+
+
+def find_open_task(db: Session, title: str):
+    from backend.models.database import Task
+    tasks = db.query(Task).filter(Task.completed == False).order_by(Task.created_at.desc()).all()  # noqa: E712
+    return next((t for t in tasks if _same_title(t.title, title)), None)
+
+
+def find_upcoming_event(db: Session, title: str):
+    from datetime import datetime
+    from backend.models.database import CalendarEvent
+    events = (
+        db.query(CalendarEvent)
+        .filter(CalendarEvent.start_datetime >= datetime.utcnow())
+        .order_by(CalendarEvent.start_datetime.asc())
+        .all()
+    )
+    return next((e for e in events if _same_title(e.title, title)), None)
+
+
+def save_task(db: Session, title: str, due: str | None, priority: str | None = None) -> tuple[str, object]:
+    """Create or update (same title, still open) a task. Local wall-clock due → UTC.
+    Shared by [TASK:…] commands and the create_task tool so both behave the same."""
+    from backend.models.database import Task
+
+    due_utc = _parse_local(due)
+    existing = find_open_task(db, title)
+    if existing:
+        if due_utc is not None:
+            existing.due_date = due_utc
+        existing.priority = priority or existing.priority
+        return "Updated", existing
+    task = Task(title=title.strip(), due_date=due_utc, priority=priority or "medium")
+    db.add(task)
+    return "Added", task
+
+
+def save_event(db: Session, title: str, start: str | None, duration: int | str | None = 60) -> tuple[str, object] | None:
+    """Create or move (same title, upcoming) an event. Local wall-clock start → UTC."""
+    from datetime import timedelta
+    from backend.models.database import CalendarEvent
+
+    start_utc = _parse_local(start)
+    if start_utc is None:
+        return None
+    try:
+        minutes = int(duration or 60)
+    except (TypeError, ValueError):
+        minutes = 60
+    end_utc = start_utc + timedelta(minutes=minutes) if minutes > 0 else None
+    existing = find_upcoming_event(db, title)
+    if existing:
+        verb = "Updated" if existing.start_datetime == start_utc else "Moved"
+        existing.start_datetime, existing.end_datetime = start_utc, end_utc
+        return verb, existing
+    event = CalendarEvent(title=title.strip(), start_datetime=start_utc, end_datetime=end_utc)
+    db.add(event)
+    return "Added", event
+
+
+def save_and_verify(db: Session, cmd: dict) -> str:
+    """Save one task/event command, read it back from the database, and describe
+    what is actually stored — the confirmation comes from the row, not the model."""
+    from backend.models.database import CalendarEvent, Task
+    from backend.services.time_utils import describe_local
+
+    title = (cmd.get("title") or "").strip()
+    try:
+        if cmd["type"] == "task":
+            verb, row = save_task(db, title, cmd.get("due"), cmd.get("priority"))
+        else:
+            saved = save_event(db, title, cmd.get("datetime"), cmd.get("duration"))
+            if saved is None:
+                return f"I couldn't save “{title}” — I need a date and time for it."
+            verb, row = saved
+        db.commit()
+        model = Task if cmd["type"] == "task" else CalendarEvent
+        stored = db.query(model).filter(model.id == row.id).first()
+    except Exception as e:
+        db.rollback()
+        return f"I couldn't save “{title}”: {e}"
+    if stored is None:
+        return f"I couldn't save “{title}” — it didn't make it into the database."
+    if cmd["type"] == "task":
+        when = f"due {describe_local(stored.due_date)}" if stored.due_date else "with no due time"
+        return f"{verb} task “{stored.title}” — {when}."
+    return f"{verb} “{stored.title}” {'to' if verb == 'Added' else 'on'} your calendar — {describe_local(stored.start_datetime)}."
+
+
+def describe_commands(commands: list[dict], db: Session) -> str:
+    """One line per task/event command, for replies that were only a tag."""
+    from backend.services.time_utils import describe_local
+
+    lines = []
+    for cmd in commands:
+        if cmd.get("type") == "task":
+            verb = "Updated" if find_open_task(db, cmd["title"]) else "Added"
+            due = _parse_local(cmd.get("due"))
+            when = f"due {describe_local(due)}" if due else "with no due time"
+            lines.append(f"{verb} task “{cmd['title']}” — {when}.")
+        elif cmd.get("type") == "event":
+            start = _parse_local(cmd.get("datetime"))
+            if start:
+                verb = "Moved" if find_upcoming_event(db, cmd["title"]) else "Added"
+                lines.append(f"{verb} “{cmd['title']}” to your calendar — {describe_local(start)}.")
+    return "\n".join(lines)
+
+
 def execute_commands(commands: list[dict], db: Session, conversation_id: int) -> None:
     """Execute parsed bracket action commands."""
     import os
-    from datetime import datetime
+    from datetime import timedelta
     from backend.services.app_launcher import launch_app
     from backend.models.database import Task, CalendarEvent
 
@@ -125,24 +261,12 @@ def execute_commands(commands: list[dict], db: Session, conversation_id: int) ->
                 launch_app(cmd["app"])
 
             elif cmd["type"] == "task":
-                due = None
-                if cmd.get("due"):
-                    try:
-                        due = datetime.fromisoformat(cmd["due"])
-                    except Exception:
-                        pass
-                task = Task(title=cmd["title"], due_date=due, priority=cmd.get("priority", "medium"))
-                db.add(task)
+                # Same title as an open task = the user is changing it ("make it
+                # 10 PM"), not asking for a second copy.
+                save_task(db, cmd["title"], cmd.get("due"), cmd.get("priority"))
 
             elif cmd["type"] == "event":
-                try:
-                    dt = datetime.fromisoformat(cmd["datetime"])
-                    duration = int(cmd.get("duration", 60))
-                    end_dt = dt.replace(minute=dt.minute + duration) if duration else None
-                    event = CalendarEvent(title=cmd["title"], start_datetime=dt, end_datetime=end_dt)
-                    db.add(event)
-                except Exception:
-                    pass
+                save_event(db, cmd["title"], cmd.get("datetime"), cmd.get("duration"))
         except Exception:
             pass
 

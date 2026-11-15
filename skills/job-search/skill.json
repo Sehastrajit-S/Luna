@@ -1,0 +1,156 @@
+{
+  "id": "job-search",
+  "name": "Job Search",
+  "description": "Find open job postings that fit the user (from their resume or stated role), across company job systems and job boards, with live links and fit ratings.",
+  "permissions": [
+    "web"
+  ],
+  "tools": [
+    "web_search"
+  ],
+  "keywords": [
+    "job",
+    "jobs",
+    "hiring",
+    "openings",
+    "internship",
+    "career",
+    "apply",
+    "posting",
+    "postings",
+    "vacancy"
+  ],
+  "search": {
+    "order": 10,
+    "strong": true,
+    "intents": [
+      "\\b(?:jobs?|job\\s+postings?|job\\s+listings?|openings?|vacanc(?:y|ies)|internships?|co-?ops?)\\b",
+      "\\bhiring\\b",
+      "\\b(?:roles?|positions?)\\s+(?:to|i\\s+(?:can|could|should))\\s+apply\\b",
+      "\\bwhere\\s+(?:can|should)\\s+i\\s+apply\\b"
+    ],
+    "slots": {
+      "titles": "up to 3 job titles that fit the user — from the request, their files or the conversation — e.g. [\"Machine Learning Engineer\"]",
+      "location": "city, region or 'remote' the user asked for, or \"\"",
+      "seniority": "intern / entry level / junior / senior / staff if the user said so, else \"\""
+    },
+    "fan_out": "titles",
+    "grounded": [
+      "location",
+      "seniority"
+    ],
+    "requires": {
+      "any": [
+        "documents",
+        "pattern:\\b(?:engineer\\w*|developer|scientist|analyst|manager|designer|architect|intern(?:ship)?|specialist|consultant|administrator|technician|researcher|nurse|teacher|accountant|recruiter|writer|marketing|sales|product|devops|sre|ml|ai|data|software|frontend|backend|full[\\s-]?stack|security|finance)\\b"
+      ],
+      "ask": "Happy to look. What kind of role should I search for — a job title and, if it matters, a location? Or attach your resume and I'll pick roles that fit it."
+    },
+    "queries": [
+      "\"{item}\" {seniority} {location} (site:boards.greenhouse.io OR site:job-boards.greenhouse.io OR site:jobs.lever.co OR site:jobs.ashbyhq.com)",
+      "\"{item}\" {seniority} {location} (site:myworkdayjobs.com OR site:apply.workable.com OR site:jobs.smartrecruiters.com)",
+      "\"{item}\" {seniority} {location} (site:linkedin.com/jobs/view OR site:indeed.com/viewjob OR site:builtin.com/job OR site:wellfound.com/jobs OR site:dice.com/job-detail)",
+      "\"{item}\" {seniority} {location} job opening apply"
+    ],
+    "max_items": 3,
+    "per_query": 6,
+    "recency": "m",
+    "keep_urls": [
+      "greenhouse\\.io/[^/]+/jobs/\\d+",
+      "jobs\\.lever\\.co/[^/]+/[0-9a-f]{8}-",
+      "jobs\\.ashbyhq\\.com/[^/]+/[0-9a-f]{8}-",
+      "myworkdayjobs\\.com/.+/job/",
+      "apply\\.workable\\.com/[^/]+/j/",
+      "jobs\\.smartrecruiters\\.com/[^/]+/\\d{6,}",
+      "linkedin\\.com/jobs/view/",
+      "indeed\\.com/(?:viewjob|rc/clk|m/viewjob)|indeed\\.com/.*[?&]jk=",
+      "builtin\\.com/job/",
+      "wellfound\\.com/jobs/\\d+",
+      "dice\\.com/job-detail/",
+      "glassdoor\\.com/job-listing/",
+      "simplify\\.jobs/p/",
+      "jobs\\.apple\\.com/.+/details/",
+      "amazon\\.jobs/.+/jobs/\\d+",
+      "careers\\.google\\.com/jobs/results/\\d+|google\\.com/about/careers/applications/jobs/results/\\d+",
+      "ycombinator\\.com/companies/[^/]+/jobs/",
+      "hiringcafe\\.com/",
+      "/(?:careers?|jobs?|positions?|openings?)/[^?#]*(?:\\d{4,}|[0-9a-f]{8}-[0-9a-f]{4})"
+    ],
+    "drop_urls": [
+      "youtube\\.com",
+      "resume",
+      "linkedin\\.com/jobs/[a-z0-9-]+-jobs",
+      "indeed\\.com/(?:q-|jobs\\?|cmp/[^/]+/?$)",
+      "[?&]q=",
+      "/search\\b"
+    ],
+    "url_rewrites": [
+      {
+        "match": "(greenhouse\\.io/[^/]+/jobs/\\d+)/confirmation\\b",
+        "replace": "\\1"
+      }
+    ],
+    "check_links": true,
+    "dead_phrases": [
+      "no longer accepting applications",
+      "this job is no longer available",
+      "job is no longer available",
+      "this job has expired",
+      "job posting has expired",
+      "position has been filled",
+      "this position is closed",
+      "posting is no longer active",
+      "the job you are looking for is no longer"
+    ],
+    "status_apis": [
+      {
+        "match": "greenhouse\\.io/(?:embed/job_app\\?for=)?([\\w-]+)/jobs/(\\d+)",
+        "url": "https://boards-api.greenhouse.io/v1/boards/{1}/jobs/{2}"
+      },
+      {
+        "match": "jobs\\.lever\\.co/([\\w.-]+)/([0-9a-f]{8}-[0-9a-f-]{27})",
+        "url": "https://api.lever.co/v0/postings/{1}/{2}"
+      },
+      {
+        "match": "apply\\.workable\\.com/([^/?#]+)/j/([A-Z0-9]+)",
+        "url": "https://apply.workable.com/api/v2/accounts/{1}/jobs/{2}"
+      },
+      {
+        "match": "jobs\\.smartrecruiters\\.com/([^/?#]+)/(\\d{6,})",
+        "url": "https://api.smartrecruiters.com/v1/companies/{1}/postings/{2}"
+      },
+      {
+        "match": "jobs\\.ashbyhq\\.com/([^/?#]+)/([0-9a-f]{8}-[0-9a-f-]{27})",
+        "list_url": "https://api.ashbyhq.com/posting-api/job-board/{1}",
+        "ids": "jobs.id",
+        "id_group": 2
+      }
+    ],
+    "labels": [
+      {
+        "match": "greenhouse\\.io/(?:embed/job_app\\?for=)?([\\w-]+)/jobs/",
+        "name": "Company"
+      },
+      {
+        "match": "jobs\\.lever\\.co/([\\w.-]+)/",
+        "name": "Company"
+      },
+      {
+        "match": "jobs\\.ashbyhq\\.com/([^/?#]+)/",
+        "name": "Company"
+      },
+      {
+        "match": "apply\\.workable\\.com/([^/?#]+)/",
+        "name": "Company"
+      },
+      {
+        "match": "jobs\\.smartrecruiters\\.com/([^/?#]+)/",
+        "name": "Company"
+      },
+      {
+        "match": "https?://([\\w-]+)\\.wd\\d+\\.myworkdayjobs\\.com",
+        "name": "Company"
+      }
+    ]
+  }
+}

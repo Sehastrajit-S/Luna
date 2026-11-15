@@ -1,73 +1,16 @@
 [
   {
-    "message": "I'm good.",
-    "chosen": "Cool.\n\nNeed anything?",
-    "mode": "response",
-    "luna_tone": "concerned",
-    "auto_generated": true
-  },
-  {
-    "message": "play shape of you",
-    "chosen": "Playing.",
+    "message": "What's 17 times 23?",
+    "chosen": "289.",
     "mode": "response",
     "luna_tone": "warm",
     "auto_generated": true
   },
   {
-    "message": "hey",
-    "chosen": "Hey!\n\nWhat's up? Need help with anything?",
+    "message": "Remind me to repot the Zorblax cactus tomorrow at 9am.",
+    "chosen": "Got it.\n\nI'll remind you to repot the Zorblax cactus tomorrow at 9 AM.",
     "mode": "response",
-    "luna_tone": "thoughtful",
-    "auto_generated": true
-  },
-  {
-    "message": "See, there is a party here.  Here is a cake or something.  What is this party?",
-    "chosen": "Cool.\n\nA party with cake — sounds like a good time. Is it a birthday? Or maybe a celebration for something else?",
-    "mode": "response",
-    "luna_tone": "excited",
-    "auto_generated": true
-  },
-  {
-    "message": "I  You know  You know  You know  I  You  play, put on, we are good.",
-    "chosen": "You know, you know, you know — it’s like you’re trying to say something, but it’s not quite landing.\n\nAre you feeling stuck or like you’re not sure how to express what you’re thinking?",
-    "mode": "response",
-    "luna_tone": "excited",
-    "auto_generated": true
-  },
-  {
-    "message": "Do you need to do this?  Do you need to do this?",
-    "chosen": "Cool.\n\nI'm here if you need anything. Need anything?",
-    "mode": "response",
-    "luna_tone": "excited",
-    "auto_generated": true
-  },
-  {
-    "message": "I don't know.  If it's not a grand deal.  What?  I don't go.  I don't think I can do this.  Okay, let me put the button on.  Ah, this is a TV campaign.  Huh, this is not a TV campaign.  I don't know if it's a TV show.",
-    "chosen": "Cool.\n\nThat’s pretty deep. You’re talking about something fundamental to human existence, right? Like, it's not just a tool or a method — it's a core part of what we're trying to achieve. What are you referring to exactly?",
-    "mode": "response",
-    "luna_tone": "excited",
-    "auto_generated": true
-  },
-  {
-    "message": "Love you!",
-    "chosen": "You're welcome.\n\nI'm here if you need anything. Need anything?",
-    "mode": "response",
-    "luna_tone": "excited",
-    "auto_generated": true
-  },
-  {
-    "id": 9,
-    "timestamp": "2026-05-24T10:03:54.911452",
-    "mode": "response",
-    "message": "whats my latest mail",
-    "chosen": "References:\n[1] Informed Delivery® - Mail & Package Notifications | USPS - https://www.usps.com/manage/informed-delivery.htm\n[2] How to See What Packages and Mail You Have Coming Before It Arrives - https://www.postscanmail.com/blog/how-to-see-what-packages-and-mail-you-have-coming-before-it-arrives.html\n[3] How to Find Out If Your Mail Has Been Delivered or Not - PostGrid - https://www.postgrid.com/how-to-find-out-if-mail-has-been-delivered/\n[4] How to view my USPS mail online before it arrives - Quora - https://www.quora.com/How-can-I-view-my-USPS-mail-online-before-it-arrives\n[5] What Is My Email Address? How to Find, Change & Protect It - https://atomicmail.io/blog/what-is-my-email-address-how-to-find-change-protect\n[6] How to Check Your Mail Before It Arrives: Tips for Early Access - https://www.acg.aaa.com/connect/blogs/4c/home/what-is-informed-delivery",
-    "rejected": []
-  },
-  {
-    "message": "track face mode on.",
-    "chosen": "[FACE:on] Face tracking activated.",
-    "mode": "response",
-    "luna_tone": "concerned",
+    "luna_tone": "melancholic",
     "auto_generated": true
   }
 ]

@@ -16,6 +16,9 @@ from backend.services.chat_pipeline.stage_dispatch import dispatch_direct_comman
 from backend.services.chat_pipeline.stage_generate import generate
 from backend.services.chat_pipeline.stage_tools import process_tools
 from backend.services.chat_pipeline.stage_finalize import finalize
+from backend.services.chat_pipeline.stage_small_talk import answer_small_talk
+from backend.services.agent_loop import agent_loop_applies, run_agent_turn
+from backend.services.response_formatter import strip_cards
 
 logger = logging.getLogger(__name__)
 
@@ -34,38 +37,57 @@ async def run_pipeline(ctx: ChatContext, background_tasks: BackgroundTasks) -> A
     # Emit conversation meta
     yield _sse({"conversation_id": ctx.conv.id, "type": "meta"})
 
-    # ── Stage 2: Build context ────────────────────────────────────────────────
-    await build_context(ctx)
+    # ── Small talk fast path ("hi", "good morning", "thanks") ─────────────────
+    # Answered without the LLM: skips context build, dispatch, generate, tools.
+    if answer_small_talk(ctx):
+        ctx.route = "small_talk"
+    else:
+        # ── Stage 2: Build context ────────────────────────────────────────────
+        await build_context(ctx)
 
-    # Emit proactive message if any
-    if ctx.proactive_message:
-        yield _sse({"type": "proactive", "message": ctx.proactive_message})
+        # Emit proactive message if any
+        if ctx.proactive_message:
+            yield _sse({"type": "proactive", "message": ctx.proactive_message})
 
-    # ── Stage 3: Dispatch direct commands ─────────────────────────────────────
-    await dispatch_direct_commands(ctx)
+        # ── Stage 3: Dispatch direct commands ─────────────────────────────────
+        await dispatch_direct_commands(ctx)
 
-    # ── Stage 4: Generate LLM response (if not dispatched) ────────────────────
-    if not ctx.dispatched:
-        # For streaming stages, we need to flush SSE events as they're produced.
-        # The generate stage queues events in ctx.sse_events.
-        await generate(ctx)
+        # ── Stage 4: Agent loop (native tool calling, many steps) ─────────────
+        if ctx.dispatched:
+            ctx.route = f"shortcut:{ctx.direct_command_type or 'unknown'}"
+        if agent_loop_applies(ctx):
+            ctx.route = "agent_loop"
+            async for event in run_agent_turn(ctx):
+                yield _sse(event)
+            for event in ctx.sse_events:
+                yield _sse(event)
+            ctx.sse_events.clear()
 
-        # Flush any SSE events from generate (coding agent tokens, plans, etc.)
-        for event in ctx.sse_events:
-            yield _sse(event)
-        ctx.sse_events.clear()
+        # ── Stage 4 (fallback): single-shot generate + one tool call ──────────
+        elif not ctx.dispatched:
+            from backend.services.chat_pipeline.stage_generate import uses_special_agent
+            ctx.route = "special_agent" if uses_special_agent(ctx) else "single_shot"
+            # For streaming stages, we need to flush SSE events as they're produced.
+            # The generate stage queues events in ctx.sse_events.
+            await generate(ctx)
 
-    # ── Stage 5: Process tool calls ───────────────────────────────────────────
-    await process_tools(ctx)
+            # Flush any SSE events from generate (coding agent tokens, plans, etc.)
+            for event in ctx.sse_events:
+                yield _sse(event)
+            ctx.sse_events.clear()
 
-    # Flush any SSE events from tools (confirmation_required, etc.)
-    for event in ctx.sse_events:
-        yield _sse(event)
-    ctx.sse_events.clear()
+            # ── Stage 5: Process the one tool call in the reply ───────────────
+            await process_tools(ctx)
+
+            # Flush any SSE events from tools (confirmation_required, etc.)
+            for event in ctx.sse_events:
+                yield _sse(event)
+            ctx.sse_events.clear()
 
     # ── Stage 6: Stream visible response to client ────────────────────────────
     # (Only if not already streamed by generate stage for voice/coding)
-    if not (ctx.voice_streamed and not ctx.had_tool_call):
+    # The agent loop streams voice/CLI text live (reply_streamed); nothing to resend.
+    if not ctx.reply_streamed and not (ctx.voice_streamed and not ctx.had_tool_call):
         visible_events = _build_visible_response_events(ctx)
         for event in visible_events:
             yield event
@@ -93,9 +115,13 @@ def _build_visible_response_events(ctx: ChatContext) -> list[str]:
     full_response = ctx.full_response
 
     visible_text = re.sub(STRIP_RE, "", full_response).strip()
+    if ctx.cli or getattr(ctx, "voice", False):
+        visible_text = strip_cards(visible_text).strip()   # cards are for rich UIs
     if ctx.cli:
         visible_text = _plain_terminal_format(visible_text)
-    _max_parts = 10 if ctx.had_tool_call else 2
+    # Text chat shows the whole answer. Only spoken (voice) replies stay short —
+    # capping text replies silently dropped long answers after paragraph two.
+    _max_parts = 2 if getattr(ctx, "voice", False) and not ctx.had_tool_call else None
 
     refs_match = re.search(r"\n\s*References:\s*", visible_text, flags=re.IGNORECASE)
     if refs_match:

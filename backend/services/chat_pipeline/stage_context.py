@@ -9,7 +9,6 @@ from backend.services.personality import PersonalityEngine
 from backend.services.activity_tracker import ActivityTracker
 from backend.services.media_context import get_watching_context
 from backend.services.state_engine import state_engine
-from backend.services.vision import get_visual_context
 from backend.services.scheduler import proactive_queue
 from backend.services.prompt_builder import (
     build_system_prompt,
@@ -61,14 +60,27 @@ async def build_context(ctx: ChatContext) -> None:
     else:
         ctx.relevant_memories = await memory.retrieve_relevant(ctx.user_message)
 
-    recent_context = memory.get_conversation_context(ctx.conv.id, settings.max_conversation_history)
+    # The transcript itself is sent as chat messages and fitted to the context
+    # window at generation time; repeating it here only doubled its cost.
+    ctx.conversation_summary = (getattr(ctx.conv, "summary", None) or "").strip()
+    recent_context = (
+        "- The conversation so far is in the chat messages. "
+        "Older turns are summarized at the end of this prompt when they no longer fit."
+    )
     watching_context = get_watching_context().as_prompt_text()
 
     user_name = settings.user_name
 
+    # Skills load their full instructions only when relevant; include the last
+    # couple of user turns so follow-ups ("do the same for X") keep the skill.
+    _recent_user_turns = [
+        m["content"] for m in memory.get_recent_conversation(ctx.conv.id, 5) if m["role"] == "user"
+    ][-3:]
+    skill_hint = " ".join(_recent_user_turns + [ctx.user_message])
+
     # Build system prompt based on variant/mode
     if ctx.cli:
-        ctx.system_prompt = build_cli_system_prompt(user_name, recent_context)
+        ctx.system_prompt = build_cli_system_prompt(user_name, recent_context, skill_hint=skill_hint)
     elif ctx.is_business:
         ctx.system_prompt = build_business_system_prompt(
             user_name, recent_context,
@@ -76,15 +88,24 @@ async def build_context(ctx: ChatContext) -> None:
             live_data=get_live_data_section(),
         )
     else:
-        _visual = get_visual_context()
         from backend.services.spotify import spotify_service
         spotify_track = None if ctx.cli else spotify_service.get_current()
         ctx.system_prompt = build_system_prompt(
             memory, personality, activity_tracker, ctx.relevant_memories,
             user_name, recent_context, watching_context, spotify_track,
             state_context=ctx.state_context,
-            visual_context=_visual.as_prompt_text() if _visual else "",
+            skill_hint=skill_hint,
         )
+
+    # Working state (code written, files attached) re-read every turn, so it
+    # survives context fitting and summaries.
+    try:
+        from backend.services.session_state import session_state_block
+        _state = session_state_block(ctx.db, ctx.conv.id, ctx.user_message)
+        if _state:
+            ctx.system_prompt += "\n\n" + _state
+    except Exception as e:
+        logger.warning("Session state unavailable: %s", e)
 
     # Append contradiction notes if any
     _contradiction_notes = _pop_contradiction_notes(ctx.conv.id)

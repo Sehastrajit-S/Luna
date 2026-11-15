@@ -24,18 +24,19 @@ class RegistryToolTests(unittest.TestCase):
         from backend.services.tool_registry import TOOL_REGISTRY
 
         covered = {
-            "launch_app", "list_apps",
+            "launch_app", "close_app", "list_apps",
             "spotify_play", "spotify_pause", "spotify_next", "spotify_prev", "spotify_queue",
             "switch_audio",
             "create_task", "create_event",
             "take_screenshot", "find_text_on_screen", "get_active_window", "click_at", "type_text",
-            "browse_url", "web_search", "web_research", "dataset_search", "web_fetch", "web_download_file",
+            "browse_url", "web_search", "use_skill", "web_research", "dataset_search", "web_fetch", "web_download_file",
             "browser_open", "browser_read",
             "workspace_read", "workspace_write", "workspace_read_base64", "workspace_write_base64",
-            "list_skills", "create_agent_task",
+            "list_skills", "create_agent_task", "search_conversation",
             "get_volume", "set_volume", "mute_audio", "unmute_audio",
             "get_brightness", "set_brightness", "lock_screen", "turn_off_display", "sleep_system",
             "get_clipboard", "set_clipboard", "get_system_info",
+            "calculate", "save_memory", "forget_memory", "daily_news",  # test_grounding.py
             "github_list_repos", "github_list_issues", "github_create_issue", "github_comment",
             "github_list_prs", "github_get_pr", "github_summarize_user_pr", "github_create_pr",
             "slack_search_messages", "slack_channel_history",

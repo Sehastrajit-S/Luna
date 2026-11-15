@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { useStore } from './store'
-import { useCamera } from './hooks/useCamera'
 import { Sidebar } from './components/Layout/Sidebar'
 import { TitleBar } from './components/Layout/TitleBar'
 import { VoiceOrb } from './components/Voice/VoiceOrb'
@@ -16,6 +15,7 @@ import { HologramMapOverlay } from './components/Map/HologramMapOverlay'
 import { TrainView } from './components/Train/TrainView'
 import { ExtractTrainView } from './components/ExtractTrain/ExtractTrainView'
 import { SleepView } from './components/Sleep/SleepView'
+import { MomentumView } from './components/Momentum/MomentumView'
 import { AwayScreen } from './components/Layout/AwayScreen'
 import { LunaDashboardView } from './components/Luna/LunaDashboardView'
 import { DynamicWidgetOverlay } from './components/Dynamic/DynamicWidgetOverlay'
@@ -63,7 +63,6 @@ function StartupSplash({ show }: { show: boolean }) {
 
 export default function App() {
   const { activeView, setOllamaOnline, setPersonality, addMessage, viewMode, theme } = useStore()
-  useCamera()
   useProactiveStream()
   const [showSplash, setShowSplash] = useState(true)
   // Mobile: show setup until an API key is configured
@@ -172,6 +171,7 @@ export default function App() {
   }
 
   const views = {
+    focus: MomentumView,
     chat: ChatWindow,
     memory: MemoryPanel,
     calendar: CalendarView,

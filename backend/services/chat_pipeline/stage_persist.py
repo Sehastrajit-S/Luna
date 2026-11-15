@@ -9,6 +9,7 @@ from backend.models.database import Conversation, Message
 from backend.services.personality import assess_user_sentiment
 from backend.services.shared_context import get_active_conversation_id, set_active_conversation_id
 from backend.services.chat_pipeline.context import ChatContext
+from backend.services.files import link_to_message
 
 logger = logging.getLogger(__name__)
 
@@ -46,5 +47,11 @@ async def persist(ctx: ChatContext) -> None:
     conv.message_count += 1
     db.commit()
     ctx.user_msg_obj = user_msg
+
+    if ctx.attachment_ids:
+        # Only files that were actually linked count from here on (unknown ids,
+        # or files claimed by another conversation, are dropped).
+        linked = link_to_message(db, ctx.attachment_ids, conv.id, user_msg.id)
+        ctx.attachment_ids = [a.id for a in linked]
 
     logger.debug("Persisted user message (conv=%d, msg_count=%d)", conv.id, conv.message_count)

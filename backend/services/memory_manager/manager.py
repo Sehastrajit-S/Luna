@@ -16,6 +16,15 @@ from backend.services.llm import ollama
 
 logger = logging.getLogger(__name__)
 
+_FORGET_STOPWORDS = frozenset({
+    "the", "and", "you", "your", "know", "about", "everything", "anything", "all", "that", "this", "what",
+    "forget", "remember", "memory", "memories", "please", "user", "user's", "luna", "my", "mine", "stuff",
+    "things", "info", "information", "details", "delete", "erase", "remove", "wipe", "from",
+    # Never expand a forget to every fact sharing a day or month name.
+    "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "january", "february",
+    "march", "april", "may", "june", "july", "august", "september", "october", "november", "december",
+})
+
 
 class MemoryManager:
     def __init__(self, db: Session):
@@ -29,8 +38,14 @@ class MemoryManager:
                 path=settings.chroma_path,
                 settings=ChromaSettings(anonymized_telemetry=False),
             )
+            # Scope the collection name by embedding provider so switching
+            # providers (different embedding dimensions) can never collide
+            # with an existing collection again — "luna_memories" stays the
+            # default/Ollama collection so existing history is untouched.
+            provider = settings.embedding_provider.strip().lower()
+            name = "luna_memories" if provider != "openai-compatible" else "luna_memories_openai"
             self._collection = self._client.get_or_create_collection(
-                name="luna_memories",
+                name=name,
                 metadata={"hnsw:space": "cosine"},
             )
         return self._collection
@@ -283,12 +298,20 @@ class MemoryManager:
             distances = results.get("distances",  [[]])[0]
             metas     = results.get("metadatas",  [[]])[0]
 
+            # A deleted or forgotten fact keeps its vector until cleaned up;
+            # only facts still active in the database may be recalled.
+            fact_ids = [m.get("fact_id") for m in metas if m and m.get("type") == "fact" and m.get("fact_id")]
+            active_ids = {row.id for row in self.db.query(Fact.id).filter(
+                Fact.id.in_(fact_ids), Fact.is_active == True)} if fact_ids else set()
+
             now         = datetime.utcnow().timestamp()
             THIRTY_DAYS = 30 * 86_400
 
             scored: list[tuple[str, float, float]] = []
             for doc, dist, meta in zip(docs, distances, metas):
                 if dist >= 0.8:
+                    continue
+                if (meta or {}).get("type") == "fact" and meta.get("fact_id") not in active_ids:
                     continue
                 semantic   = 1.0 - dist
                 created    = meta.get("created_at", now - THIRTY_DAYS)
@@ -307,6 +330,55 @@ class MemoryManager:
         except (chromadb.errors.ChromaError, OSError, ValueError) as e:
             logger.warning("Memory retrieval failed, using fallback facts: %s", e)
             return {"short_term": [], "long_term": self._fallback_facts()}
+        except Exception as e:
+            # Embedding providers can fail independently of chat (for example
+            # a hosted provider rate limit). Never block the conversation on
+            # optional semantic memory.
+            logger.warning("Memory provider failed, using fallback facts: %s", e)
+            return {"short_term": [], "long_term": self._fallback_facts()}
+
+    def forget(self, about: str) -> list[str]:
+        """Deactivate every memory about a subject and drop its vectors.
+
+        Matches facts by the subject's words, then by the names those facts
+        mention ("my dog" finds "User has a dog named Quillon", and "Quillon"
+        then finds "Quillon is 4 years old"). Episode summaries that mention
+        them are removed from semantic memory too. Returns what was forgotten.
+        """
+        words = [w for w in _re.findall(r"[a-z0-9']+", (about or "").lower())
+                 if len(w) > 2 and w not in _FORGET_STOPWORDS]
+        if not words:
+            return []
+        active = self.db.query(Fact).filter(Fact.is_active == True).all()
+
+        def mentions(text: str, terms: set[str]) -> bool:
+            low = text.lower()
+            return any(_re.search(rf"\b{_re.escape(t)}\w*\b", low) for t in terms)
+
+        terms = set(words)
+        matched = [f for f in active if mentions(f.content, terms)]
+        # Names inside the matched facts (not their first word, which is capitalised anyway).
+        names = {n.lower() for f in matched for n in _re.findall(r"\b[A-Z][a-z]{2,}\b", f.content.split(" ", 1)[-1])
+                 if n.lower() not in _FORGET_STOPWORDS}
+        if names:
+            terms |= names
+            matched = [f for f in active if mentions(f.content, terms)]
+        for fact in matched:
+            fact.is_active = False
+        self.db.commit()
+
+        try:
+            col = self._get_collection()
+            ids = [f"fact_{f.id}" for f in matched]
+            got = col.get(include=["documents", "metadatas"])
+            for doc_id, doc, meta in zip(got.get("ids", []), got.get("documents", []), got.get("metadatas", [])):
+                if doc_id not in ids and (meta or {}).get("type") != "fact" and mentions(doc or "", terms):
+                    ids.append(doc_id)
+            if ids:
+                col.delete(ids=ids)
+        except Exception as e:                   # SQL already forgot; vectors are filtered by is_active
+            logger.warning("Could not remove forgotten memories from the vector store: %s", e)
+        return [f.content for f in matched]
 
     def _fallback_facts(self) -> list[str]:
         now   = datetime.utcnow()

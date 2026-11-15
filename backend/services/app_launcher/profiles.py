@@ -615,12 +615,6 @@ APP_PROFILES = {
         "mac":     ["app:Maps"],
         "linux":   ["xdg-open:https://maps.google.com"],
     },
-    "camera": {
-        "aliases": ["camera", "webcam", "photo booth"],
-        "windows": ["microsoft.windows.camera:"],
-        "mac":     ["app:Photo Booth"],
-        "linux":   ["cheese", "kamoso", "guvcview"],
-    },
     "photos": {
         "aliases": ["photos", "pictures", "image viewer"],
         "windows": ["ms-photos:"],
@@ -874,7 +868,6 @@ COMMON_APP_ALIASES = {
     "snipping tool": "SnippingTool",
     "clock": "ms-clock:",
     "photos": "ms-photos:",
-    "camera": "microsoft.windows.camera:",
     "maps": "bingmaps:",
     "store": "ms-windows-store:",
     "sticky notes": STICKY_NOTES_TARGET,

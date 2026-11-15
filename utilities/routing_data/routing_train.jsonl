@@ -1,0 +1,215 @@
+{"text": "crew mode: find three cheap flights to Tokyo and write up the pros and cons", "crew": true, "coding_agent": false, "save_request": false, "multi_step": true}
+{"text": "use multiple agents for this — one researches, one writes, one critiques", "crew": true, "coding_agent": false, "save_request": false, "multi_step": true}
+{"text": "get a team of agents to brainstorm names for my startup", "crew": true, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "have your sub-agents split up the research on electric SUVs", "crew": true, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "run this in crew mode: compare Postgres, MySQL and SQLite for my app", "crew": true, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "I want a multi-agent run on my business plan: critique it and suggest fixes", "crew": true, "coding_agent": false, "save_request": false, "multi_step": true}
+{"text": "dispatch agents to gather reviews for the Sony XM6 and summarize them", "crew": true, "coding_agent": false, "save_request": false, "multi_step": true}
+{"text": "spawn a couple of agents to debate whether I should learn Rust or Go", "crew": true, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "orchestrate agents to write a blog post about home composting", "crew": true, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "let the agent swarm handle my conference trip planning", "crew": true, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "use the crew to put together a study plan for the GRE", "crew": true, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "delegate to sub-agents: one checks prices, one checks reviews, then pick a laptop", "crew": true, "coding_agent": false, "save_request": false, "multi_step": true}
+{"text": "multiple agents please — research the history of the transistor and draft a timeline", "crew": true, "coding_agent": false, "save_request": false, "multi_step": true}
+{"text": "coordinate your agents to review my cover letter and rewrite it", "crew": true, "coding_agent": false, "save_request": false, "multi_step": true}
+{"text": "turn on crew mode and analyze these survey results", "crew": true, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "can a group of agents plan my wedding budget?", "crew": true, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "sub-agents: summarize each chapter of the book and then write an overall review", "crew": true, "coding_agent": false, "save_request": false, "multi_step": true}
+{"text": "put a multi-agent team on finding me a used car under 15k", "crew": true, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "use crew mode to investigate why my sales dropped last month", "crew": true, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "assign agents to research, outline and write a talk on climate tech", "crew": true, "coding_agent": false, "save_request": false, "multi_step": true}
+{"text": "what's the crew size on a Boeing 737?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "my agent at the real estate firm never calls back, what should I do?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "who plays the secret agent in the new Bond film?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "research electric SUVs and summarize the top three", "crew": false, "coding_agent": false, "save_request": false, "multi_step": true}
+{"text": "plan my trip to Lisbon and book nothing yet, just ideas", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "write a test plan for a login page", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "check if my code has any obvious bugs: for i in range(len(x)): print(x[i+1])", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "compute my BMI and recommend a target weight", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "gather the key points from this email and draft a reply", "crew": false, "coding_agent": false, "save_request": false, "multi_step": true}
+{"text": "what's the code for the wifi you told me earlier?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "quick test: can you hear me?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "review this paragraph for grammar", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "organize my thoughts about the job offer into pros and cons", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "investigate why my houseplant leaves are turning yellow", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "build me a workout routine for three days a week", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "configure my week so I have mornings free", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "open server.py in my project and add logging to the startup", "crew": false, "coding_agent": true, "save_request": false, "multi_step": false}
+{"text": "list the files in my workspace", "crew": false, "coding_agent": true, "save_request": false, "multi_step": false}
+{"text": "in my repo, delete the old migrations folder", "crew": false, "coding_agent": true, "save_request": false, "multi_step": false}
+{"text": "run npm test in the project and fix whatever breaks", "crew": false, "coding_agent": true, "save_request": false, "multi_step": true}
+{"text": "update requirements.txt to pin fastapi to 0.115", "crew": false, "coding_agent": true, "save_request": false, "multi_step": false}
+{"text": "grep my codebase for hard-coded API keys", "crew": false, "coding_agent": true, "save_request": false, "multi_step": false}
+{"text": "create a tests folder in the workspace with a test for the add function", "crew": false, "coding_agent": true, "save_request": false, "multi_step": false}
+{"text": "look at config.yaml in my project and tell me what port it uses", "crew": false, "coding_agent": true, "save_request": false, "multi_step": false}
+{"text": "move helpers.py into a utils package in my repo", "crew": false, "coding_agent": true, "save_request": false, "multi_step": false}
+{"text": "write the endpoint into routes/links.py in my project", "crew": false, "coding_agent": true, "save_request": false, "multi_step": false}
+{"text": "save that code as rate_limiter.py in my workspace", "crew": false, "coding_agent": true, "save_request": false, "multi_step": false}
+{"text": "check the Dockerfile in my repo for problems", "crew": false, "coding_agent": true, "save_request": false, "multi_step": false}
+{"text": "add type hints to every function in models.py", "crew": false, "coding_agent": true, "save_request": false, "multi_step": false}
+{"text": "run the script in my workspace and show me the output", "crew": false, "coding_agent": true, "save_request": false, "multi_step": false}
+{"text": "rename getUser to fetchUser across my codebase", "crew": false, "coding_agent": true, "save_request": false, "multi_step": false}
+{"text": "open package.json and bump the version to 1.2.0", "crew": false, "coding_agent": true, "save_request": false, "multi_step": false}
+{"text": "find where we call the payments API in the project", "crew": false, "coding_agent": true, "save_request": false, "multi_step": false}
+{"text": "fix the import error in app/main.py", "crew": false, "coding_agent": true, "save_request": false, "multi_step": false}
+{"text": "create a .gitignore for my python project", "crew": false, "coding_agent": true, "save_request": false, "multi_step": false}
+{"text": "clean up unused imports in all the files under src/", "crew": false, "coding_agent": true, "save_request": false, "multi_step": false}
+{"text": "write a Makefile in my workspace with test and lint targets", "crew": false, "coding_agent": true, "save_request": false, "multi_step": false}
+{"text": "in the workspace, split cli.py into two modules", "crew": false, "coding_agent": true, "save_request": false, "multi_step": false}
+{"text": "read the error log in logs/app.log and tell me what failed", "crew": false, "coding_agent": true, "save_request": false, "multi_step": false}
+{"text": "commit my changes in the repo with a good message", "crew": false, "coding_agent": true, "save_request": false, "multi_step": false}
+{"text": "show me the diff of what changed in my project today", "crew": false, "coding_agent": true, "save_request": false, "multi_step": false}
+{"text": "generate a README for the repo based on its files", "crew": false, "coding_agent": true, "save_request": false, "multi_step": false}
+{"text": "add a docstring to each class in services/billing.py", "crew": false, "coding_agent": true, "save_request": false, "multi_step": false}
+{"text": "download the dataset and put it in my workspace data folder", "crew": false, "coding_agent": true, "save_request": false, "multi_step": true}
+{"text": "open the notebook analysis.ipynb in my project and fix the broken cell", "crew": false, "coding_agent": true, "save_request": false, "multi_step": false}
+{"text": "set up a virtualenv in my project and install the requirements", "crew": false, "coding_agent": true, "save_request": false, "multi_step": true}
+{"text": "go through the repo and list every TODO with its file name", "crew": false, "coding_agent": true, "save_request": false, "multi_step": false}
+{"text": "explain what React hooks are", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "write a Python class for a bank account with deposit and withdraw", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "how do I read a JSON file in Node.js?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "show me an example of a SQL join", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "what does the async keyword do in JavaScript?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "write a regex that matches US phone numbers", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "is Express.js still a good choice in 2026?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "debug this: TypeError: undefined is not a function at line 12", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "give me a Go snippet that reads a file line by line", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "what's the difference between a process and a thread?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "write a Dockerfile for a FastAPI app", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "how should I structure a Flask project?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "convert this Python loop to a list comprehension: for x in a: b.append(x*2)", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "what are the new features in Python 3.14?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "explain the files a typical Django project has", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "how do I use D3.js to draw a bar chart?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "write unit tests for a function that reverses a string", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "refactor this function to be shorter: def f(x): if x>0: return True else: return False", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "what's a good folder structure for a React app?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "should I use a monorepo for my three services?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "how does git rebase differ from merge?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "write the SQLAlchemy model for a users table", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "remind me to pay rent on the 1st", "crew": false, "coding_agent": false, "save_request": true, "multi_step": false}
+{"text": "add dinner with Sam on Saturday at 7 to my calendar", "crew": false, "coding_agent": false, "save_request": true, "multi_step": false}
+{"text": "put 'renew passport' on my to-do list", "crew": false, "coding_agent": false, "save_request": true, "multi_step": false}
+{"text": "set an alarm for 6:30 tomorrow", "crew": false, "coding_agent": false, "save_request": true, "multi_step": false}
+{"text": "remember I have a doctor's appointment Thursday at 11", "crew": false, "coding_agent": false, "save_request": true, "multi_step": false}
+{"text": "make a task to email the professor by Friday", "crew": false, "coding_agent": false, "save_request": true, "multi_step": false}
+{"text": "book a slot on my calendar for gym every Monday at 6", "crew": false, "coding_agent": false, "save_request": true, "multi_step": false}
+{"text": "I need to call the bank tomorrow morning, remind me", "crew": false, "coding_agent": false, "save_request": true, "multi_step": false}
+{"text": "log a task: fix the leaking tap", "crew": false, "coding_agent": false, "save_request": true, "multi_step": false}
+{"text": "move my 3pm meeting to 4", "crew": false, "coding_agent": false, "save_request": true, "multi_step": false}
+{"text": "change the dentist reminder to Wednesday", "crew": false, "coding_agent": false, "save_request": true, "multi_step": false}
+{"text": "push the standup to 10:30", "crew": false, "coding_agent": false, "save_request": true, "multi_step": false}
+{"text": "actually make that 8 pm", "crew": false, "coding_agent": false, "save_request": true, "multi_step": false}
+{"text": "keep a note that the car insurance is due on the 20th", "crew": false, "coding_agent": false, "save_request": true, "multi_step": false}
+{"text": "schedule a reminder to stretch every two hours", "crew": false, "coding_agent": false, "save_request": true, "multi_step": false}
+{"text": "I have an interview next Tuesday at 9, put it in", "crew": false, "coding_agent": false, "save_request": true, "multi_step": false}
+{"text": "can you remind me to take the chicken out of the freezer at 5", "crew": false, "coding_agent": false, "save_request": true, "multi_step": false}
+{"text": "add 'call grandma' for Sunday afternoon", "crew": false, "coding_agent": false, "save_request": true, "multi_step": false}
+{"text": "don't let me forget the team lunch on Friday at noon", "crew": false, "coding_agent": false, "save_request": true, "multi_step": false}
+{"text": "put the project deadline, October 3rd, on my calendar", "crew": false, "coding_agent": false, "save_request": true, "multi_step": false}
+{"text": "remind me in an hour to check the oven", "crew": false, "coding_agent": false, "save_request": true, "multi_step": false}
+{"text": "add buy batteries and buy tape to my list", "crew": false, "coding_agent": false, "save_request": true, "multi_step": false}
+{"text": "new task: prepare slides for Monday", "crew": false, "coding_agent": false, "save_request": true, "multi_step": false}
+{"text": "calendar: parent-teacher meeting on the 14th at 5:30", "crew": false, "coding_agent": false, "save_request": true, "multi_step": false}
+{"text": "note my flight home on the 22nd at 6am", "crew": false, "coding_agent": false, "save_request": true, "multi_step": false}
+{"text": "set a reminder for mom's birthday next month", "crew": false, "coding_agent": false, "save_request": true, "multi_step": false}
+{"text": "can you save a reminder to cancel the free trial before it renews", "crew": false, "coding_agent": false, "save_request": true, "multi_step": false}
+{"text": "put a recurring task to water plants every Wednesday", "crew": false, "coding_agent": false, "save_request": true, "multi_step": false}
+{"text": "reschedule gym to Thursday", "crew": false, "coding_agent": false, "save_request": true, "multi_step": false}
+{"text": "remind me what we decided about the budget", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "remind me why we chose Postgres", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "remind me how the token bucket works", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "what's on my to-do list?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "do I have anything scheduled tomorrow?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "how many tasks are overdue?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "delete everything from my calendar", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "add a login endpoint to the API design", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "add more detail to the second paragraph", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "add salt to taste, then what?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "schedule is a python library, how do I use it?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "how do cron schedules work?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "the meeting went long and I'm exhausted", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "my calendar app keeps crashing, any fix?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "write a function that schedules tasks with a priority queue", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "save this recipe idea for later: miso butter pasta", "crew": false, "coding_agent": false, "save_request": true, "multi_step": false}
+{"text": "I remember the meeting was fun", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "note that git stores objects by hash, right?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "set up a new react project, what are the steps?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "put simply, what is a monad?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "log files keep growing, how do I rotate them?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "look up tomorrow's weather and remind me to bring an umbrella if it rains", "crew": false, "coding_agent": false, "save_request": true, "multi_step": true}
+{"text": "find a sushi place nearby and add dinner there Friday at 8 to my calendar", "crew": false, "coding_agent": false, "save_request": true, "multi_step": true}
+{"text": "check the train times to Boston and set a reminder 30 minutes before the 5pm one", "crew": false, "coding_agent": false, "save_request": true, "multi_step": true}
+{"text": "open YouTube and search for lo-fi study music", "crew": false, "coding_agent": false, "save_request": false, "multi_step": true}
+{"text": "mute the volume and lock the screen", "crew": false, "coding_agent": false, "save_request": false, "multi_step": true}
+{"text": "search for the best budget mechanical keyboard and then send me the link", "crew": false, "coding_agent": false, "save_request": false, "multi_step": true}
+{"text": "read my latest email and draft a polite reply saying yes", "crew": false, "coding_agent": false, "save_request": false, "multi_step": true}
+{"text": "translate this to French and then shorten it", "crew": false, "coding_agent": false, "save_request": false, "multi_step": true}
+{"text": "look up the population of Canada, then compare it with Australia", "crew": false, "coding_agent": false, "save_request": false, "multi_step": true}
+{"text": "turn up the brightness and play my focus playlist", "crew": false, "coding_agent": false, "save_request": false, "multi_step": true}
+{"text": "find the nearest pharmacy and give me directions", "crew": false, "coding_agent": false, "save_request": false, "multi_step": true}
+{"text": "download the PDF, summarize it, then list three action items", "crew": false, "coding_agent": false, "save_request": false, "multi_step": true}
+{"text": "check my GitHub PRs and comment on the oldest one", "crew": false, "coding_agent": false, "save_request": false, "multi_step": true}
+{"text": "copy this to my clipboard and open Notepad", "crew": false, "coding_agent": false, "save_request": false, "multi_step": true}
+{"text": "first explain OAuth, then write a small example", "crew": false, "coding_agent": false, "save_request": false, "multi_step": true}
+{"text": "search the news for Apple earnings and summarize them in three bullets", "crew": false, "coding_agent": false, "save_request": false, "multi_step": true}
+{"text": "look up the recipe for ramen eggs and add the ingredients to my shopping list", "crew": false, "coding_agent": false, "save_request": true, "multi_step": true}
+{"text": "get my calendar for tomorrow and move anything before 10 to the afternoon", "crew": false, "coding_agent": false, "save_request": true, "multi_step": true}
+{"text": "switch to my headphones and play the next song", "crew": false, "coding_agent": false, "save_request": false, "multi_step": true}
+{"text": "write a short poem about rain, then turn it into a haiku", "crew": false, "coding_agent": false, "save_request": false, "multi_step": true}
+{"text": "find my resume in the workspace and then rewrite the summary section", "crew": false, "coding_agent": true, "save_request": false, "multi_step": true}
+{"text": "research standing desks under 400 dollars and send the best one to my email", "crew": false, "coding_agent": false, "save_request": false, "multi_step": true}
+{"text": "close Chrome and open VS Code", "crew": false, "coding_agent": false, "save_request": false, "multi_step": true}
+{"text": "pull the latest from my repo and run the tests", "crew": false, "coding_agent": true, "save_request": false, "multi_step": true}
+{"text": "summarize the article and save the summary to notes.md in my workspace", "crew": false, "coding_agent": true, "save_request": false, "multi_step": true}
+{"text": "search black and white film cameras", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "compare iPhone and Pixel cameras", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "research and write", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "salt and pepper squid recipe", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "rock and roll history in a paragraph", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "what's the difference between TCP and UDP?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "pros and cons of remote work", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "find me a good book on stoicism", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "explain supply and demand", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "play Bohemian Rhapsody", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "how are you doing today?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "thanks, that was helpful", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "good night", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "what time is it in Tokyo?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "how much is 18% of 240?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "suggest a name for my golden retriever", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "what's my battery level?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "is it going to rain today?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "I feel anxious about tomorrow", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "write a short birthday message for my sister", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "open Spotify", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "turn the volume up", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "what's the capital of Australia?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "recommend a sci-fi movie", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "how do vaccines work?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "summarize the plot of Dune", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "what did we talk about yesterday?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "search for jobs in data engineering near Austin", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "find papers on diffusion models from 2026", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "check my inbox", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "list my GitHub repos", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "Here's my essay, can you give feedback? [long essay text about climate change and cities]", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "Error log: task scheduler failed; event queue full; retry scheduled at 10:00. What's wrong?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "My notes: meeting with design team, add icons, schedule review. Can you tidy these notes?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "what does 'add to calendar' do in Google Calendar invites?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "should I schedule my runs in the morning or evening?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "remind me later", "crew": false, "coding_agent": false, "save_request": true, "multi_step": false}
+{"text": "what was the name of the function you wrote for the encoder?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "use the same schema as before but add a created_at column", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "rewrite the redirect endpoint to use the cache module", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "make the rate limiter allow 20 requests per minute", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "give me the final file layout of the project", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "design the ECS deployment with autoscaling", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "how would we add expiring links?", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "security review: top 3 risks and fixes", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "Our new project is called Orca.", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "add a task to read the quarterly report tonight at 9 pm", "crew": false, "coding_agent": false, "save_request": true, "multi_step": false}
+{"text": "Write a Python function that validates an email address with a regex.", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "We are calling the service Snip and it runs on FastAPI.", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "write a function that parses dates, with tests", "crew": false, "coding_agent": false, "save_request": false, "multi_step": false}
+{"text": "set a reminder for the dentist at 3 pm tomorrow", "crew": false, "coding_agent": false, "save_request": true, "multi_step": false}

@@ -24,6 +24,7 @@ class ChatContext:
     volume: float = 0.0
     speech_speed: float = 0.0
     speech_duration: float = 0.0
+    attachment_ids: list[str] = field(default_factory=list)  # files attached to this message
 
     # ── Resolved by persist stage ─────────────────────────────────────────────
     conv: Any = None  # Conversation ORM object
@@ -33,6 +34,9 @@ class ChatContext:
     system_prompt: str = ""
     messages: list[dict] = field(default_factory=list)
     history: list[dict] = field(default_factory=list)
+    conversation_summary: str = ""  # rolling summary of turns older than history
+    small_talk: bool = False  # answered by the small-talk fast path (no LLM)
+    document_context: str = ""  # attachment text sent to the model this turn (for link checks)
     prev_luna: Optional[str] = None
     relevant_memories: dict = field(default_factory=lambda: {"short_term": [], "long_term": []})
     state_context: str = ""
@@ -40,7 +44,7 @@ class ChatContext:
 
     # ── Resolved by dispatch stage (fast-path commands) ───────────────────────
     dispatched: bool = False  # True if a fast-path handler fully resolved the response
-    direct_command_type: Optional[str] = None  # e.g. "spotify", "launch", "face", "gmail"
+    direct_command_type: Optional[str] = None  # e.g. "spotify", "launch", "gmail"
 
     # ── Resolved by generate stage ────────────────────────────────────────────
     full_response: str = ""
@@ -49,6 +53,11 @@ class ChatContext:
     had_tool_call: bool = False
     tool_succeeded: bool = False
     task_completed: bool = False
+    reply_streamed: bool = False  # the agent loop already streamed the final text (voice/CLI)
+    tools_used: list[str] = field(default_factory=list)  # tools the agent loop called, in order
+    tool_outputs: list[str] = field(default_factory=list)  # their results (links in them count as verified)
+    tool_errors: int = 0          # tool calls in the agent loop that failed or were declined
+    route: str = ""               # which path answered: small_talk, shortcut:<type>, agent_loop, crew, coding_agent, single_shot
 
     # ── SSE events to emit (collected by stages, flushed by finalize) ─────────
     sse_events: list[dict] = field(default_factory=list)

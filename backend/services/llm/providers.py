@@ -5,6 +5,7 @@ from typing import AsyncGenerator
 import httpx
 
 from backend.config import settings
+from backend.services.llm.context_window import _clip_middle, estimate_tokens, fit_context
 
 _TIMEOUT = httpx.Timeout(connect=10.0, read=300.0, write=30.0, pool=5.0)
 
@@ -30,17 +31,19 @@ async def _stream_ollama(
     num_predict: int | None = None,
     temperature: float = 0.7,
 ) -> AsyncGenerator[str, None]:
-    full_messages = [{"role": "system", "content": system_prompt}] + messages
-    # Adaptive context: size to the actual prompt + headroom instead of always
-    # allocating 8192 tokens of KV cache. Reduces TTFT by 20-40% on short turns.
-    prompt_tokens = sum(len(m.get("content", "")) for m in full_messages) // 3
-    ctx = num_ctx or max(512, min(8192, prompt_tokens + 1024))
+    # Fixed window (Ollama reloads the model when num_ctx changes) and an
+    # explicit fit so Ollama never truncates the prompt on its own. Callers that
+    # already fitted (the chat pipeline) pass through unchanged.
+    ctx = num_ctx or settings.llm_context_window
+    max_output = num_predict or settings.llm_max_output_tokens
+    fitted = fit_context(system_prompt, messages, context_window=ctx, max_output_tokens=max_output)
+    full_messages = [{"role": "system", "content": fitted.system_prompt}] + fitted.messages
     options = {
         "temperature": temperature,
         "top_p": 0.9,
         "repeat_penalty": 1.1,
         "num_ctx": ctx,
-        "num_predict": num_predict or 1024,
+        "num_predict": max_output,
     }
     async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
         async with client.stream(
@@ -288,10 +291,13 @@ async def _stream_mistral(
 # ── non-streaming completions ─────────────────────────────────────────────────
 
 async def _complete_ollama(prompt: str, system: str, temperature: float) -> str:
+    ctx = settings.llm_context_window
+    max_output = settings.llm_max_output_tokens
+    room = ctx - max_output - 256 - estimate_tokens(system)
     messages = []
     if system:
         messages.append({"role": "system", "content": system})
-    messages.append({"role": "user", "content": prompt})
+    messages.append({"role": "user", "content": _clip_middle(prompt, max(512, room))})
     async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
         r = await client.post(
             f"{settings.ollama_base_url}/api/chat",
@@ -300,7 +306,7 @@ async def _complete_ollama(prompt: str, system: str, temperature: float) -> str:
                 "messages": messages,
                 "stream": False,
                 "think": False,
-                "options": {"temperature": temperature},
+                "options": {"temperature": temperature, "num_ctx": ctx, "num_predict": max_output},
             },
         )
         r.raise_for_status()

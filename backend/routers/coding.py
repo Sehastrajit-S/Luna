@@ -77,6 +77,15 @@ async def get_coding_settings():
         "mistral_model": settings.mistral_model,
         "cohere_model": settings.cohere_model,
         "nvidia_nim_model": settings.nvidia_nim_model,
+        "tts_provider": settings.tts_provider,
+        "stt_provider": settings.stt_provider,
+        "elevenlabs_voice_id": settings.elevenlabs_voice_id,
+        "elevenlabs_tts_model": settings.elevenlabs_tts_model,
+        "elevenlabs_stt_model": settings.elevenlabs_stt_model,
+        "voice_providers": {
+            "edge":       {"label": "Local (edge-tts / Whisper)", "configured": True},
+            "elevenlabs": {"label": "ElevenLabs (cloud)",         "configured": bool(settings.elevenlabs_api_key)},
+        },
         "providers": {
             "ollama":           {"label": "Ollama (local)",      "configured": True},
             "anthropic":        {"label": "Anthropic Claude",    "configured": bool(settings.anthropic_api_key)},
@@ -95,6 +104,8 @@ _SETTINGS_ALLOWED = {
     "llm_provider",
     "ollama_model", "anthropic_model", "groq_model", "google_model",
     "openai_model", "mistral_model", "cohere_model", "nvidia_nim_model",
+    "tts_provider", "stt_provider",
+    "elevenlabs_voice_id", "elevenlabs_tts_model", "elevenlabs_stt_model",
 }
 
 

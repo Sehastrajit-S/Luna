@@ -1,0 +1,20 @@
+{
+  "name": "luna-desktop",
+  "version": "0.1.0",
+  "description": "L.U.N.A. desktop shell — reference architecture",
+  "author": "L.U.N.A. contributors",
+  "license": "MIT",
+  "main": "src/main/index.js",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win --config build/electron-builder.yml --publish never",
+    "build:dir": "electron-builder --dir --config build/electron-builder.yml"
+  },
+  "devDependencies": {
+    "electron": "32.3.3",
+    "electron-builder": "^25.0.0"
+  },
+  "dependencies": {
+    "electron-updater": "^6.6.2"
+  }
+}

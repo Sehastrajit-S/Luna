@@ -1,7 +1,7 @@
 # Dependencies
 node_modules/
 frontend/node_modules/
-electron/node_modules/
+desktop-app/node_modules/
 docs-site/node_modules/
 
 # Build artifacts (rebuilt inside Docker)
@@ -20,8 +20,15 @@ data/
 .gitignore
 .vscode/
 
-# Electron desktop shell (not needed in Docker)
-electron/
+# Desktop shell: only its renderer + resources are served as the web UI
+desktop-app/node_modules/
+desktop-app/build/
+desktop-app/src/main/
+desktop-app/src/preload/
+dist-electron/
+
+# Mobile React app (built locally for Capacitor, not served by Docker)
+frontend/
 
 # Docs site (not served by the backend)
 docs-site/

@@ -7,6 +7,7 @@ from backend.services.app_launcher.profiles import (
     STICKY_NOTES_TARGET,
 )
 from backend.services.app_launcher.launcher import (
+    close_app,
     find_app,
     launch_app,
     launch_sticky_notes,
@@ -20,6 +21,7 @@ __all__ = [
     "STICKY_NOTES_TARGET",
     "STICKY_NOTES_APP_IDS",
     "STICKY_NOTES_PROTOCOLS",
+    "close_app",
     "find_app",
     "launch_app",
     "launch_sticky_notes",

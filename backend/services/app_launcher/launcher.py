@@ -219,6 +219,70 @@ def launch_app(name: str) -> tuple[bool, str]:
         return False, f"Couldn't launch '{name}': {e}"
 
 
+def _process_name_candidates(query: str) -> list[str]:
+    """Resolve a query to candidate running-process name stems (normalized, no extension)."""
+    candidates: set[str] = set()
+    for target in _profile_targets(query):
+        if target.startswith("app:"):
+            candidates.add(target[4:])
+        elif target.startswith("app_path:"):
+            candidates.add(Path(target[9:]).stem)
+        elif not (target.endswith(":") or target.startswith("ms-")
+                  or target.startswith("shell:") or target.startswith("xdg-open:")):
+            candidates.add(target.split()[0])
+    candidates.add(query)
+    return [_normalize(c) for c in candidates if c]
+
+
+def close_app(name: str) -> tuple[bool, str]:
+    """Close a running app by name. Returns (success, message)."""
+    query = _normalize(name)
+    candidates = _process_name_candidates(query)
+
+    try:
+        import psutil
+
+        procs = list(psutil.process_iter(["pid", "name"]))
+        matched = [p for p in procs if _normalize(p.info.get("name") or "") in candidates]
+        if not matched:
+            matched = [
+                p for p in procs
+                if any(c and c in _normalize(p.info.get("name") or "") for c in candidates)
+            ]
+        if not matched:
+            return False, f"Couldn't find a running app matching '{name}'."
+
+        closed = 0
+        for proc in matched:
+            try:
+                proc.terminate()
+                closed += 1
+            except Exception:
+                continue
+        if closed:
+            return True, f"Closed {name}"
+        return False, f"Found '{name}' running but couldn't close it."
+    except ImportError:
+        pass
+
+    for cand in candidates:
+        try:
+            if IS_WINDOWS:
+                result = subprocess.run(
+                    ["taskkill", "/IM", f"{cand}.exe", "/F"],
+                    capture_output=True, text=True, timeout=5,
+                    creationflags=subprocess.CREATE_NO_WINDOW,
+                )
+            else:
+                result = subprocess.run(["pkill", "-i", cand], capture_output=True, timeout=5)
+            if result.returncode == 0:
+                return True, f"Closed {name}"
+        except Exception:
+            continue
+
+    return False, f"Couldn't find a running app matching '{name}'."
+
+
 def list_known_apps() -> list[str]:
     from backend.services.app_launcher.discovery import (
         _get_desktop_apps,

@@ -10,7 +10,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from backend.config import settings
+from backend.config import DATA_DIR, settings
 from backend.models.database import get_db
 from backend.services.memory_manager import MemoryManager
 from backend.services.personality import PersonalityEngine
@@ -19,7 +19,7 @@ from backend.services.media_context import get_watching_context
 
 router = APIRouter(prefix="/api/train", tags=["train"])
 
-PAIRS_FILE = Path("data/rlhf_pairs.json")
+PAIRS_FILE = DATA_DIR / "rlhf_pairs.json"
 
 _RESPONSE_SYSTEM = """You are generating training data for Luna, a personal AI companion.
 Given a user message, write exactly 3 short response alternatives Luna might give.

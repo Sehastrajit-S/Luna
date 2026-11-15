@@ -1,27 +1,21 @@
 """
-Request ID + structured logging middleware.
+Request ID middleware.
 
 Attaches a unique request_id to every request, adds it to response headers,
-and configures Python's logging to include it in every log line.
-
-Config (.env):
-  log_level=INFO          # DEBUG | INFO | WARNING | ERROR
-  log_format=text         # text | json  (json is machine-readable for log aggregation)
+and logs request completion. Logging setup itself (handlers, formatters,
+file rotation) lives in backend.core.logging — configure_logging() is
+re-exported here for backward compatibility.
 """
 import logging
-import logging.config
 import time
 import uuid
-from contextvars import ContextVar
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from backend.config import settings
+from backend.core.logging import configure_logging, request_id_var  # noqa: F401
 
-# ── Context variable for request correlation ──────────────────────────────────
-# Accessible from any async/sync code in the same request context.
-request_id_var: ContextVar[str] = ContextVar("request_id", default="-")
+__all__ = ["RequestIDMiddleware", "configure_logging", "request_id_var"]
 
 
 class RequestIDMiddleware(BaseHTTPMiddleware):
@@ -63,68 +57,3 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         )
 
         return response
-
-
-# ── Logging configuration ─────────────────────────────────────────────────────
-
-class RequestIDFilter(logging.Filter):
-    """Injects request_id into every log record."""
-
-    def filter(self, record: logging.LogRecord) -> bool:
-        record.request_id = request_id_var.get("-")
-        return True
-
-
-def configure_logging() -> None:
-    """
-    Configure structured logging for the entire backend.
-
-    Call this once at application startup (before any loggers are used).
-    Reads log_level and log_format from settings.
-    """
-    log_level = getattr(settings, "log_level", "INFO").upper()
-    log_format = getattr(settings, "log_format", "text").lower()
-
-    if log_format == "json":
-        # JSON format for production log aggregation (ELK, CloudWatch, etc.)
-        fmt = '{"time":"%(asctime)s","level":"%(levelname)s","logger":"%(name)s","request_id":"%(request_id)s","message":"%(message)s"}'
-    else:
-        # Human-readable format for development
-        fmt = "%(asctime)s | %(levelname)-7s | %(name)-30s | [%(request_id)s] %(message)s"
-
-    logging.config.dictConfig({
-        "version": 1,
-        "disable_existing_loggers": False,
-        "filters": {
-            "request_id": {
-                "()": RequestIDFilter,
-            },
-        },
-        "formatters": {
-            "default": {
-                "format": fmt,
-                "datefmt": "%Y-%m-%d %H:%M:%S",
-            },
-        },
-        "handlers": {
-            "console": {
-                "class": "logging.StreamHandler",
-                "stream": "ext://sys.stdout",
-                "formatter": "default",
-                "filters": ["request_id"],
-            },
-        },
-        "root": {
-            "level": log_level,
-            "handlers": ["console"],
-        },
-        # Quiet down noisy libraries
-        "loggers": {
-            "uvicorn": {"level": "INFO"},
-            "uvicorn.access": {"level": "WARNING"},
-            "httpx": {"level": "WARNING"},
-            "httpcore": {"level": "WARNING"},
-            "chromadb": {"level": "WARNING"},
-            "sqlalchemy.engine": {"level": "WARNING" if not settings.db_echo else "INFO"},
-        },
-    })

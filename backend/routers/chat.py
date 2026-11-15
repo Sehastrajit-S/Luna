@@ -6,16 +6,19 @@ This router only handles HTTP concerns: request parsing, SSE framing, and respon
 """
 import logging
 
-from fastapi import APIRouter, Depends, BackgroundTasks, Request
+from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException, Request
 from fastapi.responses import StreamingResponse, JSONResponse
 from sqlalchemy.orm import Session
 
 from backend.config import settings
-from backend.models.database import get_db, Conversation
+from backend.models.database import (
+    get_db, Attachment, Conversation, ConversationArtifact, Episode, Fact, FeedbackLog, PlanRecord, Trace,
+)
 from backend.models.schemas import ChatRequest, ConversationOut, ConversationDetail, StatusResponse
 from backend.services.permission_manager import permission_manager
 from backend.services.shared_context import get_active_conversation_id, set_active_conversation_id
 from backend.services.chat_pipeline import ChatContext, run_pipeline
+from backend.services.files import delete_attachment_files
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +59,7 @@ async def chat_stream(
         volume=_volume,
         speech_speed=_speech_speed,
         speech_duration=_speech_dur,
+        attachment_ids=req.attachment_ids,
     )
 
     # Run the pipeline as an SSE stream
@@ -77,14 +81,39 @@ async def chat_stream(
 # ── Conversation CRUD endpoints ───────────────────────────────────────────────
 
 
+@router.get("/activity")
+def chat_activity(year: int | None = None, month: int | None = None, db: Session = Depends(get_db)):
+    """Messages per local day for the dashboard heatmap, with each day's chat topics."""
+    from datetime import datetime as _dt
+    from backend.services.activity_calendar import month_activity
+
+    now = _dt.now()
+    year, month = year or now.year, month or now.month
+    if not (1 <= month <= 12 and 2000 <= year <= 2100):
+        raise HTTPException(status_code=422, detail="Invalid month")
+    return month_activity(db, year, month)
+
+
 @router.get("/conversations", response_model=list[ConversationOut])
 def list_conversations(limit: int = 20, db: Session = Depends(get_db)):
-    return (
+    conversations = (
         db.query(Conversation)
         .order_by(Conversation.started_at.desc())
         .limit(limit)
         .all()
     )
+    # Older conversations may not have a generated title. Use the first user
+    # message as a readable display title without changing stored data.
+    for conversation in conversations:
+        if not conversation.title:
+            first_user_message = next(
+                (message for message in conversation.messages if message.role == "user"),
+                None,
+            )
+            if first_user_message:
+                title = " ".join(first_user_message.content.split())
+                conversation.title = title[:52] + ("…" if len(title) > 52 else "")
+    return conversations
 
 
 @router.get("/context")
@@ -113,15 +142,36 @@ async def set_shared_context(request: Request, db: Session = Depends(get_db)):
 
 @router.get("/conversations/{conversation_id}", response_model=ConversationDetail)
 def get_conversation(conversation_id: int, db: Session = Depends(get_db)):
-    return db.query(Conversation).filter_by(id=conversation_id).first()
+    conv = db.query(Conversation).filter_by(id=conversation_id).first()
+    if conv is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return conv
 
 
 @router.delete("/conversations/{conversation_id}")
 def delete_conversation(conversation_id: int, db: Session = Depends(get_db)):
     conv = db.query(Conversation).filter_by(id=conversation_id).first()
     if conv:
+        # Other tables reference the conversation (SQLite enforces the FKs), so
+        # deleting it alone failed with an IntegrityError. Learned facts,
+        # feedback, traces and plans outlive the chat — just unlink them; the
+        # episode summary belongs to this conversation only.
+        db.query(Fact).filter_by(source_conversation_id=conversation_id).update(
+            {Fact.source_conversation_id: None}, synchronize_session=False)
+        for model in (FeedbackLog, Trace, PlanRecord):
+            db.query(model).filter_by(conversation_id=conversation_id).update(
+                {model.conversation_id: None}, synchronize_session=False)
+        db.query(Episode).filter_by(conversation_id=conversation_id).delete(synchronize_session=False)
+        db.query(ConversationArtifact).filter_by(conversation_id=conversation_id).delete(synchronize_session=False)
+        attachment_ids = [a.id for a in db.query(Attachment.id).filter_by(conversation_id=conversation_id)]
+        db.query(Attachment).filter_by(conversation_id=conversation_id).delete(synchronize_session=False)
         db.delete(conv)
         db.commit()
+        for attachment_id in attachment_ids:
+            try:
+                delete_attachment_files(attachment_id)
+            except OSError as e:
+                logger.warning("Could not remove files for attachment %s: %s", attachment_id, e)
         if get_active_conversation_id() == conversation_id:
             set_active_conversation_id(None)
     return StatusResponse(status="ok")

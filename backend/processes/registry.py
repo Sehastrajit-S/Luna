@@ -25,6 +25,7 @@ PROCESS_MODULES = [
     "backend.processes.memory_maintenance.process",
     "backend.processes.proactive_followups.process",
     "backend.processes.voice_runtime.process",
+    "backend.processes.spotify_activity.process",
 ]
 
 

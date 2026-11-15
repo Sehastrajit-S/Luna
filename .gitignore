@@ -29,8 +29,11 @@ data/*.db-wal
 data/*.sqlite
 data/*.sqlite3
 data/shared_context.json
+data/local_api_token
 data/*.log
 data/*.pid
+data/models/
+data/desktop-app/
 data/*-dev.pid
 data/backups/
 data/workspace/
@@ -82,3 +85,13 @@ scripts/screenshots/
 
 .vercel
 .env*.local
+
+# pip cache/temp kept on E: for this checkout
+.pip-cache/
+.pip-tmp/
+
+# Local scratch and runtime user data
+.tmp/
+data/uploads/
+data/decisions/
+data/*.backup-*.json

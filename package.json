@@ -8,24 +8,22 @@
   },
   "workspaces": [
     "frontend",
-    "electron",
     "docs-site"
   ],
   "scripts": {
     "luna": "node ./cli/luna.mjs",
-    "install:all": "npm install --workspace=frontend --workspace=electron",
-    "start": "npm start --workspace=electron",
-    "dev": "concurrently -n vite,electron -c cyan,magenta \"npm run dev --workspace=frontend\" \"npm start --workspace=electron\"",
-    "dev:lan": "concurrently -n vite,electron -c cyan,magenta \"npm run dev --workspace=frontend -- --host 0.0.0.0\" \"npm start --workspace=electron\"",
-    "web": "concurrently -n api,vite -c green,cyan \"node ./cli/luna.mjs backend\" \"npm run dev --workspace=frontend\"",
-    "web:lan": "concurrently -n api,vite -c green,cyan \"node ./cli/luna.mjs backend\" \"npm run dev --workspace=frontend -- --host 0.0.0.0\"",
+    "install:all": "npm install --workspace=frontend",
+    "start": "npm run web",
+    "dev": "npm run web",
+    "dev:lan": "npm run web:lan",
+    "web": "node ./cli/luna.mjs web",
+    "web:lan": "node ./cli/luna.mjs web:lan",
+    "mobile:dev": "concurrently -n api,vite -c green,cyan \"node ./cli/luna.mjs backend\" \"npm run dev --workspace=frontend -- --host 0.0.0.0\"",
     "tunnel": "npx --yes cloudflared tunnel --url http://localhost:5173",
     "tunnel:lt": "npx --yes localtunnel --port 5173",
     "build": "npm run build --workspace=frontend",
     "vercel-build": "npm --prefix docs-site run build",
     "assets:logo": "node utilities/scripts/build-logo-assets.mjs",
-    "dist": "npm run assets:logo && npm run build --workspace=frontend && npm run build:win --workspace=electron",
-    "installer": "npm run dist",
     "docs": "npm --prefix docs-site run dev",
     "docs:build": "npm --prefix docs-site run build",
     "docs:start": "npm --prefix docs-site run start",
@@ -46,7 +44,6 @@
     "concurrently": "^9.0.0"
   },
   "dependencies": {
-    "@mediapipe/face_mesh": "^0.4.1633559619",
     "@types/react-grid-layout": "^1.3.6",
     "react-grid-layout": "^2.2.3"
   }

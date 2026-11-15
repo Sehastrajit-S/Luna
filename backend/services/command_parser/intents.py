@@ -2,6 +2,9 @@
 import re
 
 
+_LAUNCH_TRAILING_FILLERS = re.compile(r"\s+(?:for me|please|now|then|right now|already)$")
+
+
 def parse_user_launch_request(message: str) -> str | None:
     text = " ".join(message.lower().strip().split())
     patterns = [
@@ -14,7 +17,11 @@ def parse_user_launch_request(message: str) -> str | None:
         if not match:
             continue
         app_name = match.group(1).strip(" .?!")
-        app_name = re.sub(r"\s+(?:for me|please)$", "", app_name).strip()
+        while True:
+            stripped = _LAUNCH_TRAILING_FILLERS.sub("", app_name).strip()
+            if stripped == app_name:
+                break
+            app_name = stripped
         if app_name and len(app_name) <= 80:
             return app_name
     return None

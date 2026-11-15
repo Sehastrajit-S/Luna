@@ -53,7 +53,8 @@ _THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL)
 
 
 def _clean_for_channel(text: str) -> str:
-    text = _THINK_RE.sub("", text)
+    from backend.services.response_formatter import strip_cards
+    text = strip_cards(_THINK_RE.sub("", text))
     text = _UI_CMD_RE.sub("", text)
     # Collapse excess whitespace/newlines
     text = re.sub(r"\n{3,}", "\n\n", text).strip()

@@ -2,6 +2,23 @@
   "id": "dataset-builder",
   "name": "Dataset Builder",
   "description": "Find, cite, download, or synthesize datasets with provenance.",
-  "permissions": ["web", "workspace"],
-  "tools": ["dataset_search", "web_research", "web_fetch", "web_download_file", "workspace_write", "workspace_write_base64"]
+  "permissions": [
+    "web",
+    "workspace"
+  ],
+  "tools": [
+    "dataset_search",
+    "web_research",
+    "web_fetch",
+    "web_download_file",
+    "workspace_write",
+    "workspace_write_base64"
+  ],
+  "keywords": [
+    "dataset",
+    "datasets",
+    "data set",
+    "training data",
+    "kaggle"
+  ]
 }

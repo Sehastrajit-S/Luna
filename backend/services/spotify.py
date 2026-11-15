@@ -94,7 +94,17 @@ class SpotifyService:
         return self._oauth.get_authorize_url()
 
     def handle_callback(self, code: str):
-        if self._oauth:
+        if not self._oauth:
+            return
+        try:
+            self._oauth.get_access_token(code, as_dict=False)
+        except Exception:
+            # spotipy validates/refreshes any existing cached token before it
+            # exchanges the fresh code — if that old token was revoked or is
+            # from a different app registration, the whole call blows up
+            # before the new code is ever used. Clear the stale cache and
+            # retry once with just the fresh code.
+            TOKEN_CACHE.unlink(missing_ok=True)
             self._oauth.get_access_token(code, as_dict=False)
 
     def _get_token(self) -> str | None:

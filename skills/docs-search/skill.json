@@ -1,0 +1,27 @@
+{
+  "id": "docs-search",
+  "name": "Tech Docs & Errors",
+  "description": "Look up official documentation, API references, changelogs, and fixes for error messages (Stack Overflow, GitHub issues).",
+  "permissions": ["web"],
+  "tools": ["web_search"],
+  "keywords": ["docs", "documentation", "api", "error", "exception", "traceback", "changelog", "install", "library", "package", "sdk"],
+  "search": {
+    "order": 60,
+    "strong": false,
+    "intents": [
+      "\\b(?:error|exception|traceback|stack\\s*trace|segfault|errno|TypeError|ValueError|KeyError|ModuleNotFoundError|ENOENT|EADDRINUSE|npm\\s+ERR)\\b",
+      "\\b(?:docs?|documentation|api\\s+reference|changelog|release\\s+notes|migration\\s+guide|sdk)\\s+(?:for|of|on)\\b"
+    ],
+    "slots": {
+      "technology": "the library, framework, language or tool, with version if given, or \"\"",
+      "question": "the concrete question or the exact error message, shortened to its key part"
+    },
+    "queries": [
+      "{technology} {question} (site:stackoverflow.com OR site:github.com)",
+      "{technology} {question} official documentation"
+    ],
+    "max_items": 1,
+    "per_query": 6,
+    "drop_urls": ["youtube\\.com"]
+  }
+}

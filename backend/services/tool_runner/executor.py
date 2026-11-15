@@ -12,7 +12,7 @@ async def execute_tool_call(tc: dict, db: Session, conversation_id: int) -> str:
     tool_name = tc.get("tool", "")
     args = tc.get("args", {})
 
-    from backend.services.app_launcher import launch_app, list_known_apps
+    from backend.services.app_launcher import launch_app, close_app, list_known_apps
     from backend.services.spotify import spotify_service
     from backend.services.screen_perception import execute_screen_tool
     from backend.models.database import Task, CalendarEvent
@@ -22,9 +22,42 @@ async def execute_tool_call(tc: dict, db: Session, conversation_id: int) -> str:
             success, msg = launch_app(args.get("app", ""))
             return "opened successfully" if success else f"failed: {msg}"
 
+        elif tool_name == "close_app":
+            success, msg = close_app(args.get("app", ""))
+            return "closed successfully" if success else f"failed: {msg}"
+
         elif tool_name == "list_apps":
             apps = list_known_apps()
             return json.dumps({"apps": apps[:200], "count": len(apps)})
+
+        elif tool_name == "save_memory":
+            # Read back from the database: the reply says what is stored, not what was meant.
+            from backend.models.database import Fact
+            from backend.services.memory_manager import MemoryManager
+            fact = " ".join(str(args.get("fact", "")).split())
+            if len(fact) < 4:
+                return "Error: nothing to remember — give the fact as a sentence."
+            fact_id = await MemoryManager(db).store_fact(
+                fact, str(args.get("category") or "personal"), conversation_id=conversation_id,
+                confidence=1.0, importance=0.8, source="explicit")
+            stored = db.query(Fact).filter_by(id=fact_id, is_active=True).first()
+            return f"Saved to memory: {stored.content}" if stored else "Error: the memory didn't save."
+
+        elif tool_name == "forget_memory":
+            from backend.services.memory_manager import MemoryManager
+            about = str(args.get("about", "")).strip()
+            forgotten = MemoryManager(db).forget(about)
+            if not forgotten:
+                return f"Nothing in memory matched “{about}”, so there was nothing to forget."
+            return f"Forgot {len(forgotten)} memor{'y' if len(forgotten) == 1 else 'ies'}: " + "; ".join(forgotten)
+
+        elif tool_name == "daily_news":
+            from backend.services.dashboard.news import daily_news
+            return await daily_news(str(args.get("topic") or ""), args.get("limit") or 8)
+
+        elif tool_name == "calculate":
+            from backend.services.calculator import calculate
+            return calculate(str(args.get("expression", "")))
 
         elif tool_name == "spotify_play":
             ok = spotify_service.play(args.get("query") or None)
@@ -81,29 +114,17 @@ async def execute_tool_call(tc: dict, db: Session, conversation_id: int) -> str:
                 os.startfile(url)
             return f"opened {url}"
 
-        elif tool_name == "create_task":
-            due = None
-            if args.get("due"):
-                try:
-                    due = datetime.fromisoformat(args["due"])
-                except Exception:
-                    pass
-            task = Task(title=args.get("title", "task"), due_date=due, priority=args.get("priority", "medium"))
-            db.add(task)
-            db.commit()
-            return f"task '{args.get('title')}' created"
-
-        elif tool_name == "create_event":
-            try:
-                dt = datetime.fromisoformat(args.get("datetime", ""))
-                dur = int(args.get("duration", 60))
-                end = dt.replace(minute=dt.minute + dur) if dur else None
-                ev = CalendarEvent(title=args.get("title", "event"), start_datetime=dt, end_datetime=end)
-                db.add(ev)
-                db.commit()
-                return f"event '{args.get('title')}' created"
-            except Exception as e:
-                return f"event creation failed: {e}"
+        elif tool_name in ("create_task", "create_event"):
+            # Same save path as [TASK:…]/[EVENT:…]: local time → UTC, same title
+            # updates, and the confirmation is read back from the database.
+            from backend.services.command_parser.commands import save_and_verify
+            if tool_name == "create_task":
+                cmd = {"type": "task", "title": str(args.get("title") or "task"),
+                       "due": args.get("due"), "priority": args.get("priority")}
+            else:
+                cmd = {"type": "event", "title": str(args.get("title") or "event"),
+                       "datetime": args.get("datetime"), "duration": args.get("duration", 60)}
+            return save_and_verify(db, cmd)
 
         elif tool_name in ("take_screenshot", "get_active_window", "find_text_on_screen", "click_at", "type_text"):
             result = execute_screen_tool(tool_name, args)
@@ -114,6 +135,14 @@ async def execute_tool_call(tc: dict, db: Session, conversation_id: int) -> str:
         elif tool_name == "web_search":
             from backend.services.web_tools import web_search
             return await web_search(args.get("query", ""))
+
+        elif tool_name == "use_skill":
+            # Generic: runs whichever skills/<id> is named (or best matches).
+            from backend.services.skill_runtime import get_search_skill, pick_search_skill, run_search_skill, run_web_search
+            request = str(args.get("request") or args.get("query") or "")
+            skill = get_search_skill(str(args.get("skill", ""))) or pick_search_skill(request)
+            run = await (run_search_skill(skill, request) if skill else run_web_search(request))
+            return run.answer
 
         elif tool_name == "web_research":
             from backend.services.web_tools import web_research
@@ -174,6 +203,10 @@ async def execute_tool_call(tc: dict, db: Session, conversation_id: int) -> str:
             record_audit("tool_call", tool=tool_name, args={"path": args.get("path", "")}, result=json.dumps(result), conversation_id=conversation_id)
             return f"workspace binary file written: {result['path']}"
 
+        elif tool_name == "search_conversation":
+            from backend.services.session_state import search_conversation
+            return search_conversation(db, conversation_id, str(args.get("query", "")))
+
         elif tool_name == "list_skills":
             from backend.services.skill_manager import list_skills
             return json.dumps(list_skills())[:4000]
@@ -207,7 +240,13 @@ async def execute_tool_call(tc: dict, db: Session, conversation_id: int) -> str:
                 "get_system_info":  lambda: system_controls.get_system_info(),
             }
             result = dispatch[tool_name]()
-            return json.dumps(result)[:4000] if isinstance(result, dict) else str(result)
+            # Controls return (ok, value): report failures as errors, successes as the value.
+            if isinstance(result, tuple) and len(result) == 2 and isinstance(result[0], bool):
+                ok, value = result
+                if not ok:
+                    return f"Error: {value}"
+                result = value if value is not None else "done"
+            return json.dumps(result)[:4000] if isinstance(result, (dict, list)) else str(result)
 
         elif tool_name.startswith("github_"):
             from backend.services import github

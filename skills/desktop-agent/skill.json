@@ -2,6 +2,25 @@
   "id": "desktop-agent",
   "name": "Desktop Agent",
   "description": "Plan and execute controlled desktop tasks through Luna's permission system.",
-  "permissions": ["workspace", "browser", "screen", "confirm-risky-actions"],
-  "tools": ["create_agent_task", "workspace_write", "workspace_read", "take_screenshot", "get_active_window"]
+  "permissions": [
+    "workspace",
+    "browser",
+    "screen",
+    "confirm-risky-actions"
+  ],
+  "tools": [
+    "create_agent_task",
+    "workspace_write",
+    "workspace_read",
+    "take_screenshot",
+    "get_active_window"
+  ],
+  "keywords": [
+    "click",
+    "open app",
+    "desktop",
+    "window",
+    "screen",
+    "automate"
+  ]
 }

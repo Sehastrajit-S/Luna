@@ -105,11 +105,6 @@ export function useChat() {
           } else if (event.type === 'commands') {
             const awayCmds: any[] = event.commands?.filter((c: any) => c.type === 'away') ?? []
             if (awayCmds.some((c: any) => c.action === 'on')) useStore.getState().enterAwayMode()
-            const faceCmd = event.commands?.find((c: any) => c.type === 'face')
-            if (faceCmd) {
-              if (faceCmd.action === 'on') useStore.getState().enableFaceTracking()
-              else useStore.getState().disableFaceTracking()
-            }
             const widgetCmd = event.commands?.find((c: any) => c.type === 'widget')
             if (widgetCmd) {
               useStore.getState().openDynamicWidget({

@@ -6,6 +6,7 @@ from backend.services.app_launcher import (
     STICKY_NOTES_TARGET,
     STICKY_NOTES_APP_IDS,
     STICKY_NOTES_PROTOCOLS,
+    close_app,
     find_app,
     launch_app,
     launch_sticky_notes,

@@ -1,11 +1,12 @@
 import { motion } from 'framer-motion'
-import { MessageCircle, Brain, Calendar, Activity, Plus, Trash2, Clock, Dna, Moon, FlaskConical, ShieldCheck } from 'lucide-react'
+import { MessageCircle, Brain, Calendar, Activity, Plus, Trash2, Clock, Dna, Moon, FlaskConical, ShieldCheck, Target } from 'lucide-react'
 import { useStore } from '../../store'
 import { useChat } from '../../hooks/useChat'
 import { View } from '../../types'
 import { format } from 'date-fns'
 import { useEffect, useState } from 'react'
 import { api } from '../../api/client'
+import { MomentumCard } from '../Momentum/MomentumCard'
 
 const MOOD_EMOJI: Record<string, string> = {
   happy: '😊', playful: '😄', thoughtful: '🤔', excited: '✨',
@@ -13,6 +14,7 @@ const MOOD_EMOJI: Record<string, string> = {
 }
 
 const NAV: { id: View; icon: typeof MessageCircle; label: string }[] = [
+  { id: 'focus',      icon: Target,        label: 'Focus' },
   { id: 'chat',       icon: MessageCircle, label: 'Chat' },
   { id: 'memory',     icon: Brain,         label: 'Memory' },
   { id: 'calendar',   icon: Calendar,      label: 'Calendar' },
@@ -106,6 +108,9 @@ export function Sidebar() {
           </button>
         ))}
       </nav>
+
+      {/* Momentum focus card */}
+      <MomentumCard />
 
       {/* New conversation */}
       <div className="px-3 mb-2">

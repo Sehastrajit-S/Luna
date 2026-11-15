@@ -8,14 +8,14 @@ Searches the web, fetches relevant pages, compares sources, and returns a direct
 
 ## When it activates
 
-When you ask for current information, comparisons, sourced explanations, company or product facts, policy details, or anything that needs cited context.
+Only when your message starts with `/research`. Ordinary questions, even ones about current events or asking for sources, get a normal answer (with a quick web search if needed) and never trigger this skill.
 
 ## Example prompts
 
-- "What are the differences between GPT-4o and Claude Opus?"
-- "What is the latest on the EU AI Act?"
-- "Compare the top three open-source embedding models"
-- "Who founded Mistral AI and when?"
+- "/research differences between GPT-4o and Claude Opus"
+- "/research the latest on the EU AI Act"
+- "/research compare the top three open-source embedding models"
+- "/research who founded Mistral AI and when"
 
 ## Tools used
 
