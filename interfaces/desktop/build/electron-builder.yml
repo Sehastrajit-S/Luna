@@ -1,0 +1,34 @@
+appId: com.luna.desktop
+productName: Luna
+copyright: Copyright (c) 2026 L.U.N.A. contributors
+directories:
+  buildResources: ../resources
+  output: ../../dist-electron
+npmRebuild: false
+files:
+  - src/**/*
+  - ../resources/**
+extraResources:
+  - from: ../../frontend/dist
+    to: frontend/dist
+    filter: ["**/*"]
+  - from: ../../backend
+    to: backend
+    filter: ["**/*", "!__pycache__/**", "!*.pyc"]
+win:
+  artifactName: Luna-Setup-${version}.${ext}
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: zip
+      arch: [x64]
+  icon: ../resources/icon.ico
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  deleteAppDataOnUninstall: false
+  runAfterFinish: true
+  uninstallDisplayName: L.U.N.A.
