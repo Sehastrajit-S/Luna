@@ -45,6 +45,7 @@ class Candidate:
     model: str
     params_b: float
     tools: bool
+    always_thinks: bool = False       # thinking-only model: think=false is ignored, reasoning leaks into content
 
 
 @dataclass
@@ -52,6 +53,7 @@ class SelectorState:
     source: str = "static"            # static | ollama | fallback | manual
     server: str = ""
     model: str = ""
+    always_thinks: bool = False
     checked_at: float = 0.0
     candidates: list[Candidate] = field(default_factory=list)
     unreachable: list[str] = field(default_factory=list)
@@ -60,7 +62,7 @@ class SelectorState:
 state = SelectorState()
 _lock = asyncio.Lock()
 _last_failure_probe = 0.0
-_capability_cache: dict[tuple[str, str], list[str] | None] = {}
+_capability_cache: dict[tuple[str, str], tuple[list[str] | None, bool]] = {}
 _startup_ollama_url = settings.ollama_base_url
 
 
@@ -180,21 +182,37 @@ def pick_best(candidates: list[Candidate]) -> Candidate | None:
     return min(candidates, key=lambda c: rank_key(c, preference, order))
 
 
-async def _capabilities(client: httpx.AsyncClient, server: str, model: str, digest: str) -> list[str] | None:
+def _thinking_only(caps: list[str] | None, template: str) -> bool:
+    """A thinking model whose template cannot switch thinking off (e.g. Qwen3 *-Thinking-2507).
+
+    Hybrid models (qwen3:8b) render an empty think block when think=false, via a
+    `not $.Think` / `not .Think` branch in their template; thinking-only ones don't.
+    """
+    if not caps or "thinking" not in caps:
+        return False
+    return not re.search(r"not\s+\$?\.Think\b", template or "")
+
+
+async def _capabilities(client: httpx.AsyncClient, server: str, model: str, digest: str) -> tuple[list[str] | None, bool]:
+    """(capabilities or None if unknown, thinking-only?)"""
     key = (server, digest or model)
     if key in _capability_cache:
         return _capability_cache[key]
     caps: list[str] | None = None
+    template = ""
     try:
         r = await client.post(f"{server}/api/show", json={"model": model})
         if r.status_code == 200:
-            raw = r.json().get("capabilities")
+            data = r.json()
+            raw = data.get("capabilities")
             caps = [str(c) for c in raw] if isinstance(raw, list) else None
+            template = str(data.get("template") or "")
     except (httpx.HTTPError, ValueError) as e:
         logger.debug("capability probe failed for %s on %s: %s", model, server, e)
-        return None  # don't cache transient failures
-    _capability_cache[key] = caps
-    return caps
+        return None, False  # don't cache transient failures
+    result = (caps, _thinking_only(caps, template))
+    _capability_cache[key] = result
+    return result
 
 
 async def probe_server(client: httpx.AsyncClient, server: str) -> list[Candidate]:
@@ -207,7 +225,7 @@ async def probe_server(client: httpx.AsyncClient, server: str) -> list[Candidate
         if not name:
             continue
         details = m.get("details") or {}
-        caps = await _capabilities(client, server, name, str(m.get("digest") or ""))
+        caps, always_thinks = await _capabilities(client, server, name, str(m.get("digest") or ""))
         if caps is None:  # older Ollama without capabilities: infer
             if _looks_like_embedding(name, details):
                 continue
@@ -216,7 +234,7 @@ async def probe_server(client: httpx.AsyncClient, server: str) -> list[Candidate
             if "completion" not in caps:
                 continue
             tools = "tools" in caps
-        found.append(Candidate(server, name, parse_params(details.get("parameter_size", "")), tools))
+        found.append(Candidate(server, name, parse_params(details.get("parameter_size", "")), tools, always_thinks))
     return found
 
 
@@ -227,10 +245,12 @@ def _apply(best: Candidate | None, manual: bool = False) -> None:
         settings.ollama_base_url = best.server
         settings.ollama_model = best.model
         state.source, state.server, state.model = "ollama", best.server, best.model
+        state.always_thinks = best.always_thinks
     else:
         fallback = settings.llm_fallback_provider.strip().lower()
         settings.llm_provider = fallback
         state.source, state.server = "fallback", ""
+        state.always_thinks = False
         state.model = settings.openai_model if fallback == "openai-compatible" else ""
     if manual:
         state.source = "manual"
@@ -270,7 +290,9 @@ def _apply_choice() -> None:
     """Apply the manual override if there is one, else the best of the last probe."""
     override = load_override()
     if override and override["mode"] == "ollama":
-        _apply(Candidate(override["server"], str(override.get("model") or ""), 0.0, True), manual=True)
+        server, model = override["server"], str(override.get("model") or "")
+        known = next((c for c in state.candidates if c.server == server and c.model == model), None)
+        _apply(known or Candidate(server, model, 0.0, True), manual=True)
     elif override:
         _apply(None, manual=True)
     else:
@@ -281,8 +303,25 @@ def enabled() -> bool:
     return bool(settings.llm_auto_select)
 
 
+def ollama_think_options(model: str, num_predict: int) -> tuple[bool, int]:
+    """(think flag, num_predict) for an Ollama chat call.
+
+    Thinking-only models ignore think=false and write their reasoning into the
+    reply, so ask for think=true (Ollama then returns it in a separate field we
+    drop) and leave room for the reasoning on top of the answer budget.
+    """
+    if enabled() and state.always_thinks and model == state.model and settings.llm_provider.strip().lower() == "ollama":
+        return True, num_predict + max(0, int(settings.llm_thinking_budget or 0))
+    return False, num_predict
+
+
+def is_model_missing(status_code: int, body: str = "") -> bool:
+    """Ollama answers 404 '{"error":"model 'x' not found"}' after a model is removed."""
+    return status_code == 404 and ("not found" in body or not body)
+
+
 def on_connect_error() -> None:
-    """Called when an Ollama call cannot connect: re-select right away (debounced)."""
+    """Called when the chosen Ollama server or model is gone: re-select right away (debounced)."""
     global _last_failure_probe
     if not enabled():
         return
@@ -320,11 +359,12 @@ def status() -> dict:
         "source": state.source,
         "server": state.server,
         "model": state.model,
+        "always_thinks": state.always_thinks,
         "checked_at": state.checked_at,
         "unreachable": list(state.unreachable),
         "candidates": [
             {"server": c.server, "server_label": server_label(c.server), "model": c.model,
-             "params_b": c.params_b, "tools": c.tools}
+             "params_b": c.params_b, "tools": c.tools, "always_thinks": c.always_thinks}
             for c in sorted(state.candidates, key=lambda c: rank_key(c, _split(settings.llm_model_preference), servers()))
         ],
     }

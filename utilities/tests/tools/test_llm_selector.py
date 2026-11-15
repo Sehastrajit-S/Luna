@@ -26,7 +26,7 @@ def _fake_ollama(models: dict[str, list[dict]], down: set[str] = frozenset()):
             name = json.loads(request.content)["model"]
             for m in served:
                 if m["name"] == name:
-                    return httpx.Response(200, json={"capabilities": m["caps"]})
+                    return httpx.Response(200, json={"capabilities": m["caps"], "template": m.get("template", "")})
             return httpx.Response(404, json={"error": "not found"})
         return httpx.Response(404)
     return httpx.MockTransport(handler)
@@ -173,6 +173,30 @@ class LLMSelectorTests(unittest.TestCase):
         self.assertEqual(self.selector.servers(), [self.PC, self.FRIEND])
         self.assertEqual(self.selector.server_label(self.PC), "My PC")
         self.assertEqual(self.selector.server_label(self.FRIEND), "10.0.0.2")
+
+    HYBRID = "{{ if (and $.IsThinkSet (not $.Think)) }}<think>\n\n</think>{{ end }}"
+    THINKING_ONLY = "{{ if $.IsThinkSet }}<think>{{ .Thinking }}</think>{{ end }}<think>"
+
+    def test_thinking_only_model_gets_think_true_and_extra_budget(self) -> None:
+        self._select({self.PC: [{"name": "qwen3:4b", "size": "4.0B", "caps": ["completion", "tools", "thinking"],
+                                 "template": self.THINKING_ONLY}]})
+        self.assertTrue(self.selector.state.always_thinks)
+        think, predict = self.selector.ollama_think_options("qwen3:4b", 1024)
+        self.assertTrue(think)
+        self.assertEqual(predict, 1024 + self.settings.llm_thinking_budget)
+        # another model (e.g. coding_model) is not affected
+        self.assertEqual(self.selector.ollama_think_options("qwen2.5-coder:7b", 1024), (False, 1024))
+
+    def test_hybrid_thinking_model_keeps_think_false(self) -> None:
+        self._select({self.PC: [{"name": "qwen3:8b", "size": "8.2B", "caps": ["completion", "tools", "thinking"],
+                                 "template": self.HYBRID}]})
+        self.assertFalse(self.selector.state.always_thinks)
+        self.assertEqual(self.selector.ollama_think_options("qwen3:8b", 1024), (False, 1024))
+
+    def test_model_missing_detection(self) -> None:
+        self.assertTrue(self.selector.is_model_missing(404, '{"error":"model \'qwen3:8b\' not found"}'))
+        self.assertTrue(self.selector.is_model_missing(404))
+        self.assertFalse(self.selector.is_model_missing(500, "boom"))
 
 
 if __name__ == "__main__":

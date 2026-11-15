@@ -114,17 +114,19 @@ async def chat_step(
     on_token: Callable[[str], Awaitable[None]] | None = None,
 ) -> AssistantTurn:
     """One model call with tools. Streams text tokens to `on_token` as they arrive."""
+    from backend.services.llm import selector
+    think, predict = selector.ollama_think_options(settings.ollama_model, settings.llm_max_output_tokens)
     payload = {
         "model": settings.ollama_model,
         "messages": messages,
         "stream": True,
-        "think": False,
+        "think": think,
         "options": {
             "temperature": temperature,
             "top_p": 0.9,
             "repeat_penalty": 1.1,
             "num_ctx": settings.llm_context_window,
-            "num_predict": settings.llm_max_output_tokens,
+            "num_predict": predict,
         },
     }
     if tools:
@@ -137,6 +139,8 @@ async def chat_step(
             async with client.stream("POST", f"{settings.ollama_base_url}/api/chat", json=payload) as response:
                 if response.status_code >= 400:
                     body = (await response.aread()).decode("utf-8", "replace")[:300]
+                    if selector.is_model_missing(response.status_code, body):
+                        selector.on_connect_error()
                     raise RuntimeError(f"Ollama returned {response.status_code}: {body}")
                 async for line in response.aiter_lines():
                     if not line:
@@ -162,7 +166,6 @@ async def chat_step(
                         turn.prompt_tokens = int(data.get("prompt_eval_count") or 0)
                         break
     except (httpx.ConnectError, httpx.ConnectTimeout):
-        from backend.services.llm import selector
         selector.on_connect_error()
         raise
 

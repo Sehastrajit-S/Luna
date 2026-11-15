@@ -81,6 +81,7 @@ class Settings(BaseSettings):
     llm_model_preference: str = ""      # comma-separated Ollama model names, best first (unlisted: by size)
     llm_fallback_provider: str = "openai-compatible"
     llm_select_interval: int = 60       # seconds between probes
+    llm_thinking_budget: int = 4096     # extra output tokens for thinking-only models (their reasoning counts too)
 
     # Context window (tokens) for chat requests. Requests are fitted to it
     # explicitly (services/llm/context_window.py) instead of letting the model

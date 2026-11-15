@@ -69,17 +69,19 @@ async def _stream_ollama_tokens(
     messages: list[dict],
     system: str,
 ) -> AsyncGenerator[str, None]:
+    from backend.services.llm import selector
+    think, predict = selector.ollama_think_options(model, 8192)
     payload = {
         "model": model,
         "messages": [{"role": "system", "content": system}] + messages,
         "stream": True,
-        "think": False,
+        "think": think,
         "options": {
             "temperature": 0.1,
             "top_p": 0.95,
             "repeat_penalty": 1.05,
             "num_ctx": 16384,
-            "num_predict": 8192,
+            "num_predict": predict,
         },
     }
     async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
@@ -124,12 +126,14 @@ async def _complete_provider(
     system: str,
 ) -> str:
     if provider == "ollama":
+        from backend.services.llm import selector
+        think, predict = selector.ollama_think_options(model, 512)
         payload = {
             "model": model,
             "messages": [{"role": "system", "content": system}] + messages,
             "stream": False,
-            "think": False,
-            "options": {"temperature": 0.1, "num_ctx": 16384, "num_predict": 512},
+            "think": think,
+            "options": {"temperature": 0.1, "num_ctx": 16384, "num_predict": predict},
         }
         async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
             r = await client.post(f"{settings.ollama_base_url}/api/chat", json=payload)
