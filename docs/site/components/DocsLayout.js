@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 
-export const SITE_URL = 'https://luna-frontend-tan.vercel.app';
+export const SITE_URL = 'https://www.luna-ai-engine.com';
 
 const GitHubIcon = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: 14, height: 14 }}>

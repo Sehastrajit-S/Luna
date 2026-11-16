@@ -15,7 +15,7 @@
 
   <p>
     <a href="https://github.com/Sehastrajit-S/Luna/releases/latest"><b>Download</b></a> ·
-    <a href="https://luna-frontend-tan.vercel.app"><b>Docs</b></a> ·
+    <a href="https://www.luna-ai-engine.com"><b>Docs</b></a> ·
     <a href="#quick-start"><b>Quick start</b></a> ·
     <a href="#a-quick-tour"><b>Tour</b></a> ·
     <a href="docs/REMOTE.md"><b>Use it anywhere</b></a> ·
