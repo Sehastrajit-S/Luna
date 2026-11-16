@@ -9,7 +9,7 @@ sounddevice
 numpy
 pygame
 uvicorn[standard]==0.32.1
-httpx==0.27.2
+httpx==0.28.1
 jsonschema==4.26.0
 ddgs==9.14.4
 sqlalchemy==2.0.36

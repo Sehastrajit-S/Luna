@@ -31,7 +31,7 @@ export default function MeetingMode() {
             <p>Click the orb, or press <strong>Stop</strong>. Luna transcribes the recording and writes the minutes, usually within seconds of a short meeting ending.</p>
           </Step>
         </Steps>
-        <figure className="doc-figure">
+        <figure className="doc-figure" style={{ maxWidth: 320, marginLeft: 'auto', marginRight: 'auto' }}>
           <img src="/screenshots/meeting-recording.png" alt="Meeting mode: a single glowing orb with a timer while recording" />
           <figcaption>While recording there's nothing on screen but the orb.</figcaption>
         </figure>
@@ -48,7 +48,7 @@ export default function MeetingMode() {
           <li><strong>Open questions</strong> left for next time.</li>
           <li><strong>The full transcript</strong> with timestamps.</li>
         </ul>
-        <figure className="doc-figure">
+        <figure className="doc-figure" style={{ maxWidth: 360, marginLeft: 'auto', marginRight: 'auto' }}>
           <img src="/screenshots/meeting-minutes.png" alt="Meeting minutes with summary, decisions and action items" />
           <figcaption>The minutes open in chat when processing finishes.</figcaption>
         </figure>

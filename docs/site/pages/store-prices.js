@@ -27,7 +27,7 @@ export default function StorePrices() {
           <img src="/screenshots/store-prices.png" alt="Price comparison cards for one product at several stores" />
           <figcaption>One product, five stores.</figcaption>
         </figure>
-        <figure className="doc-figure">
+        <figure className="doc-figure" style={{ maxWidth: 320, marginLeft: 'auto', marginRight: 'auto' }}>
           <img src="/screenshots/plus-menu.png" alt="The + menu with Attach, Skills and Meeting mode" />
           <figcaption>The <strong>+</strong> menu holds Attach, Skills and Meeting mode.</figcaption>
         </figure>
