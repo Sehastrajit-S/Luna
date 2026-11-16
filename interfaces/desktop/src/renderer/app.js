@@ -952,11 +952,12 @@ const viewDashboard = document.getElementById('view-dashboard')
 const viewCapabilities = document.getElementById('view-capabilities')
 const viewSettings = document.getElementById('view-settings')
 const viewLibrary = document.getElementById('view-library')
+const viewMeeting = document.getElementById('view-meeting')
 
 // Exactly one view is visible at a time — hiding only some of them left the
 // previous view stacked under the new one.
 function showView(target) {
-  ;[viewChat, viewDashboard, viewCapabilities, viewSettings, viewLibrary].forEach(view => {
+  ;[viewChat, viewDashboard, viewCapabilities, viewSettings, viewLibrary, viewMeeting].forEach(view => {
     view?.classList.toggle('is-hidden', view !== target)
   })
   const navFor = { [viewCapabilities?.id]: 'capabilities', [viewSettings?.id]: 'settings', [viewLibrary?.id]: 'library' }

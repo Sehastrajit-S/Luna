@@ -137,14 +137,29 @@
             <button class="composer-icon plus-btn" id="plus-btn" type="button" aria-label="Attach files or use a skill" aria-haspopup="menu" aria-expanded="false" aria-controls="plus-menu" title="Attach files or use a skill">
               <svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
             </button>
-            <div class="plus-menu" id="plus-menu" role="menu" aria-label="Attach or use a skill" hidden>
-              <button class="plus-item" id="attach-btn" type="button" role="menuitem">
-                <span class="plus-item-icon"><svg viewBox="0 0 24 24" width="16" height="16"><path d="M21 11.5l-8.7 8.7a4.6 4.6 0 0 1-6.5-6.5l8.4-8.4a3 3 0 0 1 4.3 4.3l-8.1 8.1a1.5 1.5 0 0 1-2.1-2.1l7.1-7.1" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                <span class="plus-item-text"><span class="plus-item-name">Attach files</span><span class="plus-item-desc">PDF, Word, Excel, slides, images, code</span></span>
-              </button>
-              <div class="plus-divider" role="separator"></div>
-              <p class="plus-label">Skills</p>
-              <div class="plus-skills" id="plus-skills"><p class="plus-empty">Loading skills…</p></div>
+            <div class="plus-menu" id="plus-menu" role="menu" aria-label="Attach, skills or meeting mode" hidden>
+              <div class="plus-panel" data-panel="root">
+                <button class="plus-item" id="attach-btn" type="button" role="menuitem">
+                  <span class="plus-item-icon"><svg viewBox="0 0 24 24" width="16" height="16"><path d="M21 11.5l-8.7 8.7a4.6 4.6 0 0 1-6.5-6.5l8.4-8.4a3 3 0 0 1 4.3 4.3l-8.1 8.1a1.5 1.5 0 0 1-2.1-2.1l7.1-7.1" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                  <span class="plus-item-text"><span class="plus-item-name">Attach files</span><span class="plus-item-desc">PDF, Word, Excel, slides, images, code</span></span>
+                </button>
+                <button class="plus-item" id="plus-skills-open" type="button" role="menuitem" aria-haspopup="menu">
+                  <span class="plus-item-icon">✦</span>
+                  <span class="plus-item-text"><span class="plus-item-name">Skills</span><span class="plus-item-desc">Store prices, news, papers, jobs, places…</span></span>
+                  <span class="plus-item-chevron" aria-hidden="true">›</span>
+                </button>
+                <button class="plus-item" id="plus-meeting" type="button" role="menuitem">
+                  <span class="plus-item-icon"><svg viewBox="0 0 24 24" width="16" height="16"><rect x="9" y="3" width="6" height="11" rx="3" stroke="currentColor" stroke-width="1.8" fill="none"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg></span>
+                  <span class="plus-item-text"><span class="plus-item-name">Meeting mode</span><span class="plus-item-desc">Record, transcribe and write minutes</span></span>
+                </button>
+              </div>
+              <div class="plus-panel" data-panel="skills" hidden>
+                <div class="plus-panel-head">
+                  <button class="plus-back" id="plus-skills-back" type="button" aria-label="Back">‹</button>
+                  <span>Skills</span>
+                </div>
+                <div class="plus-skills" id="plus-skills"><p class="plus-empty">Loading skills…</p></div>
+              </div>
             </div>
           </div>
           <span class="skill-chip" id="skill-chip" hidden>
@@ -304,6 +319,31 @@
         </div>
       </div>
 
+      <div id="view-meeting" class="view is-hidden">
+        <div class="meeting" id="meeting" data-state="idle">
+          <button class="meeting-orb" id="meeting-orb" type="button" aria-label="Start recording the meeting">
+            <span class="meeting-orb-halo" aria-hidden="true"></span>
+            <span class="meeting-orb-ring" aria-hidden="true"></span>
+            <span class="meeting-orb-core" aria-hidden="true"><img src="../../resources/logo_icon.png" alt="" /></span>
+          </button>
+          <p class="meeting-time" id="meeting-time" aria-live="off"></p>
+          <p class="meeting-status" id="meeting-status" role="status">Tap the orb to start recording</p>
+          <button class="meeting-link" id="meeting-view" type="button" hidden>View minutes</button>
+        </div>
+        <div class="meeting-sheet" id="meeting-sheet" hidden>
+          <div class="meeting-sheet-card" role="dialog" aria-modal="true" aria-label="Meeting minutes">
+            <div class="meeting-sheet-head">
+              <button class="meeting-sheet-copy" id="meeting-copy" type="button">Copy</button>
+              <button class="meeting-sheet-close" id="meeting-sheet-close" type="button" aria-label="Close minutes">×</button>
+            </div>
+            <div class="bubble meeting-sheet-body"><div class="md" id="meeting-minutes"></div>
+              <details class="meeting-transcript"><summary>Transcript</summary><div class="md" id="meeting-transcript"></div></details>
+              <p class="meeting-saved" id="meeting-saved"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div id="view-library" class="view is-hidden">
         <div class="library">
           <div class="dashboard-header">
@@ -392,6 +432,7 @@
   <script src="settings.js"></script>
   <script src="agent-steps.js"></script>
   <script src="library.js"></script>
+  <script src="meeting.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

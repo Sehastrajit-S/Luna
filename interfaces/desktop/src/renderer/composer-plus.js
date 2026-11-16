@@ -24,15 +24,33 @@
 
   const ICONS = { 'store-prices': '$' }
 
+  const panels = {
+    root: menu.querySelector('[data-panel="root"]'),
+    skills: menu.querySelector('[data-panel="skills"]'),
+  }
+
+  function activePanel() {
+    return panels.skills && !panels.skills.hidden ? 'skills' : 'root'
+  }
+
   function items() {
-    return [...menu.querySelectorAll('.plus-item:not([disabled])')]
+    return [...(panels[activePanel()] || menu).querySelectorAll('.plus-item:not([disabled]), .plus-back')]
+  }
+
+  // Skills open as a second panel inside the menu, with a back button.
+  function showPanel(name) {
+    for (const [key, panel] of Object.entries(panels)) if (panel) panel.hidden = key !== name
+    if (name === 'skills' && !loaded) loadSkills()
+    const first = name === 'skills' ? panels.skills.querySelector('.plus-item') || panels.skills.querySelector('.plus-back')
+      : document.getElementById('plus-skills-open')
+    first?.focus()
   }
 
   function open() {
     menu.hidden = false
     plusBtn.setAttribute('aria-expanded', 'true')
     plusBtn.classList.add('is-open')
-    if (!loaded) loadSkills()
+    for (const [key, panel] of Object.entries(panels)) if (panel) panel.hidden = key !== 'root'
     items()[0]?.focus()
   }
 
@@ -110,6 +128,7 @@
       const skills = (await response.json()).skills || []
       skillsBox.replaceChildren(...skills.map(skillItem))
       loaded = true
+      if (activePanel() === 'skills' && menu.contains(document.activeElement)) skillsBox.querySelector('.plus-item')?.focus()
     } catch (error) {
       const p = document.createElement('p')
       p.className = 'plus-empty'
@@ -128,6 +147,19 @@
   // attachments.js opens the file picker; the menu just gets out of the way.
   attachItem?.addEventListener('click', () => close())
 
+  document.getElementById('plus-skills-open')?.addEventListener('click', event => {
+    event.stopPropagation()
+    showPanel('skills')
+  })
+  document.getElementById('plus-skills-back')?.addEventListener('click', event => {
+    event.stopPropagation()
+    showPanel('root')
+  })
+  document.getElementById('plus-meeting')?.addEventListener('click', () => {
+    close()
+    window.lunaOpenMeeting?.()
+  })
+
   document.addEventListener('click', event => {
     if (!menu.hidden && !menu.contains(event.target) && event.target !== plusBtn) close()
   })
@@ -135,7 +167,10 @@
   menu.addEventListener('keydown', event => {
     const list = items()
     const at = list.indexOf(document.activeElement)
-    if (event.key === 'Escape') { event.preventDefault(); close({ focusInput: true }) }
+    if (event.key === 'Escape' && activePanel() === 'skills') { event.preventDefault(); showPanel('root') }
+    else if (event.key === 'Escape') { event.preventDefault(); close({ focusInput: true }) }
+    else if (event.key === 'ArrowLeft' && activePanel() === 'skills') { event.preventDefault(); showPanel('root') }
+    else if (event.key === 'ArrowRight' && document.activeElement?.id === 'plus-skills-open') { event.preventDefault(); showPanel('skills') }
     else if (event.key === 'ArrowDown') { event.preventDefault(); list[(at + 1) % list.length]?.focus() }
     else if (event.key === 'ArrowUp') { event.preventDefault(); list[(at - 1 + list.length) % list.length]?.focus() }
     else if (event.key === 'Tab') close()

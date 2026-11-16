@@ -89,8 +89,15 @@
       if (paragraph.length) out.push(`<p>${paragraph.map(renderInline).join('<br>')}</p>`)
       paragraph = []
     }
+    const listItem = item => {
+      // "- [ ] task" / "- [x] task": a checklist item (meeting action items).
+      const task = item.match(/^\[([ xX])\]\s+(.*)$/)
+      if (!task) return `<li>${renderInline(item)}</li>`
+      const done = task[1] !== ' '
+      return `<li class="md-task${done ? ' is-done' : ''}"><span class="md-check" role="img" aria-label="${done ? 'Done' : 'To do'}"></span>${renderInline(task[2])}</li>`
+    }
     const flushList = () => {
-      if (list) out.push(`<${list.type}>${list.items.map(item => `<li>${renderInline(item)}</li>`).join('')}</${list.type}>`)
+      if (list) out.push(`<${list.type}>${list.items.map(listItem).join('')}</${list.type}>`)
       list = null
     }
     const flush = () => { flushParagraph(); flushList() }

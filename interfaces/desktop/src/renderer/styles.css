@@ -1177,3 +1177,100 @@ select.settings-input { cursor: pointer; }
 }
 .plus-item-logos { display: flex; gap: 5px; margin-top: 5px; }
 .plus-item-logos img { width: 16px; height: 16px; border-radius: 4px; background: #fff; box-shadow: 0 0 0 1px var(--hairline); }
+
+/* ── + menu panels (Skills opens as a second panel) ─────────────────────── */
+.plus-panel[hidden] { display: none; }
+.plus-item-chevron { margin-left: auto; padding-left: 8px; font-size: 18px; color: var(--ink-faint); }
+.plus-panel-head { display: flex; align-items: center; gap: 6px; padding: 4px 4px 6px; font-size: 13px; font-weight: 700; }
+.plus-back {
+  width: 30px; height: 30px; border-radius: 9px; font-size: 20px; line-height: 1; color: var(--ink-soft);
+  display: flex; align-items: center; justify-content: center;
+}
+.plus-back:hover, .plus-back:focus-visible { background: #f2f2f3; outline: none; }
+
+/* ── Meeting mode: one orb ───────────────────────────────────────────────── */
+.meeting {
+  --level: 0; --progress: 0;
+  position: relative; z-index: 1; flex: 1; min-height: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  padding: 24px 20px calc(24px + env(safe-area-inset-bottom)); text-align: center;
+}
+.meeting-orb { position: relative; width: 176px; height: 176px; border-radius: 50%; margin-bottom: 18px; }
+.meeting-orb:disabled { cursor: default; }
+.meeting-orb:focus-visible { outline: 3px solid #93c5fd; outline-offset: 10px; }
+.meeting-orb-core {
+  position: absolute; inset: 0; border-radius: 50%; overflow: hidden; background: #0e0e10;
+  box-shadow: 0 22px 60px rgba(0,0,0,0.28), inset 0 0 0 1px rgba(255,255,255,0.06);
+  animation: orb-breathe 4.5s ease-in-out infinite;
+}
+.meeting-orb-core img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.meeting-orb-halo {
+  position: absolute; inset: -26px; border-radius: 50%; opacity: 0;
+  background: radial-gradient(circle, rgba(16,16,18,0.20) 0%, rgba(16,16,18,0.08) 45%, transparent 70%);
+  transform: scale(calc(1 + var(--level) * 0.45)); transition: opacity 0.3s ease, transform 0.08s linear;
+}
+.meeting-orb-ring { position: absolute; inset: -12px; border-radius: 50%; opacity: 0; transition: opacity 0.3s ease; }
+@keyframes orb-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.035); } }
+@keyframes orb-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.45); } 50% { box-shadow: 0 0 0 10px rgba(239,68,68,0); } }
+@keyframes orb-spin { to { transform: rotate(1turn); } }
+
+.meeting[data-state="recording"] .meeting-orb-core { animation: none; transform: scale(calc(1 + var(--level) * 0.06)); transition: transform 0.08s linear; }
+.meeting[data-state="recording"] .meeting-orb-halo { opacity: 1; }
+.meeting[data-state="recording"] .meeting-orb-ring { opacity: 1; border: 3px solid #ef4444; animation: orb-pulse 1.6s ease-in-out infinite; }
+.meeting[data-state="processing"] .meeting-orb-ring,
+.meeting[data-state="stopping"] .meeting-orb-ring,
+.meeting[data-state="done"] .meeting-orb-ring {
+  opacity: 1;
+  background: conic-gradient(var(--ink) calc(var(--progress) * 1turn), rgba(16,16,18,0.08) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+}
+.meeting[data-state="stopping"] .meeting-orb-ring { --progress: 0.25; animation: orb-spin 1s linear infinite; }
+.meeting[data-state="processing"] .meeting-orb-core, .meeting[data-state="stopping"] .meeting-orb-core { animation-duration: 2.2s; }
+
+.meeting-time { margin: 0; min-height: 34px; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--ink); }
+.meeting[data-state="recording"] .meeting-time::before {
+  content: ''; display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #ef4444;
+  margin-right: 10px; vertical-align: middle; animation: orb-pulse 1.6s ease-in-out infinite;
+}
+.meeting-status { margin: 0; max-width: 340px; font-size: 14px; line-height: 1.5; color: var(--ink-faint); }
+.meeting-link {
+  margin-top: 6px; padding: 9px 18px; border-radius: var(--radius-full); background: var(--ink); color: #fff;
+  font-size: 13.5px; font-weight: 600;
+}
+.meeting-link[hidden] { display: none; }
+
+.meeting-sheet {
+  position: fixed; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center;
+  padding: 24px; background: rgba(12,12,15,0.38);
+}
+.meeting-sheet[hidden] { display: none; }
+.meeting-sheet-card {
+  width: min(760px, 100%); max-height: 86vh; overflow-y: auto; padding: 18px 26px 26px;
+  border-radius: 22px; background: var(--bg-card); box-shadow: 0 30px 80px rgba(0,0,0,0.3);
+  animation: plus-in 0.18s cubic-bezier(.22,1,.36,1);
+}
+.meeting-sheet-head { position: sticky; top: -18px; display: flex; justify-content: flex-end; gap: 8px; padding: 4px 0 8px; background: var(--bg-card); }
+.meeting-sheet-copy { padding: 6px 14px; border-radius: var(--radius-full); font-size: 12.5px; font-weight: 600; box-shadow: 0 0 0 1px var(--hairline); }
+.meeting-sheet-close { width: 32px; height: 32px; border-radius: 50%; font-size: 22px; line-height: 1; color: var(--ink-soft); }
+.meeting-sheet-close:hover, .meeting-sheet-copy:hover { background: #f2f2f3; }
+.bubble.meeting-sheet-body { max-width: none; padding: 0; background: none; box-shadow: none; border: 0; border-radius: 0; }
+.meeting-transcript { margin-top: 18px; border-top: 1px solid var(--hairline); padding-top: 12px; }
+.meeting-transcript summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+.meeting-saved { margin: 14px 0 0; font-size: 12px; color: var(--ink-faint); }
+
+@media (max-width: 760px) {
+  .meeting-orb { width: 150px; height: 150px; }
+  .meeting-sheet { align-items: flex-end; padding: 0; }
+  .meeting-sheet-card { border-radius: 22px 22px 0 0; max-height: 88vh; padding: 14px 18px calc(22px + env(safe-area-inset-bottom)); }
+}
+.bubble .md li.md-task { list-style: none; position: relative; }
+.bubble .md li.md-task .md-check {
+  position: absolute; left: -22px; top: 0.3em; width: 14px; height: 14px; border-radius: 4px;
+  box-shadow: inset 0 0 0 1.5px var(--ink-faint); background: var(--bg-card);
+}
+.bubble .md li.md-task.is-done .md-check { background: var(--ink); box-shadow: none; }
+.bubble .md li.md-task.is-done .md-check::after {
+  content: ''; position: absolute; left: 4.5px; top: 1.5px; width: 4px; height: 8px;
+  border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg);
+}
