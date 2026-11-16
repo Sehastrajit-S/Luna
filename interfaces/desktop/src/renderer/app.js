@@ -68,6 +68,9 @@ document.querySelectorAll('.nav-item').forEach(btn => {
     if (btn.dataset.nav === 'capabilities') {
       showView(viewCapabilities)
       loadCapabilities()
+    } else if (btn.dataset.nav === 'library') {
+      showView(viewLibrary)
+      window.loadLibraryView?.()
     } else if (btn.dataset.nav === 'settings') {
       openSettingsView()
     }
@@ -944,18 +947,22 @@ const viewChat = document.getElementById('view-chat')
 const viewDashboard = document.getElementById('view-dashboard')
 const viewCapabilities = document.getElementById('view-capabilities')
 const viewSettings = document.getElementById('view-settings')
+const viewLibrary = document.getElementById('view-library')
 
 // Exactly one view is visible at a time — hiding only some of them left the
 // previous view stacked under the new one.
 function showView(target) {
-  ;[viewChat, viewDashboard, viewCapabilities, viewSettings].forEach(view => {
+  ;[viewChat, viewDashboard, viewCapabilities, viewSettings, viewLibrary].forEach(view => {
     view?.classList.toggle('is-hidden', view !== target)
   })
-  const navFor = { [viewCapabilities?.id]: 'capabilities', [viewSettings?.id]: 'settings' }
-  document.querySelectorAll('.nav-item[data-nav="capabilities"], .nav-item[data-nav="settings"]').forEach(item => {
+  const navFor = { [viewCapabilities?.id]: 'capabilities', [viewSettings?.id]: 'settings', [viewLibrary?.id]: 'library' }
+  document.querySelectorAll('.nav-item[data-nav="capabilities"], .nav-item[data-nav="settings"], .nav-item[data-nav="library"]').forEach(item => {
     item.classList.toggle('is-active', navFor[target?.id] === item.dataset.nav)
   })
 }
+
+// Library rows link back to the chat a file was shared in.
+window.lunaOpenConversation = id => openConversation(id)
 
 function showDashboard() {
   showView(viewDashboard)

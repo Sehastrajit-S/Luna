@@ -19,6 +19,7 @@ from server.routers.skills import router as skills_router
 from server.routers.files import router as files_router
 from server.routers.settings import router as settings_router
 from server.routers.remote import router as remote_router
+from server.routers.library import router as library_router
 from server.middleware.rate_limit import RateLimitMiddleware
 from server.middleware.logging_middleware import RequestIDMiddleware
 from server.core.logging import configure_logging
@@ -137,6 +138,7 @@ app.include_router(skills_router)
 app.include_router(files_router)
 app.include_router(settings_router)
 app.include_router(remote_router)
+app.include_router(library_router)
 
 # Serve Office Add-in static files at /addin/office/
 office_addin_dir = Path(__file__).parent.parent / "interfaces" / "office"
