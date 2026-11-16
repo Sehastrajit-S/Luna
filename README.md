@@ -53,11 +53,18 @@ Luna is an open-source, self-hosted AI assistant and agent engine, a private alt
 
 The desktop apps set themselves up on first launch (no Python install needed) and run a local server, or connect to one on another computer.
 
-**One-line install:**
+**One-line install**
+
+macOS / Linux (Terminal):
 
 ```bash
-curl -fsSL https://www.luna-ai-engine.com/install.sh | sh        # macOS / Linux
-irm https://www.luna-ai-engine.com/install.ps1 | iex             # Windows (PowerShell)
+curl -fsSL https://www.luna-ai-engine.com/install.sh | sh
+```
+
+Windows (PowerShell):
+
+```powershell
+irm https://www.luna-ai-engine.com/install.ps1 | iex
 ```
 
 **Docker** (any OS, server and web UI):
