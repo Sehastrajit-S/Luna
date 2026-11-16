@@ -1361,3 +1361,64 @@ select.settings-input { cursor: pointer; }
   .news-card:not(.is-lead):not(.no-image) { flex-direction: row; }
   .news-card:not(.is-lead):not(.no-image) .news-card-img { flex: 0 0 108px; aspect-ratio: auto; }
 }
+
+/* ── Personality panel (sidebar) ─────────────────────────────────────────── */
+.persona-card {
+  margin-top: 12px; padding: 12px 12px 10px; border-radius: 14px;
+  background: rgba(255,255,255,0.04); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.07);
+  display: flex; flex-direction: column; gap: 9px; flex-shrink: 0;
+  transition: opacity 0.2s ease;
+}
+.persona-card[hidden] { display: none; }
+.persona-card.is-offline { opacity: 0.55; }
+.persona-head { display: flex; align-items: center; gap: 10px; }
+.persona-dot {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; background: #a1a1aa;
+  transition: background 0.6s ease, box-shadow 0.6s ease;
+  animation: persona-pulse 3.2s ease-in-out infinite;
+}
+@keyframes persona-pulse { 50% { transform: scale(1.18); } }
+.persona-mood { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+.persona-mood strong { font-size: 13.5px; font-weight: 600; color: #f1f1f4; }
+.persona-label { font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; color: #6c6d74; font-weight: 600; }
+.persona-style-toggle {
+  margin-left: auto; display: inline-flex; align-items: center; gap: 3px;
+  padding: 4px 8px; border-radius: 8px; font-size: 11.5px; color: #9a9ba3;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.persona-style-toggle:hover, .persona-style-toggle:focus-visible { background: rgba(255,255,255,0.07); color: #fff; outline: none; }
+.persona-style-toggle svg { transition: transform 0.2s ease; }
+.persona-card.is-style-open .persona-style-toggle svg { transform: rotate(180deg); }
+.persona-energy { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; }
+.persona-energy-track, .persona-trait-track {
+  height: 5px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden;
+}
+.persona-energy-bar {
+  display: block; height: 100%; width: 0; border-radius: 3px;
+  background: linear-gradient(90deg, #7c3aed, #c4b5fd); transition: width 0.6s ease;
+}
+.persona-energy-value { font-size: 11px; color: #9a9ba3; font-variant-numeric: tabular-nums; min-width: 30px; text-align: right; }
+.persona-traits { display: none; flex-direction: column; gap: 6px; padding-top: 2px; }
+.persona-card.is-style-open .persona-traits { display: flex; }
+.persona-trait { display: grid; grid-template-columns: 66px 1fr; align-items: center; gap: 8px; }
+.persona-trait-name { font-size: 11.5px; color: #b4b5bc; }
+.persona-trait-fill { display: block; height: 100%; width: 0; border-radius: 3px; background: rgba(196,181,253,0.75); transition: width 0.6s ease; }
+.persona-count { margin: 0; font-size: 11px; color: #6c6d74; }
+
+/* ── On/off switch in Settings ───────────────────────────────────────────── */
+.settings-switch { position: relative; display: inline-flex; justify-self: end; cursor: pointer; }
+.settings-switch .settings-input {
+  position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0;
+  opacity: 0; cursor: pointer; box-shadow: none; background: none;
+}
+.settings-switch-track {
+  width: 40px; height: 23px; border-radius: 999px; background: #d4d4d8; position: relative;
+  transition: background 0.18s ease;
+}
+.settings-switch-track::after {
+  content: ''; position: absolute; top: 3px; left: 3px; width: 17px; height: 17px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.25); transition: transform 0.18s ease;
+}
+.settings-switch .settings-input:checked + .settings-switch-track { background: #7c3aed; }
+.settings-switch .settings-input:checked + .settings-switch-track::after { transform: translateX(17px); }
+.settings-switch .settings-input:focus-visible + .settings-switch-track { box-shadow: 0 0 0 2px #93c5fd; }

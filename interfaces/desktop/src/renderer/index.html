@@ -73,6 +73,27 @@
           <span>Show more</span>
         </button>
       </div>
+
+      <section class="persona-card" id="persona-card" aria-label="Luna's personality" hidden>
+        <div class="persona-head">
+          <span class="persona-dot" data-persona="dot"></span>
+          <div class="persona-mood">
+            <span class="persona-label">Luna feels</span>
+            <strong data-persona="mood">Calm</strong>
+          </div>
+          <button class="persona-style-toggle" type="button" data-persona="style-toggle" aria-expanded="false" aria-controls="persona-traits">
+            Style
+            <svg viewBox="0 0 24 24" width="13" height="13"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+          </button>
+        </div>
+        <div class="persona-energy">
+          <span class="persona-label">Energy</span>
+          <span class="persona-energy-track"><span class="persona-energy-bar" data-persona="energy-bar"></span></span>
+          <span class="persona-energy-value" data-persona="energy-value"></span>
+        </div>
+        <div class="persona-traits" id="persona-traits" data-persona="traits"></div>
+        <p class="persona-count" data-persona="count"></p>
+      </section>
     </aside>
 
     <!-- ── Main ────────────────────────────────────────────────────────── -->
@@ -452,6 +473,7 @@
   <script src="composer-plus.js"></script>
   <script src="voice-input.js"></script>
   <script src="settings.js"></script>
+  <script src="personality.js"></script>
   <script src="agent-steps.js"></script>
   <script src="library.js"></script>
   <script src="news.js"></script>

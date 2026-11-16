@@ -30,6 +30,9 @@ SCHEMA: list[dict] = [
     {"key": "weather_timezone", "label": "Time zone", "section": "General", "type": "text",
      "help": "IANA name, e.g. America/Phoenix."},
 
+    {"key": "show_personality_panel", "label": "Personality panel", "section": "Appearance", "type": "toggle",
+     "help": "Show Luna's mood, energy and learned conversation style in the sidebar."},
+
     {"key": "llm_provider", "label": "AI provider", "section": "AI model", "type": "select", "options": _LLM_PROVIDERS},
     {"key": "ollama_model", "label": "Chat model (Ollama)", "section": "AI model", "type": "select",
      "options_from": "ollama_models"},
@@ -138,6 +141,11 @@ def _validate(key: str, raw) -> str:
         if not spec.get("min", number) <= number <= spec.get("max", number):
             raise SettingsError(f"{spec['label']} must be between {spec['min']} and {spec['max']}.")
         value = str(number)
+    elif spec["type"] == "toggle":
+        lowered = value.lower()
+        if lowered not in ("true", "false"):
+            raise SettingsError(f"{spec['label']} must be on or off.")
+        value = lowered
     elif spec["type"] == "select" and spec.get("options") and value not in spec["options"]:
         raise SettingsError(f"{spec['label']}: choose one of {', '.join(spec['options'])}.")
     elif spec["type"] == "text" and key.endswith("_url") and value and not re.match(r"^https?://", value):

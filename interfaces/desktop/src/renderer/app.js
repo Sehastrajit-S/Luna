@@ -950,6 +950,7 @@ async function sendMessage({ spoken, onPart } = {}) {
     }
     if (!assistant) assistantText.textContent = 'I did not receive a response.'
     await loadConversations()
+    window.dispatchEvent(new Event('luna:reply-done'))   // e.g. the personality panel refreshes its mood
     return assistant
   } catch (error) {
     assistantText.textContent = `I couldn't reach Luna's backend. ${error.message}`
