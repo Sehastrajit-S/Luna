@@ -341,6 +341,8 @@ class Settings(BaseSettings):
     # ── Luna persona ──────────────────────────────────────────────────────────
     luna_name: str = "L.U.N.A."
     user_name: str = "friend"
+    # Show Luna's mood, energy and learned style in the sidebar (Settings → Appearance).
+    show_personality_panel: bool = True
 
     # Business variant config
     business_name: str = ""        # e.g. "Acme Corp"

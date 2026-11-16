@@ -24,6 +24,23 @@
   }
 
   function control(field) {
+    if (field.type === 'toggle') {
+      const wrap = document.createElement('label')
+      wrap.className = 'settings-switch'
+      const box = document.createElement('input')
+      box.type = 'checkbox'
+      box.role = 'switch'
+      box.checked = field.value === true || String(field.value).toLowerCase() === 'true'
+      box.id = `setting-${field.key}`
+      box.dataset.key = field.key
+      box.className = 'settings-input'
+      box.addEventListener('change', refreshDirty)
+      const track = document.createElement('span')
+      track.className = 'settings-switch-track'
+      track.setAttribute('aria-hidden', 'true')
+      wrap.append(box, track)
+      return wrap
+    }
     let el
     if (field.type === 'select') {
       el = document.createElement('select')
@@ -104,7 +121,9 @@
 
   function currentValues() {
     const values = {}
-    container.querySelectorAll('.settings-input').forEach(el => { values[el.dataset.key] = el.value })
+    container.querySelectorAll('.settings-input').forEach(el => {
+      values[el.dataset.key] = el.type === 'checkbox' ? String(el.checked) : el.value
+    })
     return values
   }
 
@@ -139,6 +158,10 @@
       if (!response.ok) throw new Error(`Settings returned ${response.status}`)
       fields = (await response.json()).fields || []
       render()
+      // Let other parts of the UI (e.g. the personality panel) react to saved settings.
+      window.dispatchEvent(new CustomEvent('luna:settings', {
+        detail: Object.fromEntries(fields.map(field => [field.key, field.value])),
+      }))
     } catch (error) {
       container.replaceChildren(Object.assign(document.createElement('p'), {
         className: 'settings-loading', textContent: 'Couldn’t load settings — is Luna’s backend running?',
