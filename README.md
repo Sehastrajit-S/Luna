@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs/site/public/images/banner.svg" width="100%" alt="L.U.N.A. - Large Unified Nexus Mind AI" />
+  <img src="docs/site/public/images/banner.svg" width="100%" alt="Luna: your own AI assistant. Runs on your machine, works with any model, follows you everywhere." />
 
   <h3>Your own AI assistant. It runs on your machine, works with any model, and follows you to every device.</h3>
 

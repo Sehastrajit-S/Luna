@@ -1,144 +1,145 @@
-<svg width="1280" height="400" viewBox="0 0 1280 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg width="1280" height="400" viewBox="0 0 1280 400" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Luna</title>
+  <desc id="desc">Your own AI assistant. Runs on your machine, works with any model, follows you everywhere.</desc>
   <defs>
-    <!-- Background radial glow: dark purple centre fading to near-black -->
-    <radialGradient id="bgGlow" cx="50%" cy="42%" r="55%" gradientUnits="objectBoundingBox">
-      <stop offset="0%" stop-color="#1a0a2e"/>
-      <stop offset="100%" stop-color="#030306"/>
+    <!-- Canvas: the app's light main area (#f7f7f8) -->
+    <linearGradient id="canvas" x1="0" y1="0" x2="1280" y2="400" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fbfbfc"/>
+      <stop offset="1" stop-color="#efeff2"/>
+    </linearGradient>
+    <!-- The app's background glow: soft white bloom with hairline rings -->
+    <radialGradient id="bloom" cx="1010" cy="150" r="330" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="0.6" stop-color="#ffffff" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
     </radialGradient>
-
-    <!-- Moon gradient (same stops as logo.svg, in user-space so it maps to the scaled shape) -->
-    <linearGradient id="moonGrad" x1="568" y1="78" x2="706" y2="216" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#ddd6fe"/>
-      <stop offset="0.45" stop-color="#8b5cf6"/>
-      <stop offset="1" stop-color="#4c1d95"/>
+    <!-- Sidebar gradient, same stops as .sidebar in the app -->
+    <linearGradient id="sidebar" x1="0" y1="0" x2="120" y2="270" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1b1b20"/>
+      <stop offset="0.55" stop-color="#0c0c0f"/>
+      <stop offset="1" stop-color="#08080a"/>
     </linearGradient>
-
-    <!-- Title horizontal gradient -->
-    <linearGradient id="titleGrad" x1="420" y1="0" x2="860" y2="0" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#ede9fe"/>
-      <stop offset="45%" stop-color="#a78bfa"/>
-      <stop offset="100%" stop-color="#6d28d9"/>
+    <linearGradient id="moon" x1="102" y1="116" x2="138" y2="156" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#9a9ba3"/>
     </linearGradient>
-
-    <!--
-      Crescent mask: white = show, black = hide.
-      Moon main circle: cx=640 cy=140 r=76  (logo scaled 4×, translated so main circle centre = 640,140)
-      Cutout circle offset mirrors logo: (32-21)×4=44 right, (18-27)×4=36 up → cx=684 cy=104 r=64
-    -->
-    <mask id="crescent">
+    <linearGradient id="moonSmall" x1="16" y1="20" x2="30" y2="36" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#9a9ba3"/>
+    </linearGradient>
+    <mask id="crescent" maskUnits="userSpaceOnUse" x="0" y="0" width="1280" height="400">
       <rect width="1280" height="400" fill="white"/>
-      <circle cx="684" cy="104" r="64" fill="black"/>
+      <circle cx="131" cy="127" r="16" fill="black"/>
     </mask>
-
-    <!-- Purple glow halo behind moon -->
-    <filter id="moonGlow" x="-35%" y="-35%" width="170%" height="170%">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="16" result="blur"/>
-      <feFlood flood-color="#7c3aed" flood-opacity="0.55" result="color"/>
-      <feComposite in="color" in2="blur" operator="in" result="colorBlur"/>
-      <feMerge>
-        <feMergeNode in="colorBlur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
+    <mask id="crescentSmall" maskUnits="userSpaceOnUse" x="0" y="0" width="140" height="80">
+      <rect width="140" height="80" fill="white"/>
+      <circle cx="28" cy="24" r="7" fill="black"/>
+    </mask>
+    <filter id="windowShadow" x="-15%" y="-15%" width="130%" height="140%">
+      <feDropShadow dx="0" dy="22" stdDeviation="24" flood-color="#000000" flood-opacity="0.16"/>
     </filter>
-
-    <!-- Soft glow on the title text -->
-    <filter id="titleGlow" x="-8%" y="-60%" width="116%" height="220%">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="9" result="blur"/>
-      <feFlood flood-color="#8b5cf6" flood-opacity="0.65" result="color"/>
-      <feComposite in="color" in2="blur" operator="in" result="colorBlur"/>
-      <feMerge>
-        <feMergeNode in="colorBlur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
+    <filter id="tileShadow" x="-40%" y="-40%" width="180%" height="190%">
+      <feDropShadow dx="0" dy="8" stdDeviation="9" flood-color="#000000" flood-opacity="0.22"/>
     </filter>
+    <clipPath id="window">
+      <rect width="500" height="270" rx="18"/>
+    </clipPath>
+    <clipPath id="frame">
+      <rect width="1280" height="400" rx="28"/>
+    </clipPath>
   </defs>
 
-  <!-- ═══ Background ═══ -->
-  <rect width="1280" height="400" fill="#030306"/>
-  <rect width="1280" height="400" fill="url(#bgGlow)"/>
+  <g clip-path="url(#frame)">
+    <rect width="1280" height="400" fill="url(#canvas)"/>
 
-  <!-- ═══ Star field (left side) ═══ -->
-  <circle cx="74"  cy="34"  r="1.7" fill="#ddd6fe" opacity="0.90"/>
-  <circle cx="198" cy="118" r="1.3" fill="#ede9fe" opacity="0.72"/>
-  <circle cx="342" cy="57"  r="1.1" fill="#c4b5fd" opacity="0.78"/>
-  <circle cx="148" cy="278" r="1.5" fill="#ddd6fe" opacity="0.68"/>
-  <circle cx="42"  cy="192" r="0.9" fill="#c4b5fd" opacity="0.58"/>
-  <circle cx="418" cy="335" r="1.2" fill="#ede9fe" opacity="0.63"/>
-  <circle cx="271" cy="368" r="0.8" fill="#c4b5fd" opacity="0.48"/>
-  <circle cx="119" cy="158" r="1.3" fill="#ddd6fe" opacity="0.53"/>
-  <circle cx="488" cy="83"  r="1.0" fill="#c4b5fd" opacity="0.68"/>
-  <circle cx="302" cy="214" r="1.1" fill="#ede9fe" opacity="0.44"/>
-  <circle cx="58"  cy="324" r="0.8" fill="#ddd6fe" opacity="0.58"/>
-  <circle cx="184" cy="43"  r="0.9" fill="#c4b5fd" opacity="0.68"/>
-  <circle cx="437" cy="171" r="1.0" fill="#ddd6fe" opacity="0.48"/>
-  <circle cx="511" cy="42"  r="1.3" fill="#ddd6fe" opacity="0.58"/>
+    <!-- Background glow and rings -->
+    <circle cx="1010" cy="150" r="330" fill="url(#bloom)"/>
+    <circle cx="1010" cy="150" r="270" stroke="#b4b6be" stroke-opacity="0.35"/>
+    <circle cx="1010" cy="150" r="200" stroke="#b4b6be" stroke-opacity="0.22"/>
 
-  <!-- ═══ Star field (right side) ═══ -->
-  <circle cx="848"  cy="40"  r="1.5" fill="#ddd6fe" opacity="0.80"/>
-  <circle cx="974"  cy="127" r="1.2" fill="#ede9fe" opacity="0.68"/>
-  <circle cx="1102" cy="54"  r="1.3" fill="#c4b5fd" opacity="0.73"/>
-  <circle cx="1215" cy="175" r="0.9" fill="#ddd6fe" opacity="0.63"/>
-  <circle cx="922"  cy="292" r="1.4" fill="#ede9fe" opacity="0.58"/>
-  <circle cx="1044" cy="345" r="1.0" fill="#c4b5fd" opacity="0.53"/>
-  <circle cx="1176" cy="308" r="0.8" fill="#ddd6fe" opacity="0.68"/>
-  <circle cx="808"  cy="167" r="1.2" fill="#c4b5fd" opacity="0.48"/>
-  <circle cx="1240" cy="85"  r="0.9" fill="#ede9fe" opacity="0.78"/>
-  <circle cx="868"  cy="356" r="0.7" fill="#ddd6fe" opacity="0.48"/>
-  <circle cx="1064" cy="218" r="1.1" fill="#c4b5fd" opacity="0.43"/>
-  <circle cx="1142" cy="136" r="0.8" fill="#ede9fe" opacity="0.63"/>
-  <circle cx="760"  cy="36"  r="1.5" fill="#ede9fe" opacity="0.68"/>
+    <!-- ── Brand ─────────────────────────────────────────────── -->
+    <g filter="url(#tileShadow)">
+      <rect x="88" y="100" width="64" height="64" rx="18" fill="#0e0e10"/>
+    </g>
+    <circle cx="120" cy="134" r="19" fill="url(#moon)" mask="url(#crescent)"/>
 
-  <!-- ═══ Ambient glow halos behind moon ═══ -->
-  <circle cx="640" cy="140" r="172" fill="#3b0764" opacity="0.07"/>
-  <circle cx="640" cy="140" r="116" fill="#4c1d95" opacity="0.08"/>
-  <circle cx="640" cy="140" r="74"  fill="#6d28d9" opacity="0.06"/>
+    <text x="172" y="153" fill="#101012" font-family="-apple-system, 'Segoe UI', Inter, Roboto, Helvetica, Arial, sans-serif" font-size="58" font-weight="800" letter-spacing="-1.5">Luna</text>
 
-  <!-- ═══ Crescent moon ═══ -->
-  <!-- Main circle cx=640 cy=140 r=76, crescent cut by mask -->
-  <circle cx="640" cy="140" r="76" fill="url(#moonGrad)" mask="url(#crescent)" filter="url(#moonGlow)"/>
+    <text fill="#55565c" font-family="-apple-system, 'Segoe UI', Inter, Roboto, Helvetica, Arial, sans-serif" font-size="25" letter-spacing="-0.2">
+      <tspan x="90" y="222">Your own AI assistant. Runs on your machine,</tspan>
+      <tspan x="90" y="256">works with any model, follows you everywhere.</tspan>
+    </text>
 
-  <!--
-    Orbital ring: original logo ellipse cx=26 cy=22 rx=21 ry=8 rotate(-28 26 22), scale 4×
-    translate(556, 32): cx=(26×4+556)=660 cy=(22×4+32)=120 rx=84 ry=32
-    rotate(-28) pivot stays at ring centre
-  -->
-  <ellipse cx="660" cy="120" rx="84" ry="32" stroke="#a78bfa" stroke-width="1.3"
-    stroke-linecap="round" stroke-dasharray="5 7" opacity="0.40"
-    transform="rotate(-28 660 120)"/>
+    <!-- Pills, styled like the app's filter chips -->
+    <g font-family="-apple-system, 'Segoe UI', Inter, Roboto, Helvetica, Arial, sans-serif" font-size="15" font-weight="600">
+      <rect x="90" y="290" width="164" height="36" rx="18" fill="#101012"/>
+      <text x="172" y="313" fill="#ffffff" text-anchor="middle">Private by default</text>
 
-  <!--
-    Stars from logo (scale 4×, translate 556 32):
-      cx=40 cy=9  → (716, 68)  r≈3.5
-      cx=7  cy=8  → (584, 64)  r≈2.0
-      cx=43 cy=34 → (728, 168) r≈2.0
-  -->
-  <circle cx="716" cy="68"  r="3.5" fill="#ddd6fe" opacity="0.86"/>
-  <circle cx="584" cy="64"  r="2.0" fill="#c4b5fd" opacity="0.64"/>
-  <circle cx="728" cy="168" r="2.0" fill="#c4b5fd" opacity="0.50"/>
+      <rect x="264" y="290" width="112" height="36" rx="18" fill="#ffffff" stroke="#e8e8ea"/>
+      <text x="320" y="313" fill="#55565c" text-anchor="middle">Any model</text>
 
-  <!-- ═══ Title ═══ -->
-  <text x="640" y="278"
-    text-anchor="middle"
-    font-family="'Segoe UI', 'SF Pro Display', system-ui, -apple-system, sans-serif"
-    font-size="70" font-weight="800" letter-spacing="10"
-    fill="url(#titleGrad)" filter="url(#titleGlow)">L.U.N.A.</text>
+      <rect x="386" y="290" width="196" height="36" rx="18" fill="#ffffff" stroke="#e8e8ea"/>
+      <text x="484" y="313" fill="#55565c" text-anchor="middle">Desktop · Web · Phone</text>
+    </g>
 
-  <!-- ═══ Subtitle ═══ -->
-  <text x="640" y="314"
-    text-anchor="middle"
-    font-family="'Segoe UI', 'SF Pro Text', system-ui, -apple-system, sans-serif"
-    font-size="14.5" font-weight="400" letter-spacing="3.5"
-    fill="#a78bfa" opacity="0.88">LARGE UNIFIED NEXUS MIND AI</text>
+    <!-- ── Miniature app window ──────────────────────────────── -->
+    <g transform="translate(704 66)">
+      <g filter="url(#windowShadow)">
+        <rect width="500" height="270" rx="18" fill="#f7f7f8"/>
+      </g>
+      <g clip-path="url(#window)">
+        <rect width="500" height="270" fill="#f7f7f8"/>
 
-  <!-- ═══ Separator ═══ -->
-  <line x1="530" y1="336" x2="622" y2="336" stroke="#4c1d95" stroke-width="0.8" opacity="0.55"/>
-  <circle cx="640" cy="336" r="2.2" fill="#8b5cf6" opacity="0.80"/>
-  <line x1="658" y1="336" x2="750" y2="336" stroke="#4c1d95" stroke-width="0.8" opacity="0.55"/>
+        <!-- Sidebar -->
+        <rect width="132" height="270" fill="url(#sidebar)"/>
+        <circle cx="16" cy="15" r="3.6" fill="#ff5f57"/>
+        <circle cx="28" cy="15" r="3.6" fill="#febc2e"/>
+        <circle cx="40" cy="15" r="3.6" fill="#28c840"/>
+        <circle cx="22" cy="30" r="7.5" fill="url(#moonSmall)" mask="url(#crescentSmall)"/>
+        <text x="35" y="35" fill="#ffffff" font-family="-apple-system, 'Segoe UI', Inter, Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700">Luna</text>
+        <rect x="12" y="50" width="108" height="20" rx="10" fill="#2a2a30" stroke="#ffffff" stroke-opacity="0.08"/>
+        <rect x="22" y="58" width="44" height="4" rx="2" fill="#ffffff" fill-opacity="0.85"/>
+        <rect x="16" y="84" width="60" height="4" rx="2" fill="#b7b8bd" fill-opacity="0.7"/>
+        <rect x="16" y="98" width="48" height="4" rx="2" fill="#b7b8bd" fill-opacity="0.7"/>
+        <rect x="16" y="112" width="70" height="4" rx="2" fill="#b7b8bd" fill-opacity="0.7"/>
+        <rect x="12" y="132" width="108" height="1" fill="#ffffff" fill-opacity="0.08"/>
+        <rect x="10" y="144" width="112" height="18" rx="6" fill="#ffffff" fill-opacity="0.1"/>
+        <rect x="18" y="151" width="74" height="4" rx="2" fill="#ffffff" fill-opacity="0.9"/>
+        <rect x="18" y="173" width="84" height="4" rx="2" fill="#a9aab0" fill-opacity="0.55"/>
+        <rect x="18" y="189" width="64" height="4" rx="2" fill="#a9aab0" fill-opacity="0.55"/>
+        <rect x="18" y="205" width="78" height="4" rx="2" fill="#a9aab0" fill-opacity="0.55"/>
+        <rect x="18" y="221" width="58" height="4" rx="2" fill="#a9aab0" fill-opacity="0.55"/>
 
-  <!-- ═══ Tagline ═══ -->
-  <text x="640" y="362"
-    text-anchor="middle"
-    font-family="'Segoe UI', system-ui, -apple-system, sans-serif"
-    font-size="13" font-weight="300" letter-spacing="2.5"
-    fill="#7c3aed" opacity="0.82">voice  ·  memory  ·  vision  ·  desktop automation</text>
+        <!-- User bubble -->
+        <rect x="292" y="22" width="176" height="34" rx="14" fill="#101012"/>
+        <rect x="306" y="32" width="148" height="4" rx="2" fill="#ffffff" fill-opacity="0.9"/>
+        <rect x="306" y="42" width="96" height="4" rx="2" fill="#ffffff" fill-opacity="0.9"/>
+        <circle cx="482" cy="50" r="8" fill="#101012"/>
+
+        <!-- Luna reply -->
+        <circle cx="152" cy="80" r="8" fill="#ffffff" stroke="#e8e8ea"/>
+        <rect x="166" y="72" width="246" height="128" rx="14" fill="#ffffff" stroke="#e8e8ea"/>
+        <rect x="180" y="86" width="170" height="4" rx="2" fill="#55565c" fill-opacity="0.75"/>
+        <rect x="180" y="102" width="64" height="5" rx="2.5" fill="#101012"/>
+        <rect x="192" y="116" width="150" height="4" rx="2" fill="#9a9ba3"/>
+        <rect x="192" y="128" width="124" height="4" rx="2" fill="#9a9ba3"/>
+        <rect x="180" y="144" width="72" height="5" rx="2.5" fill="#101012"/>
+        <rect x="192" y="158" width="138" height="4" rx="2" fill="#9a9ba3"/>
+        <!-- Sources pill -->
+        <rect x="180" y="174" width="118" height="16" rx="8" fill="#f7f7f8" stroke="#e8e8ea"/>
+        <rect x="188" y="180" width="30" height="4" rx="2" fill="#101012"/>
+        <rect x="224" y="179" width="30" height="6" rx="3" fill="#ffffff" stroke="#e8e8ea" stroke-width="0.8"/>
+        <rect x="258" y="179" width="30" height="6" rx="3" fill="#ffffff" stroke="#e8e8ea" stroke-width="0.8"/>
+
+        <!-- Composer -->
+        <rect x="146" y="222" width="340" height="34" rx="17" fill="#ffffff" stroke="#e8e8ea"/>
+        <rect x="166" y="237" width="80" height="4" rx="2" fill="#a9aab1"/>
+        <rect x="386" y="230" width="44" height="18" rx="9" fill="#f2f2f3"/>
+        <circle cx="469" cy="239" r="12" fill="#101012"/>
+        <path d="M469 245V233M464.5 237.5L469 233L473.5 237.5" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+    </g>
+  </g>
+  <!-- Hairline edge so the banner stays defined on GitHub's white page -->
+  <rect x="0.5" y="0.5" width="1279" height="399" rx="27.5" stroke="#e8e8ea"/>
 </svg>
