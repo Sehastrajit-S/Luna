@@ -124,6 +124,22 @@ async def dispatch_direct_commands(ctx: ChatContext) -> None:
         if forced is None:
             logger.info("Ignoring unknown skill from the + menu: %r", picked[:64])
 
+    # ── "What's the news?" / "tech news" → headlines straight from the feeds ──
+    # Left to the model, this turned into vague summaries of news-site homepages.
+    # News *about* something ("news about Tesla") still goes to the news-search skill.
+    if forced is None and not has_files:
+        from server.services import news_feed
+        news_category = news_feed.news_category_request(request)
+        if news_category:
+            ctx.dispatched = True
+            ctx.direct_command_type = f"news:{news_category}"
+            ctx.had_tool_call = True
+            stories = await news_feed.get_category(news_category, limit=12)
+            ctx.tool_succeeded = bool(stories)
+            ctx.full_response = news_feed.render_answer(news_category, stories)
+            ctx.full_response_parts = [ctx.full_response]
+            return
+
     # ── Several steps in one request → the agent loop, not a shortcut ─────────
     # A shortcut would answer the first step and silently drop the rest.
     from server.services.agent_loop.routing import is_multi_step

@@ -43,6 +43,10 @@
           <svg viewBox="0 0 24 24" width="17" height="17"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" fill="none"/><path d="M21 21l-4.3-4.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           <span>Explore</span>
         </button>
+        <button class="nav-item" type="button" data-nav="news">
+          <svg viewBox="0 0 24 24" width="17" height="17"><path d="M5 5h11v14H6.5A1.5 1.5 0 0 1 5 17.5z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/><path d="M16 9h3v8.5a1.5 1.5 0 0 1-3 0M8 9h5M8 12.5h5M8 16h3" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>News</span>
+        </button>
         <button class="nav-item" type="button" data-nav="library">
           <svg viewBox="0 0 24 24" width="17" height="17"><path d="M6 3h9l3 3v15H6z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/><path d="M14 3v4h4" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/></svg>
           <span>Library</span>
@@ -344,6 +348,24 @@
         </div>
       </div>
 
+      <div id="view-news" class="view is-hidden">
+        <div class="news-page">
+          <div class="news-head">
+            <div class="dashboard-header">
+              <p class="eyebrow">NEWS</p>
+              <h1 id="news-title">News</h1>
+              <p class="sub" id="news-sub">Headlines from BBC, The Guardian and NPR.</p>
+            </div>
+            <button class="news-refresh" id="news-refresh" type="button" aria-label="Refresh news">
+              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v4.5h-4.5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span>Refresh</span>
+            </button>
+          </div>
+          <div class="capability-filters news-tabs" id="news-tabs" role="tablist" aria-label="News categories"></div>
+          <div class="news-grid" id="news-grid" aria-live="polite"></div>
+        </div>
+      </div>
+
       <div id="view-library" class="view is-hidden">
         <div class="library">
           <div class="dashboard-header">
@@ -432,6 +454,7 @@
   <script src="settings.js"></script>
   <script src="agent-steps.js"></script>
   <script src="library.js"></script>
+  <script src="news.js"></script>
   <script src="meeting.js"></script>
   <script src="app.js"></script>
 </body>
