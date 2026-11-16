@@ -57,10 +57,11 @@ async def get_pickable():
     skills = [{
         "id": "store-prices",
         "name": "Compare store prices",
-        "description": "Walmart, Costco, Target, Sam's Club and Safeway",
+        "description": "Walmart, Costco, Target, Sam's Club and Safeway"
+                       + ("" if settings.serpapi_api_key else " · free web search"),
         "placeholder": "Which product? e.g. Tide Pods 81 count",
-        "ready": bool(settings.serpapi_api_key),
-        "setup": "Add a SerpApi key in Settings → Integrations",
+        # Always usable: without a SerpApi key it falls back to free web search.
+        "ready": True,
         "icons": [{"name": store.name, "url": store.icon} for store in STORES],
     }]
     skills += [{"id": s.id, "name": s.name, "description": s.description, "placeholder": f"{s.name}: what should I look up?",

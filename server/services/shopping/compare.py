@@ -26,6 +26,9 @@ MIN_MATCH = 0.5
 # Icons the chat will render (markdown.js ICON_URL): Google's favicon hosts only.
 ICON_HOSTS = re.compile(r"https://(?:[a-z0-9-]+\.gstatic\.com/|www\.google\.com/s2/favicons\?)[^\s\"'<>()]*$", re.I)
 
+WEB_NOTE = ("Prices come from free web search and the stores' own pages, so they can be missing or out of "
+            "date. Add a SerpApi key in Settings for live Google Shopping prices.")
+
 NOTE = ("Prices are Google Shopping listings for each store's own website. In-store, member, "
         "pickup and sale prices can differ, and package sizes vary between stores.")
 
@@ -34,9 +37,22 @@ def _tokens(text: str) -> set[str]:
     return {w for w in _WORD_RE.findall((text or "").lower()) if w not in _STOP and len(w) > 1}
 
 
+def _lead_word(product: str) -> str | None:
+    """The first real word the user typed, usually the brand ("Kirkland paper towels")."""
+    for word in _WORD_RE.findall((product or "").lower()):
+        if word not in _STOP and len(word) > 1 and not word[0].isdigit():
+            return word
+    return None
+
+
 def match_score(product: str, title: str) -> float:
-    want = _tokens(product)
-    return len(want & _tokens(title)) / len(want) if want else 0.0
+    """Share of the product's words in the listing title; 0 when the lead word
+    (brand) is missing, so "Kirkland paper towels" never matches Brawny."""
+    want, have = _tokens(product), _tokens(title)
+    lead = _lead_word(product)
+    if not want or (lead and lead not in have):
+        return 0.0
+    return len(want & have) / len(want)
 
 
 _NUM_RE = re.compile(r"\d+(?:\.\d+)?")
@@ -81,6 +97,8 @@ async def compare_store_prices(product: str, stores: list[str] | None = None, *,
     if not product:
         raise ShoppingError("bad_request", "Say which product to compare, e.g. 'Tide Pods 81 count'.")
     chosen = resolve_stores(stores)
+    if not settings.serpapi_api_key:
+        return await _compare_via_web(product, chosen)
     budget = max(1, int(settings.shopping_max_searches or 1))
     found: dict[str, dict] = {}
     missed: dict[str, str] = {}
@@ -136,6 +154,11 @@ async def compare_store_prices(product: str, stores: list[str] | None = None, *,
             result=f"{len(found)}/{len(chosen)} stores priced, {searches} search(es)",
         )
 
+    return _result(product, chosen, found, missed, searches, source="google_shopping")
+
+
+def _result(product: str, chosen: list[Store], found: dict[str, dict], missed: dict[str, str],
+            searches: int, *, source: str) -> dict:
     results = []
     for store in chosen:
         if store.key in found:
@@ -149,15 +172,52 @@ async def compare_store_prices(product: str, stores: list[str] | None = None, *,
     return {
         "product": product,
         "location": settings.shopping_location or "United States (online prices)",
+        "source": source,
         "searches_used": searches,
         "stores": results,
         "cheapest": {"store": cheapest["store"], "price": cheapest["price"], "title": cheapest["title"]} if cheapest else None,
-        "note": NOTE,
+        "note": NOTE if source == "google_shopping" else WEB_NOTE,
     }
+
+
+async def _compare_via_web(product: str, chosen: list[Store], client: httpx.AsyncClient | None = None,
+                           search=None) -> dict:
+    """No SerpApi key: free web search of each store's site (see web.py)."""
+    from server.services.shopping import web
+
+    found: dict[str, dict] = {}
+    missed: dict[str, str] = {}
+    status = "ok"
+    try:
+        listings = await web.search_stores(product, chosen, score=match_score, min_match=MIN_MATCH,
+                                           search=search, client=client)
+    except Exception as e:                      # free search failing must not crash the chat
+        status = "upstream_error"
+        raise ShoppingError("upstream_error", "The free web search didn't respond. Try again in a minute.") from e
+    finally:
+        record_audit(
+            "external_read", tool="compare_store_prices", risk="safe", status=status,
+            args={"provider": "duckduckgo", "service": "web_search", "product": product,
+                  "stores": [s.key for s in chosen]},
+            result=f"web search across {len(chosen)} store site(s)",
+        )
+    for store in chosen:
+        listing = listings.get(store.key)
+        if listing is None:
+            missed[store.key] = "not_found"
+        elif listing.price is None:
+            missed[store.key] = "price_hidden"
+            found_page = {"store": store.name, "status": "price_hidden", "title": listing.title,
+                          "url": listing.url, "icon": store.icon}
+            found[store.key] = found_page
+        else:
+            found[store.key] = _offer(product, store, listing, match_score(product, listing.title))
+    return _result(product, chosen, found, missed, len(chosen), source="web")
 
 
 _STATUS_TEXT = {
     "not_found": "no listing from this store matched",
+    "price_hidden": "found the product page, but it doesn't show a price without visiting the store's site",
     "not_searched": "not checked (search limit reached; raise shopping_max_searches to check more stores)",
     "quota_exhausted": "not checked (SerpApi searches used up this month)",
     "rate_limited": "not checked (SerpApi rate limit)",
@@ -188,15 +248,20 @@ def render_markdown(result: dict) -> str:
     from server.services.skill_runtime.runner import embed_cards
 
     priced = sorted((r for r in result["stores"] if r["status"] == "found"), key=lambda r: r["price"])
-    missing = [r for r in result["stores"] if r["status"] != "found"]
-    if not priced:
+    hidden = [r for r in result["stores"] if r["status"] == "price_hidden"]
+    missing = [r for r in result["stores"] if r["status"] not in ("found", "price_hidden")]
+    if not priced and not hidden:
         lines = [f"I couldn't find **{_cell(result['product'])}** at any of these stores on Google Shopping."]
     else:
-        best = next((r for r in priced if r["store"] == (result.get("cheapest") or {}).get("store")), priced[0])
-        lines = [f"**{_cell(result['product'])}** is cheapest at **{best['store']}** ({best['price_text']}).", "",
-                 "| Store | Item | Price |", "|---|---|---|"]
+        if priced:
+            best = next((r for r in priced if r["store"] == (result.get("cheapest") or {}).get("store")), priced[0])
+            lead = f"**{_cell(result['product'])}** is cheapest at **{best['store']}** ({best['price_text']})."
+        else:
+            lead = f"I found **{_cell(result['product'])}** at these stores, but their pages don't show a price here."
+        lines = [lead, "", "| Store | Item | Price |", "|---|---|---|"]
         lines += [f"| {_store_cell(r)} | {_cell(r['title'])}{'' if r.get('same_size', True) else ' (different size)'} | {_cell(r['price_text'])} |"
                   for r in priced]
+        lines += [f"| {_store_cell(r)} | {_cell(r['title'])} | [See price]({r['url']}) |" for r in hidden]
     if missing:
         lines += ["", "Not priced: " + "; ".join(f"{r['store']} ({_STATUS_TEXT.get(r['status'], r['status'])})" for r in missing) + "."]
     lines += ["", f"_{result['note']}_"]
@@ -214,7 +279,8 @@ def format_for_chat(result: dict) -> str:
                          **({} if r.get("same_size", True) else {"size": "different from what the user asked for"}),
                          **({"delivery": r["delivery"]} if r.get("delivery") else {})})
         else:
-            rows.append({"store": r["store"], "price": None, "why": _STATUS_TEXT.get(r["status"], r["status"])})
+            rows.append({"store": r["store"], "price": None, "why": _STATUS_TEXT.get(r["status"], r["status"]),
+                         **({"item": r["title"], "link": r["url"]} if r.get("url") else {})})
     facts = {"product": result["product"], "where": result["location"], "stores": rows,
              "cheapest": result["cheapest"], "note": result["note"]}
     guide = ("Present this as a table (Store | Item | Price), cheapest first, then name the cheapest store. "

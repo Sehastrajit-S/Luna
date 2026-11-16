@@ -103,12 +103,11 @@ class CompareTests(unittest.TestCase):
         self.assertEqual(statuses["Safeway"], "not_searched")
         self.assertEqual(len(seen), 2, "no more searches after the quota ran out")
 
-    def test_not_configured(self) -> None:
-        settings.serpapi_api_key = ""
+    def test_serpapi_client_itself_requires_a_key(self) -> None:
+        from server.services.shopping import serpapi
         with self.assertRaises(ShoppingError) as ctx:
-            self._compare([(200, GENERAL)])
+            run(serpapi.search("eggs", api_key=""))
         self.assertEqual(ctx.exception.kind, "not_configured")
-        self.assertIn("serpapi_api_key", ctx.exception.message)
 
     def test_auth_and_provider_errors_are_typed_and_never_leak_the_key(self) -> None:
         cases = [
@@ -267,7 +266,8 @@ class DirectAnswerTests(unittest.TestCase):
         with mock.patch.object(settings, "serpapi_api_key", ""):
             skills = TestClient(app).get("/api/skills/pickable").json()["skills"]
         self.assertEqual(skills[0]["id"], "store-prices")
-        self.assertFalse(skills[0]["ready"], "no key yet: the menu points to Settings")
+        self.assertTrue(skills[0]["ready"], "no key: still usable through free web search")
+        self.assertIn("free web search", skills[0]["description"])
         self.assertIn("paper-search", [s["id"] for s in skills])
 
 
