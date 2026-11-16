@@ -1,15 +1,21 @@
 <div align="center">
   <img src="docs/site/public/images/banner.svg" width="100%" alt="Luna: your own AI assistant. Runs on your machine, works with any model, follows you everywhere." />
 
-  <h3>Your own AI assistant. It runs on your machine, works with any model, and follows you to every device.</h3>
+  <h1>Luna: the open-source AI engine you own</h1>
+
+  <h3>A self-hosted AI assistant that runs on your machine, works with any model, and follows you to every device.</h3>
 
   <p>
-    <a href="https://github.com/Sehastrajit-S/Luna/stargazers"><img src="https://img.shields.io/github/stars/Sehastrajit-S/Luna?style=flat-square&color=6d28d9" alt="Stars" /></a>
-    <a href="LICENSE"><img src="https://img.shields.io/github/license/Sehastrajit-S/Luna?style=flat-square&color=8b5cf6" alt="MIT license" /></a>
-    <a href="https://github.com/Sehastrajit-S/Luna/commits/main"><img src="https://img.shields.io/github/last-commit/Sehastrajit-S/Luna?style=flat-square&color=a78bfa" alt="Last commit" /></a>
+    <a href="https://github.com/Sehastrajit-S/Luna/releases/latest"><img src="https://img.shields.io/github/v/release/Sehastrajit-S/Luna?style=flat-square&color=6d28d9&label=release" alt="Latest release" /></a>
+    <a href="https://github.com/Sehastrajit-S/Luna/releases"><img src="https://img.shields.io/github/downloads/Sehastrajit-S/Luna/total?style=flat-square&color=7c3aed" alt="Downloads" /></a>
+    <a href="https://github.com/Sehastrajit-S/Luna/stargazers"><img src="https://img.shields.io/github/stars/Sehastrajit-S/Luna?style=flat-square&color=8b5cf6" alt="Stars" /></a>
+    <a href="LICENSE"><img src="https://img.shields.io/github/license/Sehastrajit-S/Luna?style=flat-square&color=a78bfa" alt="MIT license" /></a>
+    <a href="https://github.com/Sehastrajit-S/Luna/commits/main"><img src="https://img.shields.io/github/last-commit/Sehastrajit-S/Luna?style=flat-square&color=c4b5fd" alt="Last commit" /></a>
   </p>
 
   <p>
+    <a href="https://github.com/Sehastrajit-S/Luna/releases/latest"><b>Download</b></a> ·
+    <a href="https://luna-frontend-tan.vercel.app"><b>Docs</b></a> ·
     <a href="#quick-start"><b>Quick start</b></a> ·
     <a href="#a-quick-tour"><b>Tour</b></a> ·
     <a href="docs/REMOTE.md"><b>Use it anywhere</b></a> ·
@@ -22,7 +28,7 @@
   <img src="docs/screenshots/desktop-chat.png" width="100%" alt="Luna desktop app answering a trip-planning question with sources" />
 </p>
 
-Luna is an open-source, local-first AI assistant. Chat with it, hand it your files, let it search the web and write documents, and keep everything on hardware you own. It runs with Ollama out of the box, or with any cloud model you choose.
+Luna is an open-source, self-hosted AI assistant and agent engine, a private alternative to hosted chatbots. Chat with it or talk to it, hand it your files, let it take meeting notes, search the web and write documents, and keep everything on hardware you own. It runs local LLMs through Ollama out of the box, or any cloud model you choose: Claude, Gemini, OpenAI, Groq, Mistral and more.
 
 - **Private by default.** Inference runs locally through Ollama. Memory, chats and files stay in your own SQLite database.
 - **Any model.** One line in `.env` switches between Ollama, Claude, Gemini, Groq, Mistral, Cohere, NVIDIA NIM or any OpenAI-compatible endpoint.
@@ -33,15 +39,25 @@ Luna is an open-source, local-first AI assistant. Chat with it, hand it your fil
 
 ## Quick start
 
-**Docker** (any OS):
+**Download the app** from the [latest release](https://github.com/Sehastrajit-S/Luna/releases/latest):
+
+| Platform | File |
+|---|---|
+| Windows | `Luna-Setup-<version>.exe` |
+| macOS | `Luna-<version>-macos-arm64.dmg` (Apple silicon) or `-macos-x64.dmg` (Intel) |
+| Linux | `Luna-<version>-linux-x86_64.AppImage` or `-linux-arm64.AppImage` |
+| Android | `Luna-<version>-android.apk` |
+| iPhone / iPad | Open your Luna in Safari and choose **Add to Home Screen** |
+
+The desktop apps start a local server for you (Python 3.10+ required) or connect to one on another computer.
+
+**Docker** (any OS, server and web UI):
 
 ```bash
 docker run -d --name luna -p 127.0.0.1:8899:8899 -v luna_data:/app/data ghcr.io/sehastrajit-s/luna:latest
 ```
 
 Open http://localhost:8899, then pick a model in **Settings → AI model** (a local Ollama model or a cloud API key).
-
-**Windows app:** download `Luna-Setup-<version>.exe` from [Releases](https://github.com/Sehastrajit-S/Luna/releases).
 
 **From source** (Node.js 18+, Python 3.10+):
 
