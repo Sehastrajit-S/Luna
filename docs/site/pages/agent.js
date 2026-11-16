@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import DocsLayout from '../components/DocsLayout';
 import { Callout, CodeFile, NextSteps } from '../components/Docs';
 
@@ -46,7 +47,7 @@ export default function Agent() {
         <table>
           <thead><tr><th>File</th><th>Purpose</th></tr></thead>
           <tbody>
-            <tr><td><code>skill.json</code></td><td>Machine-readable manifest — name, description, version, and registered commands.</td></tr>
+            <tr><td><code>skill.json</code></td><td>Metadata: id, name, a one-sentence description (how Luna picks the skill), an optional <code>trigger</code> slash command, and the permissions and tools it may use.</td></tr>
             <tr><td><code>SKILL.md</code></td><td>Human-readable description. Luna reads this to understand what the skill does and when to use it.</td></tr>
           </tbody>
         </table>
@@ -59,46 +60,51 @@ export default function Agent() {
 
       <section>
         <h2 id="create-skill">Create a skill</h2>
-        <p>Skills follow a simple two-file structure. Here is a minimal example:</p>
+        <p>
+          A skill is a folder with two plain-text files. No Python, no registration, no restart: Luna reads
+          the skills folders on every message, so a new skill works on your next one.
+        </p>
 
-        <CodeFile label="server/skills/my-skill/skill.json">
+        <CodeFile label="server/skills/recipe-finder/skill.json">
           <pre><code>{`{
-  "name": "my-skill",
-  "version": "1.0.0",
-  "description": "A short description of what this skill does.",
-  "commands": [
-    {
-      "name": "do_thing",
-      "description": "Does the thing with the given input.",
-      "parameters": {
-        "input": { "type": "string", "description": "What to process." }
-      }
-    }
-  ]
+  "id": "recipe-finder",
+  "name": "Recipe Finder",
+  "description": "Find, adapt, and suggest recipes based on ingredients or dietary needs.",
+  "permissions": ["web"],
+  "tools": ["web_search", "web_fetch"]
 }`}</code></pre>
         </CodeFile>
 
-        <CodeFile label="server/skills/my-skill/SKILL.md">
-          <pre><code>{`# My Skill
+        <CodeFile label="server/skills/recipe-finder/SKILL.md">
+          <pre><code>{`# Recipe Finder
 
-This skill enables Luna to do the thing.
+Use this skill when the user asks for recipes, meal ideas, ingredient substitutions, or dietary adaptations.
 
-## When to use
-Call \`do_thing\` when the user asks to process something.
+## Workflow
 
-## Examples
-- "Do the thing with this text"
-- "Can you process X for me?"`}</code></pre>
+1. Ask clarifying questions if ingredients or dietary needs are unclear.
+2. Search the web for recipes matching the request.
+3. Fetch the top 1-2 results to get the actual recipe content.
+4. Present the recipe: ingredients list, then steps.
+5. Suggest one substitution or variation at the end.
+
+## Output format
+
+- Numbered list for steps, bullet list for ingredients.
+- No ads, author bios, or filler text from fetched pages.`}</code></pre>
         </CodeFile>
 
-        <Callout type="note" title="Command implementation">
-          <p>Commands declared in <code>skill.json</code> must be registered in
-          <code>server/services/tool_registry.py</code> with matching names and handler functions.
-          The manifest describes the schema; the registry provides the implementation.</p>
-        </Callout>
+        <p>
+          <code>description</code> decides when Luna uses the skill, <code>tools</code> limits what it may call, and
+          <code>SKILL.md</code> is the workflow it follows. Add <code>"trigger": "/recipe"</code> to make it a slash
+          command that runs only when a message starts with <code>/recipe</code>. Put your own skills in
+          <code>data/workspace/skills/</code> so updates never overwrite them.
+        </p>
 
-        <p>After adding a skill, restart the backend. Luna will load it on startup and make it available
-        to the LLM as a tool call option.</p>
+        <Callout type="tip" title="Full guide">
+          <p>Every field, the permission and tool lists, and the optional <code>electron.md</code> and <code>cli.md</code> files:
+          see <Link href="/skills-authoring">Building Skills</Link> and <code>server/skills/README.md</code>.</p>
+        </Callout>
       </section>
 
       <section>

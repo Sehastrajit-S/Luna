@@ -90,3 +90,6 @@ build-backend/
 dist-backend/
 dist-electron/
 dist-mobile/
+
+# Binaries fetched at build time (scripts/fetch-uv.mjs)
+interfaces/desktop/vendor/

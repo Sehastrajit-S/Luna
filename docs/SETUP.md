@@ -14,7 +14,7 @@ Luna is a **server** (it does the thinking and keeps your chats, memory and file
 | | Good for | You need |
 |---|---|---|
 | **A. Docker** | Any OS, nothing else to install, easy upgrades | [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or Docker Engine on Linux) |
-| **B. Windows desktop app** | A Windows PC you use every day, with voice and desktop controls | Windows 10/11, plus Python 3.10+ for the built-in server |
+| **B. Desktop app** | A computer you use every day, with voice and desktop controls | Windows 10/11, macOS or Linux. Nothing else: it sets itself up on first launch |
 | **C. From source** | Developing Luna, or Linux/macOS without Docker | Node.js 18+ and Python 3.10+ |
 
 ### A. Docker
@@ -37,15 +37,16 @@ docker compose -f deploy/compose.cloud.yml up -d    # Luna only, for a cloud mod
 
 `-p 127.0.0.1:8899:8899` keeps Luna reachable from this computer only. Don't publish the port on your network; use Tailscale for other devices ([section 4](#4-use-it-from-your-other-devices-remote-over-tailscale)).
 
-### B. Windows desktop app
+### B. Desktop app
 
-1. Download `Luna-Setup-<version>.exe` from [Releases](https://github.com/Sehastrajit-S/Luna/releases) and run it.
-2. The app starts its own server using the Python on your PC, so install [Python 3.10+](https://www.python.org/downloads/) and Luna's packages once:
-   ```powershell
-   git clone https://github.com/Sehastrajit-S/Luna.git
-   pip install -r Luna\server\requirements.txt
+1. Download it from [luna-ai-engine.com](https://www.luna-ai-engine.com/#download) (it picks the right file for your computer), or from [Releases](https://github.com/Sehastrajit-S/Luna/releases/latest): `Luna-Setup.exe` (Windows), `Luna-macos-arm64.dmg` / `Luna-macos-x64.dmg` (macOS), `Luna-linux-x86_64.AppImage` (Linux). Or from a terminal:
+   ```bash
+   curl -fsSL https://www.luna-ai-engine.com/install.sh | sh     # macOS / Linux
+   irm https://www.luna-ai-engine.com/install.ps1 | iex          # Windows (PowerShell)
    ```
-   No Python? Run the server with Docker (A) instead. When a Luna server is already running on port 8899, the desktop app uses it.
+2. Open Luna. The first launch downloads a private copy of Python and Luna's libraries into the app's own folder (a few minutes, once), then starts the server. You don't install Python yourself.
+
+When a Luna server is already running on port 8899 (from Docker or source), the desktop app uses it instead. Your chats, memory and settings live in the app's data folder, so updating the app never touches them.
 
 ### C. From source
 

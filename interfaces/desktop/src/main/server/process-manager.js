@@ -81,14 +81,14 @@ async function healthCheck() {
 }
 
 function launch() {
-  const { cwd, pythonBin, scriptPath } = spawnOpts
+  const { cwd, pythonBin, scriptPath, env } = spawnOpts
   logger.info(`Starting backend: ${pythonBin} ${scriptPath}`)
   spawnedAt = Date.now()
   healthFailures = 0
   child = spawn(pythonBin, [scriptPath], {
     cwd,
     stdio: ['ignore', 'pipe', 'pipe'],
-    env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUNBUFFERED: '1' },
+    env: { ...process.env, ...env, PYTHONIOENCODING: 'utf-8', PYTHONUNBUFFERED: '1' },
     windowsHide: true,
   })
 
@@ -111,9 +111,9 @@ function launch() {
   }
 }
 
-async function spawnBackend({ cwd, pythonBin, scriptPath }) {
+async function spawnBackend({ cwd, pythonBin, scriptPath, env = {} }) {
   intentionalShutdown = false
-  spawnOpts = { cwd, pythonBin: pythonBin || resolvePython(cwd), scriptPath }
+  spawnOpts = { cwd, pythonBin: pythonBin || resolvePython(cwd), scriptPath, env }
 
   // A backend started elsewhere (`luna backend`, `npm run web`) already owns
   // the port; a second one would just fail to bind and crash-loop.
@@ -158,4 +158,4 @@ function isRunning() {
   return child !== null
 }
 
-module.exports = { spawnBackend, shutdown, isRunning }
+module.exports = { spawnBackend, shutdown, isRunning, portInUse }

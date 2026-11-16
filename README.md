@@ -25,7 +25,9 @@
 </div>
 
 <p align="center">
-  <img src="docs/screenshots/desktop-chat.png" width="100%" alt="Luna desktop app answering a trip-planning question with sources" />
+  <img src="docs/media/luna-demo.webp" width="100%" alt="Luna demo: any model, voice and meeting minutes, memory, store prices, every device, and an expanding graph of skills and integrations" />
+  <br />
+  <sub><a href="docs/media/luna-demo.mp4">▶ Watch with sound</a></sub>
 </p>
 
 Luna is an open-source, self-hosted AI assistant and agent engine, a private alternative to hosted chatbots. Chat with it or talk to it, hand it your files, let it take meeting notes, search the web and write documents, and keep everything on hardware you own. It runs local LLMs through Ollama out of the box, or any cloud model you choose: Claude, Gemini, OpenAI, Groq, Mistral and more.
@@ -49,7 +51,14 @@ Luna is an open-source, self-hosted AI assistant and agent engine, a private alt
 | Android | `Luna-<version>-android.apk` |
 | iPhone / iPad | Open your Luna in Safari and choose **Add to Home Screen** |
 
-The desktop apps start a local server for you (Python 3.10+ required) or connect to one on another computer.
+The desktop apps set themselves up on first launch (no Python install needed) and run a local server, or connect to one on another computer.
+
+**One-line install:**
+
+```bash
+curl -fsSL https://www.luna-ai-engine.com/install.sh | sh        # macOS / Linux
+irm https://www.luna-ai-engine.com/install.ps1 | iex             # Windows (PowerShell)
+```
 
 **Docker** (any OS, server and web UI):
 
@@ -141,7 +150,7 @@ A skill teaches Luna a new job. Drop a folder into `server/skills/` and it's pic
 
 ```
 server/skills/my-skill/
-├── skill.json   ← name, triggers, which tools it may use
+├── skill.json   ← name, description, optional /trigger command, which tools it may use
 └── SKILL.md     ← the instructions Luna follows
 ```
 

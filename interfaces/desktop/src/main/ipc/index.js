@@ -9,9 +9,10 @@ const { registerWindowHandlers } = require('./window.handlers')
 const { registerEnvHandlers } = require('./env.handlers')
 const { registerUpdaterHandlers } = require('./updater.handlers')
 const { registerSystemHandlers } = require('./system.handlers')
-const { registerServerHandlers } = require('./server.handlers')
+const { registerServerHandlers, setServerDataDir } = require('./server.handlers')
 
-function registerAllHandlers({ getMainWindow, envPath, openSettings }) {
+function registerAllHandlers({ getMainWindow, envPath, dataDir, openSettings }) {
+  if (dataDir) setServerDataDir(dataDir)
   registerWindowHandlers(getMainWindow)
   registerEnvHandlers(envPath)
   registerUpdaterHandlers()

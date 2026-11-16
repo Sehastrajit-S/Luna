@@ -1,6 +1,7 @@
 import Head from 'next/head';
 import Link from 'next/link';
 import { SITE_URL } from '../components/DocsLayout';
+import DownloadButton, { DOWNLOADS, INSTALL_COMMANDS } from '../components/DownloadButton';
 
 const GitHubIcon = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -44,6 +45,11 @@ const features = [
     desc: 'Record a meeting and get a timestamped transcript plus minutes: decisions, action items and open questions.',
   },
   {
+    icon: ic(<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></>),
+    title: 'Skills in plain text', href: '/skills-authoring',
+    desc: 'Teach Luna a new job with a short JSON file and a Markdown workflow. No Python, no restart, and slash commands like /research.',
+  },
+  {
     icon: ic(<><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></>),
     title: 'Automation', href: '/agent',
     desc: 'Launch apps, control the browser, manage Spotify, execute calendar tasks and desktop actions.',
@@ -52,6 +58,11 @@ const features = [
     icon: ic(<><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></>),
     title: 'News & prices', href: '/news',
     desc: "Real headlines with images by category, and one product compared across Walmart, Costco, Target, Sam's Club and Safeway.",
+  },
+  {
+    icon: ic(<><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.6 1-1.1a5.5 5.5 0 0 0 0-7.7z"/><polyline points="3 12 8 12 10 9 13 15 15 12 21 12"/></>),
+    title: 'Your health data', href: '/health',
+    desc: 'Sync Fitbit, Oura, Garmin, Withings, Google Fit, Apple Health and Samsung Health. Sleep and fitness stay in your own database.',
   },
   {
     icon: ic(<><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></>),
@@ -68,7 +79,6 @@ const steps = [
 ];
 
 
-const RELEASES = 'https://github.com/Sehastrajit-S/Luna/releases/latest';
 
 const gallery = [
   { src: '/screenshots/meeting-minutes.png', w: 600, h: 1298, phone: true,
@@ -91,11 +101,11 @@ const modelGroups = [
 ];
 
 const platforms = [
-  { name: 'Windows', file: 'Installer (.exe)', href: RELEASES },
-  { name: 'macOS', file: 'Apple silicon & Intel (.dmg)', href: RELEASES },
-  { name: 'Linux', file: 'AppImage, x86_64 & arm64', href: RELEASES },
-  { name: 'Android', file: 'App (.apk)', href: RELEASES },
-  { name: 'Docker', file: 'Server + web UI, any OS', href: '/docker' },
+  { name: 'Windows', file: 'Installer (.exe)', href: DOWNLOADS.windows.href },
+  { name: 'macOS · Apple silicon', file: 'Disk image (.dmg)', href: DOWNLOADS.mac.href },
+  { name: 'macOS · Intel', file: 'Disk image (.dmg)', href: DOWNLOADS.mac.alt.href },
+  { name: 'Linux', file: 'AppImage · x86_64', href: DOWNLOADS.linux.href },
+  { name: 'Android', file: 'App (.apk)', href: DOWNLOADS.android.href },
   { name: 'iPhone & iPad', file: 'In Safari: Add to Home Screen', href: '/setup#remote' },
 ];
 
@@ -115,7 +125,7 @@ const faqs = [
   { q: 'How is Luna different from ChatGPT?',
     a: 'You host Luna yourself, choose any model including fully local ones, and keep your data. It is open source, so you can add skills, connect tools over MCP and change how it works.' },
   { q: 'What do I need to run Luna?',
-    a: 'A Windows, macOS or Linux computer. The desktop app needs Python 3.10 or newer for its built-in server, or you can run the server with Docker. For local models, install Ollama; a GPU speeds things up, but small models also run on a CPU.' },
+    a: 'A Windows, macOS or Linux computer. The desktop app sets itself up on first launch (no Python install needed), or you can run the server with Docker. For local models, install Ollama; a GPU speeds things up, but small models also run on a CPU.' },
 ];
 
 const FAQ_JSON_LD = {
@@ -280,9 +290,7 @@ export default function Home() {
               <span className="lp-stat"><span className="lp-stat-dot" />MIT licensed</span>
             </div>
             <div className="lp-hero-actions">
-              <Link href="#download" className="lp-btn lp-btn-primary">
-                Download Luna free
-              </Link>
+              <DownloadButton />
               <a href="https://github.com/Sehastrajit-S/Luna" target="_blank" rel="noopener noreferrer" className="lp-btn lp-btn-outline">
                 <GitHubIcon />View on GitHub
               </a>
@@ -381,16 +389,27 @@ export default function Home() {
           <div className="lp-section-inner">
             <p className="lp-eyebrow-label">Download</p>
             <h2 id="download-h" className="lp-section-h2">Get Luna for every device.</h2>
-            <p className="lp-section-sub">Free downloads from the latest release. Run the server once, then use it anywhere.</p>
-            <div className="lp-platforms">
+            <p className="lp-section-sub">Free. Install it like any other app; Luna sets up everything else on first launch.</p>
+            <div className="lp-download-hero">
+              <DownloadButton fallbackHref="#all-platforms" />
+            </div>
+            <div className="lp-platforms" id="all-platforms">
               {platforms.map((p) => (
                 p.href.startsWith('http')
-                  ? <a key={p.name} href={p.href} className="lp-platform" target="_blank" rel="noopener noreferrer"><strong>{p.name}</strong><span>{p.file}</span></a>
+                  ? <a key={p.name} href={p.href} className="lp-platform"><strong>{p.name}</strong><span>{p.file}</span></a>
                   : <Link key={p.name} href={p.href} className="lp-platform"><strong>{p.name}</strong><span>{p.file}</span></Link>
               ))}
             </div>
+            <div className="lp-install-cmds">
+              <h3>Or install from a terminal</h3>
+              <p><span>macOS / Linux</span><code>{INSTALL_COMMANDS.unix}</code></p>
+              <p><span>Windows (PowerShell)</span><code>{INSTALL_COMMANDS.windows}</code></p>
+              <p className="lp-install-hint">With Docker running, the macOS/Linux command starts the Luna server instead. See <Link href="/docker">Docker</Link>.</p>
+            </div>
             <p className="lp-download-note">
-              New to self-hosting? Follow the <Link href="/setup">step-by-step setup guide</Link>.
+              Android: get automatic updates with{' '}
+              <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/Sehastrajit-S/Luna" target="_blank" rel="noopener noreferrer">Obtainium</a>.
+              {' '}New to self-hosting? Follow the <Link href="/setup">step-by-step setup guide</Link>.
             </p>
           </div>
         </section>

@@ -22,19 +22,8 @@ export default function CLI() {
         <p>Install the CLI globally on macOS, Windows, or Linux:</p>
 
         <CodeFile label="terminal">
-          <pre><code>{`npm i -g luna-workspace`}</code></pre>
-        </CodeFile>
-
-        <p>Shortest first run without a permanent install:</p>
-
-        <CodeFile label="terminal">
-          <pre><code>{`npx luna-workspace setup`}</code></pre>
-        </CodeFile>
-
-        <p>If the npm package is not published yet, install directly from GitHub:</p>
-
-        <CodeFile label="terminal">
-          <pre><code>{`npm i -g github:Sehastrajit-S/Luna`}</code></pre>
+          <pre><code>{`npm i -g github:Sehastrajit-S/Luna
+luna setup`}</code></pre>
         </CodeFile>
 
         <p>Run the CLI from the repository root:</p>

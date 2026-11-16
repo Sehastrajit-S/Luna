@@ -35,7 +35,7 @@ export default function Setup() {
           <thead><tr><th>Option</th><th>Good for</th><th>You need</th></tr></thead>
           <tbody>
             <tr><td><strong>A. Docker</strong></td><td>Any OS, nothing else to install, easy upgrades</td><td>Docker Desktop, or Docker Engine on Linux</td></tr>
-            <tr><td><strong>B. Windows app</strong></td><td>A Windows PC you use every day, with voice and desktop controls</td><td>Windows 10/11, plus Python 3.10+ for the built-in server</td></tr>
+            <tr><td><strong>B. Desktop app</strong></td><td>A computer you use every day, with voice and desktop controls</td><td>Windows, macOS or Linux. Nothing else: it sets itself up on first launch</td></tr>
             <tr><td><strong>C. From source</strong></td><td>Developing Luna, or Linux/macOS without Docker</td><td>Node.js 18+ and Python 3.10+</td></tr>
           </tbody>
         </table>
@@ -52,18 +52,21 @@ export default function Setup() {
           Compose, a GPU, or a cloud-only setup, see <Link href="/docker">Docker</Link>.
         </p>
 
-        <h3>B. Windows app</h3>
+        <h3>B. Desktop app</h3>
         <Steps>
           <Step num="1" title="Install the app">
-            <p>Download <code>Luna-Setup-&lt;version&gt;.exe</code> from <Link href="/downloads">Downloads</Link> and run it.</p>
-          </Step>
-          <Step num="2" title="Give it Python">
-            <p>The app starts its own server with the Python on your PC. Install Python 3.10+, then Luna's packages, once:</p>
-            <CodeFile label="PowerShell">
-              <pre><code>{`git clone https://github.com/Sehastrajit-S/Luna.git
-pip install -r Luna\\server\\requirements.txt`}</code></pre>
+            <p>Get it from <Link href="/downloads">Downloads</Link> (Windows, macOS or Linux), or from a terminal:</p>
+            <CodeFile label="terminal">
+              <pre><code>{`curl -fsSL https://www.luna-ai-engine.com/install.sh | sh     # macOS / Linux
+irm https://www.luna-ai-engine.com/install.ps1 | iex          # Windows (PowerShell)`}</code></pre>
             </CodeFile>
-            <p>No Python? Run the server with Docker instead. When a Luna server is already running on port 8899, the app uses it.</p>
+          </Step>
+          <Step num="2" title="Open it">
+            <p>
+              The first launch downloads a private copy of Python and Luna's libraries into the app's own folder
+              (a few minutes, once), then starts the server. You don't install Python yourself. When a Luna server
+              is already running on port 8899, the app uses it instead.
+            </p>
           </Step>
         </Steps>
 
