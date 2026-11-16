@@ -42,5 +42,6 @@ module.exports = Object.freeze({
     getConfig: 'server:get-config',
     test: 'server:test',
     save: 'server:save',
+    discover: 'server:discover',
   },
 })

@@ -42,6 +42,7 @@ const IPC = {
     getConfig: 'server:get-config',
     test: 'server:test',
     save: 'server:save',
+    discover: 'server:discover',
   },
 }
 
@@ -58,6 +59,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getServerConfig: () => ipcRenderer.invoke(IPC.server.getConfig),
   testServer: (url, token) => ipcRenderer.invoke(IPC.server.test, { url, token }),
   saveServer: config => ipcRenderer.invoke(IPC.server.save, config),
+  discoverServers: () => ipcRenderer.invoke(IPC.server.discover),
 
   // Window controls
   minimize: () => ipcRenderer.invoke(IPC.window.minimize),

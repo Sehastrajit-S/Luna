@@ -38,7 +38,7 @@ function validate(config) {
     return 'Enter the server URL, e.g. https://my-pc.tailnet.ts.net:8899'
   }
   if (!/^https?:$/.test(parsed.protocol)) return 'The server URL must start with https:// or http://'
-  if (!config.token) return 'Paste the access token printed by `luna serve --tailscale`.'
+  // No token is fine: the server lets its owner's Tailscale devices in by identity.
   return ''
 }
 

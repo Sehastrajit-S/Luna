@@ -18,6 +18,7 @@ from server.core import access
 from server.services import settings_store
 
 TOKEN = "s3cret-token"
+OWNER = "owner@example.com"
 PROXIED = {"X-Forwarded-Host": "my-pc.tailnet.ts.net:8899", "X-Forwarded-For": "100.101.102.103"}
 
 
@@ -49,6 +50,9 @@ class RemoteAccessTests(unittest.TestCase):
         patcher = mock.patch.object(settings_store, "TOKEN_PATH", token_path)
         patcher.start()
         self.addCleanup(patcher.stop)
+        trusted = mock.patch.object(access, "trusted_logins", mock.AsyncMock(return_value=frozenset({OWNER})))
+        trusted.start()
+        self.addCleanup(trusted.stop)
         self.addCleanup(self._tmp.cleanup)
 
     def _client(self, client_host: str = "127.0.0.1", **kwargs) -> TestClient:
@@ -75,7 +79,25 @@ class RemoteAccessTests(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
 
     def test_any_tailscale_header_marks_request_remote(self) -> None:
-        res = self._client().get("/api/settings", headers={"Tailscale-User-Login": "me@example.com"})
+        res = self._client().get("/api/settings", headers={"Tailscale-User-Login": "someone-else@example.com"})
+        self.assertEqual(res.status_code, 401)
+
+    def test_owner_device_via_tailscale_needs_no_token(self) -> None:
+        res = self._client().get("/api/settings", headers={**PROXIED, "Tailscale-User-Login": OWNER.upper()})
+        self.assertEqual(res.status_code, 200)
+
+    def test_other_tailnet_user_still_needs_token(self) -> None:
+        headers = {**PROXIED, "Tailscale-User-Login": "guest@example.com"}
+        self.assertEqual(self._client().get("/api/settings", headers=headers).status_code, 401)
+        self.assertEqual(self._client().get("/api/settings", headers={**headers, "X-Luna-Token": TOKEN}).status_code, 200)
+
+    def test_funnel_traffic_is_never_trusted_by_identity(self) -> None:
+        headers = {**PROXIED, "Tailscale-User-Login": OWNER, "Tailscale-Funnel-Request": "?1"}
+        self.assertEqual(self._client().get("/api/settings", headers=headers).status_code, 401)
+
+    def test_identity_header_from_non_loopback_peer_is_ignored(self) -> None:
+        # Only tailscaled on this machine (a loopback peer) can vouch for the header.
+        res = self._client("192.168.1.20").get("/api/settings", headers={**PROXIED, "Tailscale-User-Login": OWNER})
         self.assertEqual(res.status_code, 401)
 
     def test_public_routes_stay_open_through_proxy(self) -> None:
@@ -108,6 +130,45 @@ class ServerWiringTests(unittest.TestCase):
     def test_main_app_installs_remote_access_middleware(self) -> None:
         from server.main import app
         self.assertIn(access.RemoteAccessMiddleware, [m.cls for m in app.user_middleware])
+
+    def test_hello_reports_whether_caller_is_authorized(self) -> None:
+        from server.main import app
+        client = TestClient(app, client=("127.0.0.1", 50000))
+        with mock.patch.object(access, "trusted_logins", mock.AsyncMock(return_value=frozenset({OWNER}))):
+            stranger = client.get("/api/remote/hello", headers=PROXIED).json()
+            owner = client.get("/api/remote/hello", headers={**PROXIED, "Tailscale-User-Login": OWNER}).json()
+            local = client.get("/api/remote/hello").json()
+        self.assertTrue(stranger["luna"])
+        self.assertEqual((stranger["authorized"], stranger["via"]), (False, None))
+        self.assertEqual((owner["authorized"], owner["via"]), (True, "tailscale"))
+        self.assertEqual(local["via"], "local")
+
+
+class TailscaleIdentityTests(unittest.TestCase):
+    STATUS = '{"Self": {"UserID": 42}, "User": {"42": {"LoginName": "Owner@Example.com"}}}'
+
+    def _load(self, **overrides):
+        from server.services import tailscale_identity as ti
+        values = {"tailscale_trust_owner": True, "tailscale_trusted_logins": "", **overrides}
+        done = mock.Mock(stdout=self.STATUS)
+        with mock.patch.multiple(ti.settings, **values), \
+             mock.patch.object(ti.shutil, "which", return_value="tailscale"), \
+             mock.patch.object(ti.subprocess, "run", return_value=done):
+            return ti._load()
+
+    def test_owner_login_is_trusted(self) -> None:
+        self.assertEqual(self._load(), frozenset({"owner@example.com"}))
+
+    def test_extra_logins_and_owner_opt_out(self) -> None:
+        self.assertEqual(
+            self._load(tailscale_trust_owner=False, tailscale_trusted_logins="Friend@Example.com, "),
+            frozenset({"friend@example.com"}),
+        )
+
+    def test_no_tailscale_means_no_identity_trust(self) -> None:
+        from server.services import tailscale_identity as ti
+        with mock.patch.object(ti.shutil, "which", return_value=None):
+            self.assertEqual(ti._owner_login(), "")
 
 
 if __name__ == "__main__":

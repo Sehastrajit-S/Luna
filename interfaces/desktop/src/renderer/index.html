@@ -247,17 +247,24 @@
                 <option value="remote">Remote over Tailscale</option>
               </select>
             </div>
-            <div class="settings-row server-remote-row">
-              <div class="settings-text">
-                <label for="server-url">Server URL</label>
-                <p class="settings-help">Printed by <code>luna serve --tailscale</code>, e.g. https://my-pc.tailnet.ts.net:8899</p>
+            <div class="server-remote-row server-found">
+              <div class="server-found-head">
+                <span class="settings-help" id="server-found-status">Looking for Luna on your tailnet…</span>
+                <button type="button" class="server-rescan" id="server-rescan">Search again</button>
               </div>
-              <input class="server-input settings-input" id="server-url" type="url" placeholder="https://my-pc.tailnet.ts.net:8899" autocomplete="off" spellcheck="false" />
+              <div class="server-found-list" id="server-found-list" role="list"></div>
             </div>
             <div class="settings-row server-remote-row">
               <div class="settings-text">
+                <label for="server-url">Server URL</label>
+                <p class="settings-help">Filled in when you pick a server above, or type one, e.g. https://my-pc.tailnet.ts.net:8899</p>
+              </div>
+              <input class="server-input settings-input" id="server-url" type="url" placeholder="https://my-pc.tailnet.ts.net:8899" autocomplete="off" spellcheck="false" />
+            </div>
+            <div class="settings-row server-remote-row server-token-row" hidden>
+              <div class="settings-text">
                 <label for="server-token">Access token</label>
-                <p class="settings-help">Also printed by <code>luna serve --tailscale</code>. Stored only on this computer.</p>
+                <p class="settings-help">Only needed when the server doesn’t trust your Tailscale account. Printed by <code>luna serve --tailscale</code>.</p>
               </div>
               <input class="server-input settings-input" id="server-token" type="password" autocomplete="new-password" spellcheck="false" />
             </div>

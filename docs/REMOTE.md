@@ -21,19 +21,26 @@ This starts the server and runs `tailscale serve` so it's reachable at `https://
 
 ## 2. Connect a client
 
+Devices signed in to Tailscale with the **same account** as the server computer connect with nothing to copy:
+
 | Client | How |
 |---|---|
-| Desktop app | Settings → Server → **Remote over Tailscale**, paste the URL and token, **Test connection**, then **Save and restart**. Switch back to **This computer** the same way. |
-| Browser | Open the `…/#token=…` link printed by `luna serve --tailscale` once. The token is kept in that browser. |
-| Mobile app | Settings → Server: enter the URL and access token. |
+| Desktop app | Settings → Server → **Remote over Tailscale**. The app searches your tailnet and lists every shared Luna. If there's exactly one, it's picked for you. Click **Save and restart**. Switch back to **This computer** the same way. |
+| Browser | Open the URL printed by `luna serve --tailscale`. |
+| Mobile app | Settings → Server: enter the URL. The token field can stay empty. |
 
-The device must be signed in to the same tailnet.
+Other people on your tailnet (shared machines, other accounts) need the access token. It's printed by `luna serve --tailscale`, and the desktop app asks for it when a server shows **Needs token**.
 
 ## How access is checked
 
-Apps on the server's own computer (desktop app, CLI, VS Code, Office) call `http://127.0.0.1:8899` and don't need the token.
+Apps on the server's own computer (desktop app, CLI, VS Code, Office) call `http://127.0.0.1:8899` and don't need anything.
 
-Requests that arrive through a proxy must send the token in the `X-Luna-Token` header, or as `?luna_token=` for event streams. `tailscale serve` always adds `X-Forwarded-Host`, and it strips any `Tailscale-*` headers a client tries to send, so the server can tell these requests apart. See [`server/core/access.py`](../server/core/access.py).
+Requests through `tailscale serve` are let in when either of these is true:
+
+1. **Tailscale identity.** Tailscale adds `Tailscale-User-Login` for the signed-in user and strips any copy a client sends. The server trusts the login this computer is signed in as, plus any listed in `tailscale_trusted_logins`. It only believes the header when the connection comes from tailscaled on the same machine and isn't Funnel (public) traffic. Set `tailscale_trust_owner=false` to turn this off.
+2. **Access token.** The token goes in the `X-Luna-Token` header, or `?luna_token=` for event streams.
+
+`tailscale serve` always adds `X-Forwarded-Host`, so the server can tell proxied requests from local ones. `/api/remote/hello` is public: it tells a client "this is Luna, and you are or aren't authorized". The desktop app uses it for discovery. See [`server/core/access.py`](../server/core/access.py).
 
 Some routes stay open without the token: `/api/system/health`, the web UI's static files, inbound webhooks that verify their own signatures (`/api/channels/*`, `/api/health/webhook/*`) and OAuth callbacks.
 

@@ -5,6 +5,7 @@ const path = require('path')
 const { ipcMain, app } = require('electron')
 const IPC = require('../../shared/ipc-channels')
 const connectionStore = require('../services/connection-store')
+const discovery = require('../services/tailscale-discovery')
 const logger = require('../services/logger')
 
 const TEST_TIMEOUT_MS = 8000
@@ -28,23 +29,29 @@ async function probe(url, token) {
   const problem = connectionStore.validate({ mode: 'remote', url: base, token: String(token || '').trim() })
   if (problem) return { ok: false, message: problem }
 
-  const get = (route, headers = {}) => fetch(`${base}${route}`, { headers, signal: AbortSignal.timeout(TEST_TIMEOUT_MS) })
+  const typed = String(token || '').trim()
+  let hello
   try {
-    const health = await get('/api/system/health')
-    if (!health.ok) return { ok: false, message: `Server answered ${health.status}. Is that a Luna server?` }
+    const res = await fetch(`${base}/api/remote/hello`, {
+      headers: typed ? { 'X-Luna-Token': typed } : {},
+      signal: AbortSignal.timeout(TEST_TIMEOUT_MS),
+    })
+    if (!res.ok) return { ok: false, message: `Server answered ${res.status}. Is that a Luna server (updated to this version)?` }
+    hello = await res.json()
   } catch (error) {
     const reason = error?.name === 'TimeoutError' ? 'timed out' : error?.cause?.code || error?.message || 'unreachable'
     return { ok: false, message: `Can't reach ${base} (${reason}). Check the URL and that this computer is on the same tailnet.` }
   }
-  // Health is public; settings needs the token, so it proves the token works.
-  try {
-    const authed = await get('/api/settings', { 'X-Luna-Token': String(token).trim() })
-    if (authed.status === 401 || authed.status === 403) return { ok: false, message: 'Server reached, but it rejected the access token.' }
-    if (!authed.ok) return { ok: false, message: `Server reached, but settings returned ${authed.status}.` }
-  } catch (error) {
-    return { ok: false, message: `Server reached, but the token check failed: ${error?.message || error}` }
+  if (!hello?.luna) return { ok: false, message: 'That address answered, but it isn’t a Luna server.' }
+  if (hello.via === 'tailscale') return { ok: true, message: `Connected to ${hello.name}. Your Tailscale account is trusted, no token needed.` }
+  if (hello.via === 'token') return { ok: true, message: `Connected to ${hello.name}. The token works.` }
+  if (hello.authorized) return { ok: true, message: `Connected to ${hello.name}.` }
+  return {
+    ok: false,
+    message: typed
+      ? 'Server reached, but it rejected the access token.'
+      : `Reached ${hello.name}, but it doesn’t trust this Tailscale account. Paste its access token.`,
   }
-  return { ok: true, message: 'Connected. The token works.' }
 }
 
 function registerServerHandlers({ envPath }) {
@@ -63,7 +70,14 @@ function registerServerHandlers({ envPath }) {
     return { mode: config.mode, url: config.url, hasToken: Boolean(config.token) }
   })
 
-  ipcMain.handle(IPC.server.test, (_event, { url, token } = {}) => probe(url, token))
+  ipcMain.handle(IPC.server.test, (_event, { url, token } = {}) => {
+    // A blank token field means "the saved one" for the saved server.
+    const saved = connectionStore.load()
+    const useSaved = !String(token || '').trim() && saved.mode === 'remote' && saved.url === connectionStore.normaliseUrl(url)
+    return probe(url, useSaved ? saved.token : token)
+  })
+
+  ipcMain.handle(IPC.server.discover, () => discovery.discover())
 
   // Switching servers restarts the app: the local server is started (or not)
   // at launch, and every window's API base is fixed when it loads.

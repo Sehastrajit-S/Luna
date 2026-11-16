@@ -856,6 +856,22 @@ select.settings-input { cursor: pointer; }
 .server-connection code { font-size: 11.5px; }
 .server-connection.is-local .server-remote-row { display: none; }
 .server-actions { position: static; background: none; padding-top: 14px; }
+.server-found { padding: 12px 0; border-top: 1px solid var(--hairline); }
+.server-found-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.server-rescan { font-size: 12px; font-weight: 600; color: var(--ink-soft); padding: 4px 10px; border-radius: var(--radius-full); box-shadow: 0 0 0 1px var(--hairline); }
+.server-rescan:disabled { opacity: 0.4; cursor: default; }
+.server-found-list { display: grid; gap: 8px; margin-top: 10px; }
+.server-found-list:empty { display: none; }
+.server-option {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; text-align: left;
+  padding: 10px 12px; border-radius: 12px; background: var(--bg-main); box-shadow: 0 0 0 1px var(--hairline);
+}
+.server-option:hover { box-shadow: 0 0 0 1px #93c5fd; }
+.server-option.is-selected { box-shadow: 0 0 0 2px #2563eb; background: #fff; }
+.server-option-name { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+.server-option-host { display: block; font-size: 11.5px; color: var(--ink-faint); margin-top: 2px; word-break: break-all; }
+.server-option .settings-badge { flex-shrink: 0; }
+.server-option .settings-badge.is-warn { background: #fffbeb; color: #b45309; box-shadow: 0 0 0 1px #fde68a; }
 
 /* ── Developer dashboard ─────────────────────────────────────────────────── */
 .dev-dash {

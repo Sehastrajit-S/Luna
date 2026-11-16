@@ -356,6 +356,17 @@ function tailscaleDnsName() {
   }
 }
 
+function tailscaleOwnerLogin() {
+  const res = tailscale(['status', '--json'])
+  if (!res.ok) return ''
+  try {
+    const status = JSON.parse(res.out)
+    return status.User?.[String(status.Self?.UserID)]?.LoginName || ''
+  } catch {
+    return ''
+  }
+}
+
 function serve(args) {
   const env = readEnvFile()
   const port = env.port || '8899'
@@ -395,13 +406,14 @@ function serve(args) {
 
   const url = `https://${dns}:${httpsPort}`
   const token = localApiToken()
+  const owner = tailscaleOwnerLogin()
   ok(`Shared with your tailnet: ${c.cyan}${url}${c.reset}`)
   console.log()
-  console.log(`  ${c.bold}Connect from another device on your tailnet${c.reset}`)
-  console.log(`    Desktop app  Settings → Server → Remote, then paste the URL and token`)
-  console.log(`    Browser      ${c.cyan}${url}/#token=${encodeURIComponent(token)}${c.reset}`)
-  console.log(`    Token        ${token}`)
-  console.log(`  ${c.dim}Keep the token private: it gives full access to this Luna. Stop sharing with: luna serve --tailscale --off${c.reset}`)
+  console.log(`  ${c.bold}Your devices${owner ? ` (signed in to Tailscale as ${owner})` : ''} connect with no setup:${c.reset}`)
+  console.log(`    Desktop app  Settings → Server → Remote over Tailscale → pick this computer`)
+  console.log(`    Browser      ${c.cyan}${url}${c.reset}`)
+  console.log(`  ${c.dim}Other tailnet users need the token: ${token}${c.reset}`)
+  console.log(`  ${c.dim}Stop sharing with: npm run serve:tailscale:off${c.reset}`)
   console.log()
   python(['server/server.py', ...args.filter(a => a !== '--tailscale' && !a.startsWith('--https='))])
 }

@@ -313,6 +313,11 @@ class Settings(BaseSettings):
     # access token in data/local_api_token. Turn this on to also require it for
     # direct connections from other devices (host=0.0.0.0 / LAN / Docker).
     require_token_on_lan: bool = False
+    # Through `tailscale serve`, your own devices (same Tailscale login as this
+    # machine) are let in without the token. Add other tailnet logins here
+    # (comma-separated) to trust them too; everyone else needs the token.
+    tailscale_trust_owner: bool = True
+    tailscale_trusted_logins: str = ""
 
     # ── Skills marketplace ────────────────────────────────────────────────────
     # URL of the curated registry index. Override with a self-hosted JSON file
