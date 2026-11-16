@@ -6,6 +6,8 @@ directories:
   buildResources: resources
   output: ../../dist/desktop
 npmRebuild: false
+# No auto-update feed: releases are downloaded from GitHub by hand.
+publish: null
 files:
   - src/**/*
   - resources/**
