@@ -289,6 +289,27 @@
         </div>
       </div>
 
+      <div id="view-library" class="view is-hidden">
+        <div class="library">
+          <div class="dashboard-header">
+            <p class="eyebrow">LIBRARY</p>
+            <h1>Library</h1>
+            <p class="sub">Files you’ve shared with Luna, and files Luna made for you.</p>
+          </div>
+          <div class="library-toolbar">
+            <div class="capability-filters library-tabs" role="tablist" aria-label="Library">
+              <button class="capability-filter is-active" type="button" role="tab" aria-selected="true" data-library-tab="uploads">Uploaded <span class="library-count" id="library-count-uploads"></span></button>
+              <button class="capability-filter" type="button" role="tab" aria-selected="false" data-library-tab="created">Created by Luna <span class="library-count" id="library-count-created"></span></button>
+            </div>
+            <label class="search-box library-search">
+              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" fill="none"/><path d="M21 21l-4.3-4.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <input type="search" id="library-search" placeholder="Search files…" autocomplete="off" />
+            </label>
+          </div>
+          <ul class="library-list" id="library-list" aria-live="polite"></ul>
+        </div>
+      </div>
+
       <div id="view-capabilities" class="view is-hidden">
         <div class="capabilities">
           <div class="dashboard-header">
@@ -353,6 +374,7 @@
   <script src="voice-input.js"></script>
   <script src="settings.js"></script>
   <script src="agent-steps.js"></script>
+  <script src="library.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

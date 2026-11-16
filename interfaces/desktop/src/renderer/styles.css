@@ -570,7 +570,11 @@ body.explore-open { overflow: hidden; }
   box-shadow: 0 0 0 1px var(--hairline); font-size: 11px; color: var(--ink-faint);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;
 }
-.bubble .md .md-refs-more { font-size: 11px; color: var(--ink-faint); }
+.bubble .md .md-refs-more { font-size: 11px; color: var(--ink-faint); white-space: nowrap; flex-shrink: 0; }
+/* Phones: site chips get squeezed to "kyot…"; the count alone reads better. */
+@media (max-width: 760px) {
+  .bubble .md .md-refs-chip, .bubble .md .md-refs-more { display: none; }
+}
 .bubble .md .md-refs-caret {
   width: 6px; height: 6px; margin-left: 2px; flex-shrink: 0;
   border-right: 1.5px solid var(--ink-faint); border-bottom: 1.5px solid var(--ink-faint);
@@ -1070,4 +1074,42 @@ select.settings-input { cursor: pointer; }
   .explore-overlay { padding: 12px; align-items: flex-start; padding-top: calc(12px + env(safe-area-inset-top)); }
   .explore-dialog { padding: 20px; border-radius: 22px; }
   .luna-toasts { left: 12px; right: 12px; top: calc(12px + env(safe-area-inset-top)); max-width: none; }
+}
+
+/* ── Library ─────────────────────────────────────────────────────────────── */
+.library { position: relative; z-index: 1; flex: 1; min-height: 0; overflow-y: auto; padding: 26px 32px 32px; }
+.library-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin: 22px 0 16px; max-width: 860px; }
+.library-tabs { margin-top: 0; }
+.library-count { margin-left: 4px; opacity: 0.7; font-weight: 600; }
+.library-count:empty { display: none; }
+.library-search { width: 260px; }
+.library-search input::-webkit-search-cancel-button { cursor: pointer; }
+.library-list { display: grid; gap: 8px; max-width: 860px; }
+.library-item {
+  display: flex; align-items: center; gap: 10px; padding: 6px 10px 6px 6px;
+  border-radius: 14px; background: var(--bg-card);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 0 0 1px var(--hairline);
+}
+.library-item:hover { box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 0 0 1px #cfd0d5; }
+.library-open { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 4px; text-align: left; color: var(--ink); }
+.library-text { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+.library-name { font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.library-meta { font-size: 12px; color: var(--ink-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.library-chat {
+  flex-shrink: 0; max-width: 220px; padding: 6px 11px; border-radius: var(--radius-full);
+  font-size: 12px; font-weight: 600; color: var(--ink-soft); background: var(--bg-main);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.library-chat:hover { color: var(--ink); background: #ececee; }
+.library-empty { padding: 28px 4px; color: var(--ink-faint); font-size: 13.5px; }
+.library-empty.is-error { color: #b42318; }
+
+@media (max-width: 760px) {
+  .library { padding: 14px 14px 24px; }
+  .library-toolbar { margin: 16px 0 12px; }
+  .library-search { display: flex; width: 100%; }
+  .library-search input { font-size: 16px; }
+  .library-item { flex-wrap: wrap; padding: 6px; gap: 2px; }
+  .library-open { flex-basis: 100%; }
+  .library-chat { margin: 0 0 6px 52px; max-width: calc(100% - 58px); }
 }
