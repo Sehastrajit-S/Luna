@@ -39,9 +39,22 @@ const navGroups = [
     ],
   },
   {
+    label: 'Setup',
+    items: [
+      { href: '/setup',     label: 'Local & Remote' },
+      { href: '/remote',    label: 'Remote access (Tailscale)' },
+      { href: '/docker',    label: 'Docker' },
+      { href: '/releasing', label: 'Releasing' },
+    ],
+  },
+  {
     label: 'Features',
     items: [
       { href: '/voice',        label: 'Voice' },
+      { href: '/meeting-mode', label: 'Meeting mode' },
+      { href: '/news',         label: 'News' },
+      { href: '/store-prices', label: 'Store prices' },
+      { href: '/library',      label: 'Library' },
       { href: '/memory',       label: 'Memory' },
       { href: '/agent',        label: 'Agent & Skills' },
       { href: '/integrations', label: 'Integrations' },
