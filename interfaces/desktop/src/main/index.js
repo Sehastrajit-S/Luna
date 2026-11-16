@@ -30,7 +30,9 @@ const trayService = require('./services/tray-service')
 const updaterService = require('./services/updater-service')
 const connectionStore = require('./services/connection-store')
 
-const ROOT = path.join(__dirname, '..', '..', '..', '..')
+// From source: the repo root (interfaces/desktop/src/main → 4 levels up).
+// Installed: electron-builder copies server/ into the resources folder.
+const ROOT = app.isPackaged ? process.resourcesPath : path.join(__dirname, '..', '..', '..', '..')
 const ENV_PATH = path.join(ROOT, '.env')
 
 if (!enforceSingleInstance()) {
