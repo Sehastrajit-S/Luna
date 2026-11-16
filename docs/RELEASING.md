@@ -28,6 +28,53 @@ Workflows: [`build-release.yml`](../.github/workflows/build-release.yml) (apps) 
 4. Wait for the two workflows to finish; the files appear on the release and the image on the repo's Packages page.
 5. **First release only:** make the container package public (repo → Packages → luna → Package settings → Change visibility → Public) so anyone can pull it without logging in.
 
+## Download links that never change
+
+Each release also attaches copies without the version in the name, so these always fetch the newest build (the website, README and install scripts use them):
+
+| File | Link |
+|---|---|
+| Windows | `https://github.com/Sehastrajit-S/Luna/releases/latest/download/Luna-Setup.exe` |
+| macOS | `.../latest/download/Luna-macos-arm64.dmg`, `Luna-macos-x64.dmg` |
+| Linux | `.../latest/download/Luna-linux-x86_64.AppImage`, `Luna-linux-arm64.AppImage` |
+| Android | `.../latest/download/Luna-android.apk` |
+| Server | `.../latest/download/Luna-server.zip` |
+
+The workflow also writes a **Download** table at the top of the release notes.
+
+One-line installers live on the website (`docs/site/public/install.sh`, `install.ps1`):
+
+```bash
+curl -fsSL https://www.luna-ai-engine.com/install.sh | sh     # macOS / Linux
+irm https://www.luna-ai-engine.com/install.ps1 | iex          # Windows
+```
+
+## Package managers (optional)
+
+Every release generates winget and Homebrew manifests (artifact `package-manifests`). Publishing them needs one-time setup:
+
+**Homebrew** (`brew install sehastrajit-s/luna/luna`):
+1. Create a public repo `Sehastrajit-S/homebrew-luna` with an empty `Casks/` folder.
+2. Add a secret `HOMEBREW_TAP_TOKEN`: a fine-grained token with *Contents: read and write* on that repo.
+From then on every release updates `Casks/luna.rb`.
+
+**winget** (`winget install Sehastrajit.Luna`):
+1. The first version is a manual pull request to [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs): copy `manifests/s/Sehastrajit/Luna/<version>/` from the `package-manifests` artifact (or run `node scripts/package-manifests.mjs <version> SHA256SUMS-<version>.txt`), check it with `winget validate --manifest <folder>`, and open the PR.
+2. After it's merged, add a secret `WINGET_TOKEN` (classic token, `public_repo` scope). Later releases open the update PR automatically.
+
+**Android**: Obtainium tracks GitHub releases with no setup. Share this link: `https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/Sehastrajit-S/Luna`
+
+## Code signing (optional)
+
+Builds are unsigned until these secrets exist; then the workflow signs automatically.
+
+| Platform | Secrets | Get it from |
+|---|---|---|
+| Windows | `WIN_CSC_LINK` (the `.pfx`, base64), `WIN_CSC_KEY_PASSWORD` | A code-signing certificate (OV/EV), or Azure Trusted Signing |
+| macOS | `MAC_CSC_LINK` (Developer ID Application `.p12`, base64), `MAC_CSC_KEY_PASSWORD`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` | Apple Developer Program ($99/year); notarization runs when `APPLE_ID` is set |
+
+Base64 a certificate with `base64 -i cert.p12 | pbcopy` (macOS) or `[Convert]::ToBase64String([IO.File]::ReadAllBytes('cert.pfx'))` (PowerShell).
+
 ## Building locally
 
 All build output goes under `dist/<target>/` and is never committed:

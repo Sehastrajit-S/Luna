@@ -2310,3 +2310,83 @@ img, svg {
     grid-template-columns: 1fr;
   }
 }
+
+/* =====================================================
+   LANDING PAGE — DOWNLOAD BUTTON + INSTALL COMMANDS
+   ===================================================== */
+.lp-download-cta {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.lp-download-cta-note {
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+.lp-download-cta-note a {
+  color: #c4b5fd;
+  text-decoration: none;
+}
+.lp-download-cta-note a:hover {
+  text-decoration: underline;
+}
+.lp-download-hero {
+  margin: -24px 0 36px;
+}
+.lp-install-cmds {
+  margin-top: 36px;
+  padding: 24px 28px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.028);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+.lp-install-cmds h3 {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 14px;
+}
+.lp-install-cmds p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin: 10px 0;
+}
+.lp-install-cmds p span {
+  min-width: 170px;
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+.lp-install-cmds code {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  white-space: nowrap;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #0d0d16;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #e9e5ff;
+  font-size: 0.8125rem;
+}
+.lp-install-cmds .lp-install-hint {
+  display: block;
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.45);
+  margin-top: 14px;
+}
+.lp-install-hint a {
+  color: #a78bfa;
+}
+
+.lp-hero-actions {
+  align-items: flex-start;
+}
+
+@media (min-width: 1101px) {
+  .lp-features-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}

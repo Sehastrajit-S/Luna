@@ -66,6 +66,7 @@ This tells Luna when to activate the skill and what it is allowed to do.
 | `description` | yes | One sentence. Luna uses this to decide if your skill matches a request. Make it specific. |
 | `permissions` | yes | What system areas the skill can access. See table below. |
 | `tools` | yes | Which tools Luna can call. See table below. |
+| `trigger` | no | A slash command such as `"/research"`. When set, the skill runs **only** when a message starts with it (`/research quantum batteries`), never on its own. Leave it out (or empty) to let Luna pick the skill from its description. |
 
 **Available permissions:**
 

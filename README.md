@@ -49,7 +49,14 @@ Luna is an open-source, self-hosted AI assistant and agent engine, a private alt
 | Android | `Luna-<version>-android.apk` |
 | iPhone / iPad | Open your Luna in Safari and choose **Add to Home Screen** |
 
-The desktop apps start a local server for you (Python 3.10+ required) or connect to one on another computer.
+The desktop apps set themselves up on first launch (no Python install needed) and run a local server, or connect to one on another computer.
+
+**One-line install:**
+
+```bash
+curl -fsSL https://www.luna-ai-engine.com/install.sh | sh        # macOS / Linux
+irm https://www.luna-ai-engine.com/install.ps1 | iex             # Windows (PowerShell)
+```
 
 **Docker** (any OS, server and web UI):
 
@@ -141,7 +148,7 @@ A skill teaches Luna a new job. Drop a folder into `server/skills/` and it's pic
 
 ```
 server/skills/my-skill/
-├── skill.json   ← name, triggers, which tools it may use
+├── skill.json   ← name, description, optional /trigger command, which tools it may use
 └── SKILL.md     ← the instructions Luna follows
 ```
 

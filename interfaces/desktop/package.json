@@ -1,16 +1,17 @@
 {
   "name": "luna-desktop",
-  "version": "0.2.0",
-  "description": "L.U.N.A. desktop shell — reference architecture",
+  "version": "0.2.1",
+  "description": "L.U.N.A. desktop shell \u2014 reference architecture",
   "author": "L.U.N.A. contributors",
   "license": "MIT",
   "main": "src/main/index.js",
   "scripts": {
     "start": "electron .",
-    "build:win": "electron-builder --win --config build/electron-builder.yml --publish never",
-    "build:mac": "electron-builder --mac --config build/electron-builder.yml --publish never",
-    "build:linux": "electron-builder --linux --config build/electron-builder.yml --publish never",
-    "build:dir": "electron-builder --dir --config build/electron-builder.yml"
+    "build:win": "node ../../scripts/fetch-uv.mjs win32-x64 && electron-builder --win --config build/electron-builder.yml --publish never",
+    "build:mac": "node ../../scripts/fetch-uv.mjs darwin-arm64 darwin-x64 && electron-builder --mac --config build/electron-builder.yml --publish never",
+    "build:linux": "node ../../scripts/fetch-uv.mjs linux-x64 linux-arm64 && electron-builder --linux --config build/electron-builder.yml --publish never",
+    "build:dir": "electron-builder --dir --config build/electron-builder.yml",
+    "fetch:uv": "node ../../scripts/fetch-uv.mjs"
   },
   "devDependencies": {
     "electron": "32.3.3",

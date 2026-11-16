@@ -10,9 +10,17 @@ const logger = require('../services/logger')
 
 const TEST_TIMEOUT_MS = 8000
 
+// Set at startup; installed builds keep server data in the user's app-data folder.
+let serverDataDir = null
+
+function setServerDataDir(dir) {
+  serverDataDir = dir
+}
+
 function readLocalToken(envPath) {
+  const dataDir = serverDataDir || path.join(path.dirname(envPath), 'data')
   try {
-    return fs.readFileSync(path.join(path.dirname(envPath), 'data', 'local_api_token'), 'utf8').trim()
+    return fs.readFileSync(path.join(dataDir, 'local_api_token'), 'utf8').trim()
   } catch {
     return '' // the local server writes it on first start
   }
@@ -101,4 +109,4 @@ function registerServerHandlers({ envPath }) {
   })
 }
 
-module.exports = { registerServerHandlers, currentToken, readLocalToken }
+module.exports = { registerServerHandlers, currentToken, readLocalToken, setServerDataDir }

@@ -2,6 +2,7 @@
   "id": "your-skill-name",
   "name": "Your Skill Name",
   "description": "One sentence describing exactly what requests this skill handles. Luna uses this to decide when to activate it.",
+  "trigger": "",
   "permissions": ["web"],
   "tools": ["web_search", "web_fetch"]
 }

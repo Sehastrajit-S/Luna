@@ -1,11 +1,13 @@
 import Link from 'next/link';
 import DocsLayout from '../components/DocsLayout';
 import { Callout, CodeFile, NextSteps } from '../components/Docs';
+import DownloadButton, { DOWNLOADS, INSTALL_COMMANDS } from '../components/DownloadButton';
 
 const repoUrl = 'https://github.com/Sehastrajit-S/Luna';
 const releasesUrl = `${repoUrl}/releases/latest`;
 
 const toc = [
+  { id: 'quick', label: 'Quick install' },
   { id: 'desktop', label: 'Desktop' },
   { id: 'mobile', label: 'Mobile' },
   { id: 'web', label: 'Web and Docker' },
@@ -18,33 +20,33 @@ const platforms = [
     name: 'Windows',
     status: 'Packaged',
     device: 'Windows 10/11 x64',
-    download: 'Luna setup installer or portable zip',
-    href: releasesUrl,
+    download: 'Luna-Setup.exe',
+    href: DOWNLOADS.windows.href,
     notes: 'The full desktop app: local or remote server, push-to-talk voice, meeting mode, tray and desktop automation.',
   },
   {
     name: 'macOS',
     status: 'DMG',
     device: 'Apple silicon or Intel',
-    download: 'Luna-<version>-macos-arm64.dmg / -x64.dmg',
-    href: releasesUrl,
-    notes: 'Not signed yet: right-click the app and choose Open the first time. Needs Python 3.10+ for the built-in server, or point it at a remote one.',
+    download: 'Luna-macos-arm64.dmg (Intel: Luna-macos-x64.dmg)',
+    href: DOWNLOADS.mac.href,
+    notes: 'Not signed yet: right-click the app and choose Open the first time. Everything else is set up on first launch.',
   },
   {
     name: 'Linux',
     status: 'AppImage',
     device: 'x64 and arm64',
-    download: 'Luna-<version>-linux-x86_64.AppImage',
-    href: releasesUrl,
+    download: 'Luna-linux-x86_64.AppImage (also arm64)',
+    href: DOWNLOADS.linux.href,
     notes: 'Make it executable and run it. For a headless server, use the Docker image or the server zip.',
   },
   {
     name: 'Android',
     status: 'APK',
     device: 'Android phones and tablets',
-    download: 'Android debug APK',
-    href: releasesUrl,
-    notes: 'Sideload the APK from the release, then point it at your server over Tailscale. Or just open Luna in the phone browser.',
+    download: 'Luna-android.apk',
+    href: DOWNLOADS.android.href,
+    notes: 'Install the APK, then point it at your server over Tailscale. Obtainium can keep it updated. Or just open Luna in the phone browser.',
   },
   {
     name: 'iPhone / iPad',
@@ -90,7 +92,7 @@ export default function Downloads() {
   return (
     <DocsLayout
       title="Downloads"
-      description="Install Luna on Windows, Android, any browser, Docker, and VS Code."
+      description="Download Luna for Windows, macOS, Linux and Android, or run it with Docker. Free and open source."
       toc={toc}
     >
       <section>
@@ -105,6 +107,27 @@ export default function Downloads() {
           <a className="docs-inline-button secondary" href={repoUrl} target="_blank" rel="noopener noreferrer">
             View Repository
           </a>
+        </p>
+      </section>
+
+      <section>
+        <h2 id="quick">Quick install</h2>
+        <p><DownloadButton className="docs-inline-button" fallbackHref="#desktop" /></p>
+        <p>
+          The desktop app is all you need: on first launch it downloads its own copy of Python and Luna's
+          libraries (a few minutes, once), then starts. No Python install, no terminal.
+        </p>
+        <CodeFile label="or from a terminal">
+          <pre><code>{`# macOS / Linux (starts the Docker server instead if Docker is running)
+${INSTALL_COMMANDS.unix}
+
+# Windows (PowerShell)
+${INSTALL_COMMANDS.windows}`}</code></pre>
+        </CodeFile>
+        <p>
+          Android: add Luna to{' '}
+          <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/Sehastrajit-S/Luna" target="_blank" rel="noopener noreferrer">Obtainium</a>{' '}
+          to get updates automatically.
         </p>
       </section>
 
@@ -162,18 +185,7 @@ npm run build:mobile       # builds the web UI and syncs it into interfaces/mobi
           <DownloadCard item={platforms[6]} />
         </div>
 
-        <CodeFile label="Luna CLI">
-          <pre><code>{`npm i -g luna-workspace
-luna setup`}</code></pre>
-        </CodeFile>
-
-        <CodeFile label="Shortest first run">
-          <pre><code>{`npx luna-workspace setup`}</code></pre>
-        </CodeFile>
-
-        <p>If the npm package is not published yet, install directly from GitHub:</p>
-
-        <CodeFile label="GitHub fallback">
+        <CodeFile label="Luna CLI (Node.js 18+)">
           <pre><code>{`npm i -g github:Sehastrajit-S/Luna
 luna setup`}</code></pre>
         </CodeFile>

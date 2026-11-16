@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'" />
+  <title>Setting up Luna</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: radial-gradient(ellipse at 50% 35%, #1c1433 0%, #09090f 70%);
+      color: #f4f4f6;
+      display: flex; align-items: center; justify-content: center;
+      -webkit-app-region: drag;
+      user-select: none;
+    }
+    main { width: 380px; text-align: center; }
+    img { width: 96px; height: 96px; border-radius: 50%; animation: breathe 3.2s ease-in-out infinite; }
+    @keyframes breathe { 50% { transform: scale(1.04); filter: brightness(1.15); } }
+    h1 { font-size: 20px; font-weight: 600; margin: 22px 0 6px; }
+    #step { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: #a78bfa; }
+    #detail { font-size: 13px; color: #a1a1aa; margin-top: 14px; min-height: 36px;
+              overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .bar { height: 4px; border-radius: 2px; background: #27243a; margin-top: 18px; overflow: hidden; }
+    .bar span { display: block; height: 100%; width: 35%; border-radius: 2px; background: linear-gradient(90deg, #7c3aed, #c4b5fd);
+                animation: slide 1.4s ease-in-out infinite; }
+    @keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(290%); } }
+    .error .bar, .error img { display: none; }
+    .error h1 { color: #fca5a5; }
+    a.btn { display: none; margin-top: 18px; padding: 9px 22px; border-radius: 999px; background: #7c3aed;
+            color: #fff; text-decoration: none; font-size: 14px; -webkit-app-region: no-drag; }
+    .error a.btn { display: inline-block; }
+  </style>
+</head>
+<body>
+  <main id="root">
+    <img src="../../resources/logo_icon.png" alt="" />
+    <div id="step">First launch</div>
+    <h1 id="title">Setting up Luna</h1>
+    <div class="bar"><span></span></div>
+    <div id="detail">Getting everything ready. This only happens once.</div>
+    <a class="btn" href="luna-setup://retry">Try again</a>
+  </main>
+  <script>
+    window.lunaSetup = ({ step, total, title, detail, error }) => {
+      document.getElementById('root').classList.toggle('error', Boolean(error))
+      if (step && total) document.getElementById('step').textContent = `Step ${step} of ${total}`
+      if (error) document.getElementById('step').textContent = 'Setup stopped'
+      if (title) document.getElementById('title').textContent = title
+      if (detail) document.getElementById('detail').textContent = detail
+    }
+  </script>
+</body>
+</html>

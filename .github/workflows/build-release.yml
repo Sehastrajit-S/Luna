@@ -39,10 +39,13 @@ jobs:
           npm ci
           npm ci --prefix interfaces/desktop
 
+      # Code-signed when the WIN_CSC_* secrets exist (a .pfx as base64 + its password); unsigned otherwise.
       - name: Build web UI and installer
         run: npm run build:desktop
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
 
       - uses: actions/upload-artifact@v4
         with:
@@ -72,12 +75,23 @@ jobs:
           npm ci
           npm ci --prefix interfaces/desktop
 
+      # Signed and notarized when the MAC_* and APPLE_* secrets exist; unsigned otherwise.
       - name: Build web UI and app (arm64 + x64)
         run: |
           npm run build
-          npm --prefix interfaces/desktop run build:mac
+          if [ -n "$CSC_LINK" ]; then
+            EXTRA=""
+            [ -n "$APPLE_ID" ] && EXTRA="-c.mac.notarize=true"
+            npm --prefix interfaces/desktop run build:mac -- $EXTRA
+          else
+            CSC_IDENTITY_AUTO_DISCOVERY=false npm --prefix interfaces/desktop run build:mac -- -c.mac.identity=null
+          fi
         env:
-          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
       - uses: actions/upload-artifact@v4
         with:
@@ -261,6 +275,20 @@ jobs:
           path: dist/release
           merge-multiple: true
 
+      # Copies without the version in the name, so these links always fetch the newest release:
+      #   https://github.com/<repo>/releases/latest/download/Luna-Setup.exe
+      - name: Fixed-name download links
+        run: |
+          VERSION=$(node -p "require('./interfaces/desktop/package.json').version")
+          cd dist/release
+          cp "Luna-Setup-${VERSION}.exe"                 Luna-Setup.exe
+          cp "Luna-${VERSION}-macos-arm64.dmg"           Luna-macos-arm64.dmg
+          cp "Luna-${VERSION}-macos-x64.dmg"             Luna-macos-x64.dmg
+          cp "Luna-${VERSION}-linux-x86_64.AppImage"     Luna-linux-x86_64.AppImage
+          cp "Luna-${VERSION}-linux-arm64.AppImage"      Luna-linux-arm64.AppImage
+          cp "Luna-${VERSION}-android.apk"               Luna-android.apk
+          cp "Luna-${VERSION}-server.zip"                Luna-server.zip
+
       - name: Write SHA256SUMS
         id: sums
         run: |
@@ -285,6 +313,35 @@ jobs:
         with:
           files: dist/release/*
 
+      # The release page lists ~30 files (update feeds, blockmaps, provenance). Put a short
+      # "Download" table at the top of the notes so people find the right one.
+      - name: Add a download table to the release notes
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          BASE="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}"
+          BODY=$(gh release view "$TAG" --json body --jq .body)
+          if printf '%s' "$BODY" | grep -q '<!-- luna-downloads -->'; then exit 0; fi
+          {
+            echo '<!-- luna-downloads -->'
+            echo '## Download'
+            echo
+            echo '| Platform | Download |'
+            echo '|---|---|'
+            echo "| **Windows** | [Luna-Setup.exe](${BASE}/Luna-Setup.exe) |"
+            echo "| **macOS** | [Apple silicon](${BASE}/Luna-macos-arm64.dmg) · [Intel](${BASE}/Luna-macos-x64.dmg) |"
+            echo "| **Linux** | [x86_64 AppImage](${BASE}/Luna-linux-x86_64.AppImage) · [arm64 AppImage](${BASE}/Luna-linux-arm64.AppImage) |"
+            echo "| **Android** | [Luna-android.apk](${BASE}/Luna-android.apk) |"
+            echo "| **Server / web UI** | \`docker run -d -p 127.0.0.1:8899:8899 -v luna_data:/app/data ghcr.io/sehastrajit-s/luna\` or [Luna-server.zip](${BASE}/Luna-server.zip) |"
+            echo
+            echo 'The desktop apps set everything up on first launch; no Python install needed. Other files below are for the in-app updater and for verifying downloads (`SHA256SUMS`, provenance).'
+            echo
+            printf '%s\n' "$BODY"
+          } > notes.md
+          gh release edit "$TAG" --notes-file notes.md
+
       - uses: actions/upload-artifact@v4
         if: github.event_name != 'release'
         with:
@@ -293,3 +350,62 @@ jobs:
             dist/release/SHA256SUMS-*.txt
             dist/release/*.intoto.jsonl
           retention-days: 14
+
+  # ── Package managers: winget and Homebrew ───────────────────────────────────
+  # Always generates the manifests (uploaded as an artifact). Publishing is opt-in:
+  #   HOMEBREW_TAP_TOKEN: PAT with push access to Sehastrajit-S/homebrew-luna
+  #   WINGET_TOKEN:       classic PAT (public_repo) for opening winget-pkgs PRs
+  #                       (the very first winget version is submitted by hand; see docs/RELEASING.md)
+  package-managers:
+    name: winget and Homebrew manifests
+    needs: [publish]
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate manifests
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          VERSION="${TAG#v}"
+          gh release download "$TAG" --pattern "SHA256SUMS-${VERSION}.txt" --dir dist/sums
+          node scripts/package-manifests.mjs "$VERSION" "dist/sums/SHA256SUMS-${VERSION}.txt"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package-manifests
+          path: dist/packaging
+          retention-days: 30
+
+      - name: Update the Homebrew tap
+        env:
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          if [ -z "$TAP_TOKEN" ]; then echo "HOMEBREW_TAP_TOKEN not set; skipping"; exit 0; fi
+          git clone "https://x-access-token:${TAP_TOKEN}@github.com/Sehastrajit-S/homebrew-luna.git" tap
+          mkdir -p tap/Casks
+          cp dist/packaging/homebrew/Casks/luna.rb tap/Casks/luna.rb
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/luna.rb
+          git diff --cached --quiet && exit 0
+          git commit -m "luna ${TAG#v}"
+          git push
+
+      - name: Check for a winget token
+        id: winget
+        env:
+          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+        run: echo "enabled=$([ -n "$WINGET_TOKEN" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - name: Open the winget-pkgs update PR
+        if: steps.winget.outputs.enabled == 'true'
+        uses: vedantmgoyal9/winget-releaser@v2
+        with:
+          identifier: Sehastrajit.Luna
+          installers-regex: 'Luna-Setup-[0-9.]+\.exe$'
+          token: ${{ secrets.WINGET_TOKEN }}
