@@ -158,4 +158,26 @@ function isRunning() {
   return child !== null
 }
 
-module.exports = { spawnBackend, shutdown, isRunning, portInUse }
+/**
+ * Resolve true once /health answers, false after timeoutMs. The server takes a few
+ * seconds (longer on first run, while it loads models) between spawning and answering;
+ * the window waits for this so its first requests don't fail.
+ * onSlow fires once if it's still waiting after slowAfterMs.
+ */
+async function waitUntilHealthy({ timeoutMs = 120_000, slowAfterMs = 2500, onSlow = () => {} } = {}) {
+  const started = Date.now()
+  let warned = false
+  while (Date.now() - started < timeoutMs) {
+    if (await probeHealth(3000)) return true
+    if (!warned && Date.now() - started > slowAfterMs) {
+      warned = true
+      onSlow()
+    }
+    // A crash while starting means there's nothing to wait for.
+    if (spawnOpts && !child && !intentionalShutdown && restarts >= MAX_RESTARTS) return false
+    await new Promise(r => setTimeout(r, 1000))
+  }
+  return false
+}
+
+module.exports = { spawnBackend, shutdown, isRunning, portInUse, waitUntilHealthy }

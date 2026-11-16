@@ -64,6 +64,12 @@ function startLocalServer() {
             env: { LUNA_DATA_DIR: DATA_DIR, LUNA_ENV_FILE: ENV_PATH },
           })
         }
+        // Open the window only once the server answers, so the first requests
+        // (conversations, settings) don't fail while it's still starting.
+        const healthy = await backend.waitUntilHealthy({
+          onSlow: () => setupWindow.showProgress({ title: 'Starting Luna', detail: 'Loading the server. This takes a few seconds.' }),
+        })
+        if (!healthy) logger.warn('Server did not answer its health check in time; opening the window anyway')
         resolve()
       } catch (error) {
         logger.error(`Local server setup failed: ${error.message}`)
