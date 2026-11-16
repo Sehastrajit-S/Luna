@@ -31,6 +31,8 @@
     return `<a class="md-link" href="${clean}" title="${clean}">${label || clean}</a>${after}`
   }
 
+  const ICON_URL = /^https:\/\/(?:[a-z0-9-]+\.gstatic\.com\/|www\.google\.com\/s2\/favicons\?)[^\s"'<>]*$/i
+
   function renderInline(raw) {
     const codeSpans = []
     let text = raw.replace(/`([^`\n]+)`/g, (_m, code) => {
@@ -41,6 +43,14 @@
 
     const links = []
     const stash = html => { links.push(html); return `\u0001${links.length - 1}\u0001` }
+    // Small icons (store logos) only, and only from Google's favicon hosts:
+    // arbitrary images in model output could be tracking pixels.
+    text = text.replace(/!\[([^\]\n]*)\]\((https:\/\/[^\s)]+)\)/g, (_m, alt, url) => {
+      const src = url.replace(/&amp;/g, '&')
+      return ICON_URL.test(src)
+        ? stash(`<img class="md-icon" src="${escapeHtml(src)}" alt="${alt}" width="16" height="16" loading="lazy" referrerpolicy="no-referrer">`)
+        : alt
+    })
     text = text.replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, (_m, label, url) => stash(link(url, label)))
     // Stop bare URLs at escaped quotes/brackets so they can't swallow text.
     text = text.replace(/https?:\/\/(?:(?!&quot;|&#39;|&lt;|&gt;)[^\s<])+/g, url => stash(link(url)))
@@ -54,6 +64,12 @@
     return text
       .replace(/\u0001(\d+)\u0001/g, (_m, i) => links[Number(i)])
       .replace(/\u0000(\d+)\u0000/g, (_m, i) => codeSpans[Number(i)])
+  }
+
+  const TABLE_SEPARATOR = /^\s*\|?\s*:?-{2,}:?\s*(?:\|\s*:?-{2,}:?\s*)+\|?\s*$/
+
+  function tableCells(row) {
+    return row.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(cell => cell.trim())
   }
 
   function renderMarkdown(source) {
@@ -73,8 +89,15 @@
       if (paragraph.length) out.push(`<p>${paragraph.map(renderInline).join('<br>')}</p>`)
       paragraph = []
     }
+    const listItem = item => {
+      // "- [ ] task" / "- [x] task": a checklist item (meeting action items).
+      const task = item.match(/^\[([ xX])\]\s+(.*)$/)
+      if (!task) return `<li>${renderInline(item)}</li>`
+      const done = task[1] !== ' '
+      return `<li class="md-task${done ? ' is-done' : ''}"><span class="md-check" role="img" aria-label="${done ? 'Done' : 'To do'}"></span>${renderInline(task[2])}</li>`
+    }
     const flushList = () => {
-      if (list) out.push(`<${list.type}>${list.items.map(item => `<li>${renderInline(item)}</li>`).join('')}</${list.type}>`)
+      if (list) out.push(`<${list.type}>${list.items.map(listItem).join('')}</${list.type}>`)
       list = null
     }
     const flush = () => { flushParagraph(); flushList() }
@@ -99,6 +122,20 @@
         flush()
         const level = Math.min(heading[1].length + 2, 6) // keep headings bubble-sized
         out.push(`<h${level}>${renderInline(heading[2])}</h${level}>`)
+        continue
+      }
+
+      // GitHub-style table: a | row | followed by a |---|---| separator row.
+      if (/^\s*\|.*\|\s*$/.test(line) && TABLE_SEPARATOR.test(lines[i + 1] || '')) {
+        flush()
+        const header = tableCells(line)
+        const rows = []
+        i += 2
+        while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) rows.push(tableCells(lines[i++]))
+        i -= 1
+        const head = header.map(cell => `<th>${renderInline(cell)}</th>`).join('')
+        const body = rows.map(row => `<tr>${header.map((_h, c) => `<td>${renderInline(row[c] || '')}</td>`).join('')}</tr>`).join('')
+        out.push(`<div class="md-table-wrap"><table class="md-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`)
         continue
       }
 
@@ -186,9 +223,12 @@
         ? `<span class="md-card-img"><img src="${escapeHtml(c.image)}" alt="" loading="lazy" referrerpolicy="no-referrer"></span>`
         : '<span class="md-card-img is-empty"></span>'
       const price = c.price ? `<span class="md-card-price">${escapeHtml(formatPrice(c.price, c.currency))}</span>` : ''
+      const icon = c.icon && ICON_URL.test(String(c.icon))
+        ? `<img class="md-icon" src="${escapeHtml(c.icon)}" alt="" width="14" height="14" loading="lazy" referrerpolicy="no-referrer">`
+        : ''
       return `<a class="md-link md-card" href="${escapeHtml(c.url)}" title="${escapeHtml(c.title || '')}">${image}` +
         `<span class="md-card-body"><span class="md-card-title">${escapeHtml(c.title || c.url)}</span>${price}` +
-        `<span class="md-card-site">${escapeHtml(c.site || '')}</span></span></a>`
+        `<span class="md-card-site">${icon}${escapeHtml(c.site || '')}</span></span></a>`
     }).join('')
     return `<div class="md-cards">${html}</div>`
   }

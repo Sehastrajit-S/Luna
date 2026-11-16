@@ -2,7 +2,7 @@
 import re
 
 _CMD_RE = r"\[(?:LAUNCH|TASK|EVENT|SPOTIFY|BROWSE|MAP|WIDGET):[^\]]+\]"
-_CARDS_COMMENT_RE = re.compile(r"\s*<!--luna-cards:.*?-->", re.DOTALL)
+_CARDS_COMMENT_RE = re.compile(r"\s*<!--luna-(?:cards|suggest):.*?-->", re.DOTALL)
 
 
 def strip_cards(text: str) -> str:

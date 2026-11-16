@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import DocsLayout from '../components/DocsLayout';
 import { Callout, CodeFile, NextSteps } from '../components/Docs';
 
@@ -19,23 +20,23 @@ const platforms = [
     device: 'Windows 10/11 x64',
     download: 'Luna setup installer or portable zip',
     href: releasesUrl,
-    notes: 'Best option for the full desktop app, local backend, voice, vision, and OS automation.',
+    notes: 'The full desktop app: local or remote server, push-to-talk voice, meeting mode, tray and desktop automation.',
   },
   {
     name: 'macOS',
     status: 'Source',
     device: 'Apple Silicon or Intel',
-    download: 'Run from source',
-    href: '#source',
-    notes: 'Supported as a development/source install. A signed DMG is not published yet.',
+    download: 'Docker or run from source',
+    href: '#web',
+    notes: 'Run the server in Docker and use Luna in your browser, or run from source. A signed DMG is not published yet.',
   },
   {
     name: 'Linux',
     status: 'Source',
     device: 'Ubuntu/Debian/Fedora and similar',
-    download: 'Run from source or Docker',
-    href: '#source',
-    notes: 'Use source mode for desktop features, or Docker for a browser-accessible deployment.',
+    download: 'Docker image or source',
+    href: '#web',
+    notes: 'The container image runs on amd64 and arm64, including a Raspberry Pi or NAS.',
   },
   {
     name: 'Android',
@@ -43,7 +44,7 @@ const platforms = [
     device: 'Android phones and tablets',
     download: 'Android debug APK',
     href: releasesUrl,
-    notes: 'Use the APK when published in releases, or build locally from the Capacitor project.',
+    notes: 'Sideload the APK from the release, then point it at your server over Tailscale. Or just open Luna in the phone browser.',
   },
   {
     name: 'iPhone / iPad',
@@ -57,17 +58,17 @@ const platforms = [
     name: 'Browser',
     status: 'Supported',
     device: 'Desktop, tablet, phone, LAN devices',
-    download: 'Run Luna web or Docker',
+    download: 'Open your Luna address',
     href: '#web',
-    notes: 'Use the browser UI when a local or LAN backend is running.',
+    notes: 'Any browser works, with a phone layout on small screens. Reach your server from anywhere over Tailscale.',
   },
   {
     name: 'VS Code',
     status: 'Extension',
     device: 'VS Code on desktop',
     download: 'VSIX extension',
-    href: `${repoUrl}/tree/main/integrations/vscode`,
-    notes: 'Connects to the same local Luna backend and shared conversation context.',
+    href: `${repoUrl}/tree/main/interfaces/vscode`,
+    notes: 'Connects to the Luna server on the same computer and shares its conversation context.',
   },
 ];
 
@@ -89,14 +90,13 @@ export default function Downloads() {
   return (
     <DocsLayout
       title="Downloads"
-      description="Install Luna on desktop, mobile, browser, Docker, and developer tools."
+      description="Install Luna on Windows, Android, any browser, Docker, and VS Code."
       toc={toc}
     >
       <section>
         <p>
-          Download packaged builds from the Luna GitHub releases page when available.
-          Source installs are available for every platform that can run Node.js, Python,
-          and the required native desktop dependencies.
+          Every release publishes a Windows installer, an Android APK, an iOS simulator build and a
+          container image. Not sure which you need? Start with <Link href="/setup">Setup</Link>.
         </p>
         <p>
           <a className="docs-inline-button" href={releasesUrl} target="_blank" rel="noopener noreferrer">
@@ -116,8 +116,9 @@ export default function Downloads() {
 
         <Callout type="info" title="Full desktop features">
           <p>
-            Voice, camera, screen perception, tray controls, and OS automation work best
-            through the desktop app because Electron can launch and manage the local backend.
+            Push-to-talk, tray controls and OS automation need the desktop app. It starts a local server
+            for you, or connects to one on another computer over Tailscale. The installer isn't code-signed
+            yet, so Windows SmartScreen asks once: More info → Run anyway.
           </p>
         </Callout>
       </section>
@@ -129,11 +130,9 @@ export default function Downloads() {
         </div>
 
         <CodeFile label="build mobile locally">
-          <pre><code>{`cd frontend
-npm install
-npm run build
-npx cap sync android
-npx cap sync ios`}</code></pre>
+          <pre><code>{`npm install
+npm run build:mobile       # builds the web UI and syncs it into interfaces/mobile
+# then open interfaces/mobile/android in Android Studio, or interfaces/mobile/ios in Xcode`}</code></pre>
         </CodeFile>
       </section>
 
@@ -145,14 +144,16 @@ npx cap sync ios`}</code></pre>
 
         <CodeFile label="browser UI">
           <pre><code>{`npm run web
-# Open http://localhost:5173`}</code></pre>
+# Open http://localhost:8899`}</code></pre>
         </CodeFile>
 
         <CodeFile label="Docker">
-          <pre><code>{`cp deploy/.env.personal.example .env
-docker compose up -d
+          <pre><code>{`docker run -d --name luna --restart unless-stopped \\
+  -p 127.0.0.1:8899:8899 -v luna_data:/app/data \\
+  ghcr.io/sehastrajit-s/luna:latest
 # Open http://localhost:8899`}</code></pre>
         </CodeFile>
+        <p>Compose files for Ollama, GPU, cloud-only and business setups are on <Link href="/docker">Docker</Link>. To open Luna on your phone, see <Link href="/setup#remote">Remote over Tailscale</Link>.</p>
       </section>
 
       <section>
@@ -196,13 +197,13 @@ npx vsce package`}</code></pre>
           <pre><code>{`git clone https://github.com/Sehastrajit-S/Luna.git
 cd Luna
 npm install
-npm run luna -- setup
-npm run luna -- dev`}</code></pre>
+npm run setup
+npm run web       # http://localhost:8899`}</code></pre>
         </CodeFile>
       </section>
 
       <NextSteps items={[
-        { href: '/getting-started', label: 'Setup', title: 'Getting Started', desc: 'Configure the app after download.' },
+        { href: '/setup', label: 'Setup', title: 'Local & Remote', desc: 'Set up the server and connect your devices.' },
         { href: '/environment', label: 'Config', title: 'Environment', desc: 'Set models, providers, auth, and integrations.' },
         { href: '/troubleshooting', label: 'Help', title: 'Troubleshooting', desc: 'Fix install, backend, and model issues.' },
       ]} />

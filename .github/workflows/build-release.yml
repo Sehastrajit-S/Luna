@@ -1,77 +1,60 @@
 name: Build & Release
 
+# Publishing a GitHub Release builds every app and attaches it to the release.
+# "Run workflow" (manual) builds them as downloadable artifacts only.
+# The version is interfaces/desktop/package.json's "version"; see docs/RELEASING.md.
+
 on:
   release:
     types: [published]
   workflow_dispatch:
 
-jobs:
-  # ── Windows installer (PC) ────────────────────────────────────────────────────
-  build-windows:
-    name: Windows PC
-    runs-on: windows-latest
-    permissions:
-      contents: write
+permissions:
+  contents: write
 
+jobs:
+  # ── Windows desktop app ─────────────────────────────────────────────────────
+  windows:
+    name: Windows desktop app
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: 'pip'
-
-      - name: Install Python dependencies
-        run: pip install -r server/requirements.txt pyinstaller
-
-      - name: Build backend binary
-        run: pyinstaller build-backend/luna-backend.spec --distpath dist-backend --noconfirm
-
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
-      - name: Install npm dependencies
-        run: npm install --workspace=frontend --workspace=electron
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm ci --prefix interfaces/desktop
 
-      - name: Build frontend
-        run: npm run build --workspace=frontend
-
-      - name: Build logo assets
-        run: npm run assets:logo
-
-      - name: Package Electron app
-        run: npm run build:win --workspace=electron
+      - name: Build web UI and installer
+        run: npm run build:desktop
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload to release
+      - name: Attach to release
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist-electron/Luna-Setup-*.exe
-            dist-electron/Luna-Setup-*.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            dist/desktop/Luna-Setup-*.exe
+            dist/desktop/Luna-Setup-*.zip
 
-      - name: Upload as artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: windows-installer
+          name: windows-desktop
           path: |
-            dist-electron/Luna-Setup-*.exe
-            dist-electron/Luna-Setup-*.zip
+            dist/desktop/Luna-Setup-*.exe
+            dist/desktop/Luna-Setup-*.zip
           retention-days: 14
 
-  # ── Android APK ───────────────────────────────────────────────────────────────
-  build-android:
-    name: Android APK
+  # ── Android app ─────────────────────────────────────────────────────────────
+  android:
+    name: Android app
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
     steps:
       - uses: actions/checkout@v4
 
@@ -85,49 +68,41 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Install frontend dependencies
-        run: npm install --workspace=frontend
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Build frontend
-        run: npm run build --workspace=frontend
-
-      - name: Sync Capacitor → Android
-        run: cd frontend && npx cap sync android
-
-      - name: Make Gradle wrapper executable
-        run: chmod +x interfaces/mobile/android/gradlew
-
-      - name: Build APK (debug)
-        run: cd interfaces/mobile/android && ./gradlew assembleDebug --no-daemon
-
-      - name: Rename APK
+      - name: Build web UI and sync it into the Android project
         run: |
-          VERSION=$(node -p "require('./electron/package.json').version")
-          cp interfaces/mobile/android/app/build/outputs/apk/debug/app-debug.apk \
-             "Luna-${VERSION}-android.apk"
+          npm run build
+          cd interfaces/mobile && npx cap sync android
 
-      - name: Upload to release
+      - name: Build APK (debug-signed)
+        run: |
+          chmod +x interfaces/mobile/android/gradlew
+          cd interfaces/mobile/android && ./gradlew assembleDebug --no-daemon
+
+      - name: Collect into dist/android
+        run: |
+          VERSION=$(node -p "require('./interfaces/desktop/package.json').version")
+          mkdir -p dist/android
+          cp interfaces/mobile/android/app/build/outputs/apk/debug/app-debug.apk "dist/android/Luna-${VERSION}-android.apk"
+
+      - name: Attach to release
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
-          files: Luna-*-android.apk
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          files: dist/android/Luna-*-android.apk
 
-      - name: Upload as artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: android-apk
-          path: Luna-*-android.apk
+          name: android
+          path: dist/android/Luna-*-android.apk
           retention-days: 14
 
-  # ── iOS simulator build ───────────────────────────────────────────────────────
-  build-ios:
-    name: iOS (simulator)
+  # ── iOS (simulator build; App Store builds need signing) ─────────────────────
+  ios:
+    name: iOS simulator build
     runs-on: macos-latest
-    permissions:
-      contents: write
-
     steps:
       - uses: actions/checkout@v4
 
@@ -136,52 +111,37 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
-      - name: Install frontend dependencies
-        run: npm install --workspace=frontend
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Build frontend
-        run: npm run build --workspace=frontend
+      - name: Build web UI and sync it into the iOS project
+        run: |
+          npm run build
+          cd interfaces/mobile && npx cap sync ios
 
-      - name: Sync Capacitor → iOS
-        run: cd frontend && npx cap sync ios
-
-      - name: Resolve Swift packages
+      - name: Build for the iOS simulator (no signing)
         run: |
           cd interfaces/mobile/ios/App
-          xcodebuild -resolvePackageDependencies \
-            -scheme App \
-            -project App.xcodeproj \
-            CODE_SIGNING_ALLOWED=NO 2>&1 | tail -5
+          xcodebuild -resolvePackageDependencies -scheme App -project App.xcodeproj CODE_SIGNING_ALLOWED=NO | tail -5
+          xcodebuild build -scheme App -project App.xcodeproj -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=NO \
+            -derivedDataPath build | tail -20
 
-      - name: Build iOS (simulator, no signing)
+      - name: Collect into dist/ios
         run: |
-          cd interfaces/mobile/ios/App
-          xcodebuild build \
-            -scheme App \
-            -project App.xcodeproj \
-            -configuration Debug \
-            -destination 'generic/platform=iOS Simulator' \
-            CODE_SIGNING_ALLOWED=NO \
-            ONLY_ACTIVE_ARCH=NO \
-            -derivedDataPath build 2>&1 | tail -20
+          VERSION=$(node -p "require('./interfaces/desktop/package.json').version")
+          APP=$(find interfaces/mobile/ios/App/build -name "*.app" -type d | head -1)
+          mkdir -p dist/ios
+          (cd "$(dirname "$APP")" && zip -qr "$GITHUB_WORKSPACE/dist/ios/Luna-${VERSION}-ios-simulator.zip" "$(basename "$APP")")
 
-      - name: Package .app as zip
-        run: |
-          VERSION=$(node -p "require('./electron/package.json').version")
-          APP=$(find interfaces/mobile/ios/App/build -name "*.app" | head -1)
-          zip -r "Luna-${VERSION}-ios-simulator.zip" "$APP"
-
-      - name: Upload to release
+      - name: Attach to release
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
-          files: Luna-*-ios-simulator.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          files: dist/ios/Luna-*-ios-simulator.zip
 
-      - name: Upload as artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: ios-simulator-app
-          path: Luna-*-ios-simulator.zip
+          name: ios-simulator
+          path: dist/ios/Luna-*-ios-simulator.zip
           retention-days: 14

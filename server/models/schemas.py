@@ -54,6 +54,8 @@ class ChatRequest(BaseModel):
     message: str
     conversation_id: Optional[int] = None
     attachment_ids: List[str] = Field(default_factory=list, max_length=10)
+    # A skill the user picked from the composer's + menu: "store-prices" or a lookup skill id.
+    skill: Optional[str] = Field(default=None, max_length=64)
 
 
 class FactOut(BaseSchema):

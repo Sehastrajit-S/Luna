@@ -12,8 +12,10 @@ docs/site/out/
 # Runtime data (mounted as a named volume)
 data/
 
-# Secrets — never bake into the image
+# Secrets: never bake into the image
 .env
+.env.*
+!.env.example
 
 # Git / editor
 .git/
@@ -25,7 +27,7 @@ interfaces/desktop/node_modules/
 interfaces/desktop/build/
 interfaces/desktop/src/main/
 interfaces/desktop/src/preload/
-dist-electron/
+dist/
 
 # Mobile React app (built locally for Capacitor, not served by Docker)
 interfaces/web/
@@ -46,3 +48,12 @@ docs/site/
 # OS
 .DS_Store
 Thumbs.db
+
+# Local tooling and scratch
+.venv/
+.tmp/
+.claude/
+.pip-cache/
+
+# Native mobile projects (built separately)
+interfaces/mobile/

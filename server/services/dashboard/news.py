@@ -13,8 +13,6 @@ FEEDS = [
     ("BBC Top", "https://feeds.bbci.co.uk/news/rss.xml"),
     ("The Guardian", "https://www.theguardian.com/world/rss"),
     ("NPR", "https://feeds.npr.org/1001/rss.xml"),
-    ("Reuters", "https://feeds.reuters.com/reuters/topNews"),
-    ("AP News", "https://feeds.apnews.com/rss/apf-topnews"),
 ]
 NEWS_TTL = 300
 MEDIA_NS = "http://search.yahoo.com/mrss/"

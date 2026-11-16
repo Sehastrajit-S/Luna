@@ -1,46 +1,49 @@
-# ── Luna backend + web UI ──────────────────────────────────────────────────────
-FROM python:3.11-slim
+# ── Luna: server + web UI in one image ─────────────────────────────────────────
+# Prebuilt: docker run -d -p 127.0.0.1:8899:8899 -v luna_data:/app/data ghcr.io/sehastrajit-s/luna
+# See docs/SETUP.md (Docker) for models, Tailscale and upgrades.
+FROM python:3.12-slim
 
-LABEL org.opencontainers.image.title="L.U.N.A."
-LABEL org.opencontainers.image.description="Large Unified Nexus Mind AI — local-first AI companion"
-LABEL org.opencontainers.image.source="https://github.com/luna-ai-project/Luna"
+LABEL org.opencontainers.image.title="Luna"
+LABEL org.opencontainers.image.description="Your own AI assistant: local-first, any model, every device"
+LABEL org.opencontainers.image.source="https://github.com/Sehastrajit-S/Luna"
 LABEL org.opencontainers.image.licenses="MIT"
 
-# System packages:
-#   ffmpeg        — audio decoding for faster-whisper
-#   build-essential — needed by some chromadb native deps
+# ffmpeg: audio decoding for speech-to-text and meeting recordings
+# libgl1, libglib2.0-0: OpenCV, used by OCR for scanned PDFs and images
+# build-essential: native builds for a few Python packages without wheels
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg \
-    build-essential \
+        ffmpeg libgl1 libglib2.0-0 build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Install Python deps (cross-platform subset — no pywin32/pycaw/audio drivers)
-COPY requirements.docker.txt ./
-RUN pip install --no-cache-dir -r requirements.docker.txt
+# Same requirements as a normal install; Windows-only packages are skipped by
+# their environment markers.
+COPY server/requirements.txt server/requirements.txt
+RUN pip install --no-cache-dir -r server/requirements.txt
 
-# Application code
-COPY server/ ./server/
+COPY server/ server/
+COPY alembic.ini ./
+# The web UI is the desktop app's renderer, served at "/".
+COPY interfaces/desktop/src/renderer/ interfaces/desktop/src/renderer/
+COPY interfaces/desktop/resources/ interfaces/desktop/resources/
 
-# Web UI — the desktop app's renderer, served by FastAPI at "/"
-COPY interfaces/desktop/src/renderer/ ./interfaces/desktop/src/renderer/
-COPY interfaces/desktop/resources/ ./interfaces/desktop/resources/
+# Everything Luna writes (database, memory, uploads, meetings, downloaded
+# speech models, and settings saved from the Settings page in luna.env)
+# lives in /app/data: mount a volume there to keep it.
+RUN useradd --create-home --uid 10001 luna && mkdir -p data && chown -R luna:luna /app
+USER luna
 
-# Persistent data lives here — mount a named volume to this path
-RUN mkdir -p data
+ENV PYTHONUTF8=1 \
+    PYTHONUNBUFFERED=1 \
+    HF_HOME=/app/data/models \
+    LUNA_ENV_FILE=/app/data/luna.env \
+    host=0.0.0.0 \
+    port=8899
 
-# Force UTF-8 output (avoids cp1252 issues inherited from Windows development)
-ENV PYTHONUTF8=1
-ENV PYTHONUNBUFFERED=1
-
-# Luna backend port
 EXPOSE 8899
 
-# Health check — FastAPI exposes /api/system/health
-HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8899/api/system/health')" || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8899/api/system/health', timeout=8)" || exit 1
 
-CMD ["python", "-m", "uvicorn", "server.main:app", \
-     "--host", "0.0.0.0", "--port", "8899", \
-     "--log-level", "warning"]
+CMD ["python", "-m", "uvicorn", "server.main:app", "--host", "0.0.0.0", "--port", "8899", "--log-level", "warning"]

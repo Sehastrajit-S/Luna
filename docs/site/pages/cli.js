@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import DocsLayout from '../components/DocsLayout';
 import { Callout, CodeFile, NextSteps } from '../components/Docs';
 
@@ -68,19 +69,32 @@ luna help       # list all commands`}</code></pre>
             <tr><td><code>doctor</code></td><td>Verify Node.js, npm, Python, Ollama, and Docker are installed and at the right versions.</td></tr>
             <tr><td><code>health</code></td><td>Hit the running backend's <code>/api/system/health</code> endpoint and display the JSON response.</td></tr>
             <tr><td><code>chat</code></td><td>Start an interactive terminal chat session with a running Luna backend. Pass a message as an argument for a one-shot query.</td></tr>
-            <tr><td><code>dev</code></td><td>Start Vite and Electron together (full desktop stack). Personal variant.</td></tr>
-            <tr><td><code>dev:lan</code></td><td>Start with Vite bound to <code>0.0.0.0</code> for LAN access from other devices.</td></tr>
-            <tr><td><code>web</code></td><td>Start the FastAPI backend and Vite dev server without Electron (browser UI only).</td></tr>
-            <tr><td><code>web:lan</code></td><td>Same as <code>web</code> but binds to <code>0.0.0.0</code> for LAN access.</td></tr>
-            <tr><td><code>backend</code></td><td>Start only the FastAPI backend on port 8899.</td></tr>
-            <tr><td><code>frontend</code></td><td>Start only the Vite dev server on port 5173.</td></tr>
-            <tr><td><code>electron</code></td><td>Start only the Electron shell (backend must already be running).</td></tr>
-            <tr><td><code>tunnel</code></td><td>Start an ngrok tunnel to the backend port. Useful for registering Telegram / Discord / Slack webhooks during development.</td></tr>
-            <tr><td><code>build</code></td><td>Build the frontend for production (<code>interfaces/web/dist/</code>).</td></tr>
-            <tr><td><code>dist</code></td><td>Build the frontend and package the Windows NSIS installer.</td></tr>
+            <tr><td><code>web</code></td><td>Start the server and open Luna in your browser at <code>http://localhost:8899</code>.</td></tr>
+            <tr><td><code>web:lan</code></td><td>Same as <code>web</code>, reachable from phones and tablets on your network.</td></tr>
+            <tr><td><code>dev</code> / <code>dev:lan</code></td><td>Aliases for <code>web</code> / <code>web:lan</code>.</td></tr>
+            <tr><td><code>serve</code></td><td>Start the server. <code>--tailscale</code> also shares it with your tailnet over HTTPS port 8899; <code>--tailscale --off</code> stops sharing. See <Link href="/remote">Remote access</Link>.</td></tr>
+            <tr><td><code>backend</code></td><td>Start only the FastAPI server on port 8899.</td></tr>
+            <tr><td><code>frontend</code></td><td>Start only the Vite dev server for the mobile React UI.</td></tr>
+            <tr><td><code>tunnel</code></td><td>Expose the Vite dev server through a Cloudflare tunnel.</td></tr>
+            <tr><td><code>build</code></td><td>Build the React frontend.</td></tr>
             <tr><td><code>check</code></td><td>Run lightweight Python syntax checks on critical backend files.</td></tr>
             <tr><td><code>processes</code></td><td>Print all registered backend background processes as JSON.</td></tr>
-            <tr><td><code>clean</code></td><td>Remove local runtime and build artefacts that are gitignored.</td></tr>
+            <tr><td><code>clean</code></td><td>Remove build artifacts and runtime data.</td></tr>
+          </tbody>
+        </table>
+
+        <h3>npm scripts</h3>
+        <p>From a clone, these npm scripts wrap the CLI and the build steps. In PowerShell, prefer them over <code>npm run luna -- …</code>, because PowerShell drops the <code>--</code>.</p>
+        <table>
+          <thead><tr><th>Script</th><th>Does</th></tr></thead>
+          <tbody>
+            <tr><td><code>npm run setup</code></td><td>First-time setup wizard.</td></tr>
+            <tr><td><code>npm run web</code></td><td>Server + browser UI at <code>http://localhost:8899</code>.</td></tr>
+            <tr><td><code>npm run serve:tailscale</code></td><td>Start the server and share it over Tailscale.</td></tr>
+            <tr><td><code>npm run serve:tailscale:off</code></td><td>Stop sharing over Tailscale.</td></tr>
+            <tr><td><code>npm run build:desktop</code></td><td>Windows installer in <code>dist/desktop/</code>.</td></tr>
+            <tr><td><code>npm run build:mobile</code></td><td>Sync the web build into <code>interfaces/mobile</code> for Android Studio / Xcode.</td></tr>
+            <tr><td><code>npm run docs</code></td><td>This docs site at <code>http://localhost:3000</code>.</td></tr>
           </tbody>
         </table>
 

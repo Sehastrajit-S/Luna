@@ -1,5 +1,7 @@
 # Using Luna from another device (Tailscale)
 
+Step-by-step setup for every kind of install is in [SETUP.md](SETUP.md#4-use-it-from-your-other-devices-remote-over-tailscale). This page has the details.
+
 Run Luna's server on one computer and use it from your laptop, phone or browser anywhere, over your private [Tailscale](https://tailscale.com) network. Nothing is exposed to the public internet.
 
 ## 1. Share the server
@@ -47,6 +49,22 @@ Some routes stay open without the token: `/api/system/health`, the web UI's stat
 If you run Luna with `host=0.0.0.0` (LAN mode or Docker), other devices can also connect directly. Set `require_token_on_lan=true` in `.env` to require the token for those connections too. It's off by default so LAN mode and Docker keep working as before.
 
 The token is in `data/local_api_token` on the server. Anyone who has it gets full access to that Luna, so treat it like a password. To rotate it, delete the file and restart the server, then reconnect your clients.
+
+## Docker
+
+`npm run serve:tailscale` needs a source checkout. For Docker (or the installed desktop app), share the port with Tailscale directly:
+
+```bash
+tailscale serve --bg --https=8899 http://127.0.0.1:8899
+```
+
+Tailscale's proxy reaches the container from outside it, so Luna can't tell that the connection came from tailscaled, and it doesn't trust identity headers. Every remote device uses the access token once:
+
+```bash
+docker exec luna cat /app/data/local_api_token
+```
+
+Keep the container's port on `127.0.0.1` (the default in `deploy/compose.yml`), so nothing on your network can reach Luna except through Tailscale.
 
 ## Limits
 

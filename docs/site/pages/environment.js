@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import DocsLayout from '../components/DocsLayout';
 import { Callout, CodeFile, NextSteps } from '../components/Docs';
 
@@ -9,6 +10,9 @@ const toc = [
   { id: 'channels',     label: 'Messaging channels' },
   { id: 'github',       label: 'GitHub' },
   { id: 'lan',          label: 'LAN / network' },
+  { id: 'remote',       label: 'Remote access' },
+  { id: 'shopping',     label: 'Store prices' },
+  { id: 'files',        label: 'Where settings live' },
   { id: 'spotify',      label: 'Spotify' },
   { id: 'data',         label: 'Data services' },
   { id: 'reference',    label: 'Full reference' },
@@ -304,7 +308,46 @@ Events:        push, pull_request, issues, issue_comment, release`}</code></pre>
           <pre><code>{`host=0.0.0.0`}</code></pre>
         </CodeFile>
         <p>Open <code>http://YOUR_LAN_IP:8899</code> on any device on your network.
-        For the business variant, set <code>jwt_secret</code> to protect the admin API.</p>
+        For the business variant, set <code>jwt_secret</code> to protect the admin API. To use Luna away from
+        home without opening it to your network, prefer <Link href="/remote">Tailscale</Link>.</p>
+      </section>
+
+      {/* ── Remote ── */}
+      <section>
+        <h2 id="remote">Remote access</h2>
+        <table>
+          <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>tailscale_trust_owner</code></td><td><code>true</code></td><td>Let in this computer's Tailscale account through <code>tailscale serve</code> without a token.</td></tr>
+            <tr><td><code>tailscale_trusted_logins</code></td><td>empty</td><td>More tailnet logins to trust, comma-separated.</td></tr>
+            <tr><td><code>require_token_on_lan</code></td><td><code>false</code></td><td>Require the access token for direct network connections when <code>host=0.0.0.0</code>.</td></tr>
+          </tbody>
+        </table>
+        <p>See <Link href="/remote">Remote access</Link>.</p>
+      </section>
+
+      {/* ── Shopping ── */}
+      <section>
+        <h2 id="shopping">Store prices</h2>
+        <table>
+          <thead><tr><th>Key</th><th>Default</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>serpapi_api_key</code></td><td>empty</td><td>SerpApi key for live Google Shopping prices (free plan: 100 searches a month). Empty uses a free web search.</td></tr>
+            <tr><td><code>shopping_location</code></td><td>empty</td><td>Where to look up prices, e.g. <code>Phoenix, Arizona, United States</code>.</td></tr>
+            <tr><td><code>shopping_max_searches</code></td><td><code>3</code></td><td>Searches one comparison may use.</td></tr>
+          </tbody>
+        </table>
+        <p>See <Link href="/store-prices">Store prices</Link>.</p>
+      </section>
+
+      {/* ── Files ── */}
+      <section>
+        <h2 id="files">Where settings live</h2>
+        <ul>
+          <li><strong>From source or the desktop app:</strong> <code>.env</code> in the repo root. Settings saved in the app are written there too. Never commit it.</li>
+          <li><strong>Docker:</strong> <code>LUNA_ENV_FILE=/app/data/luna.env</code>, inside the data volume, so settings survive upgrades. A repo <code>.env</code> is optional.</li>
+          <li><strong>Data:</strong> <code>LUNA_DATA_DIR</code> moves the database, memory, uploads and workspace (default <code>data/</code>).</li>
+        </ul>
       </section>
 
       {/* ── Spotify ── */}
@@ -324,7 +367,8 @@ spotify_client_secret=your_client_secret`}</code></pre>
         <table>
           <thead><tr><th>Key</th><th>Service</th><th>Notes</th></tr></thead>
           <tbody>
-            <tr><td><code>the_news_api</code></td><td>TheNewsAPI</td><td>Live news headlines. Dashboard widget. Free tier available.</td></tr>
+            <tr><td><code>the_news_api</code></td><td>TheNewsAPI</td><td>Optional headlines for the dashboard widget. Free tier available.</td></tr>
+            <tr><td>none</td><td>BBC, Guardian, NPR RSS</td><td>The News tab and news answers use public feeds; no key needed. See <Link href="/news">News</Link>.</td></tr>
             <tr><td><code>alpha_vantage</code></td><td>Alpha Vantage</td><td>Extended market data. Falls back to Yahoo Finance without this.</td></tr>
             <tr><td><code>weather_lat/lon</code></td><td>Open-Meteo</td><td>Free, no key. Set your coordinates for accurate weather.</td></tr>
             <tr><td><code>weather_city</code></td><td>—</td><td>Display name for the weather widget.</td></tr>

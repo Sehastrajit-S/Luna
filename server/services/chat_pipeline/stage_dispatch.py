@@ -100,11 +100,58 @@ async def dispatch_direct_commands(ctx: ChatContext) -> None:
         if getattr(ctx, "messages", None):
             ctx.messages[-1] = {**ctx.messages[-1], "content": request}
 
+    # ── A skill the user picked from the composer's + menu ────────────────────
+    # Their choice beats any guess below. Store prices are answered straight
+    # from the listings (the message is the product), so no model can misquote one.
+    forced = None
+    picked = str(getattr(ctx, "skill", "") or "")
+    if picked == "store-prices":
+        from server.services.shopping import ShoppingError, compare_store_prices, render_markdown
+        ctx.dispatched = True
+        ctx.direct_command_type = "skill:store-prices"
+        ctx.had_tool_call = True
+        try:
+            ctx.full_response = render_markdown(await compare_store_prices(request))
+            ctx.tool_succeeded = True
+        except ShoppingError as e:
+            ctx.full_response = e.message
+            ctx.tool_succeeded = False
+        ctx.full_response_parts = [ctx.full_response]
+        return
+    if picked:
+        from server.services.skill_runtime.registry import get_search_skill
+        forced = get_search_skill(picked)
+        if forced is None:
+            logger.info("Ignoring unknown skill from the + menu: %r", picked[:64])
+
+    # ── "What's the news?" / "tech news" → headlines straight from the feeds ──
+    # Left to the model, this turned into vague summaries of news-site homepages.
+    # News *about* something ("news about Tesla") still goes to the news-search skill.
+    if forced is None and not has_files:
+        from server.services import news_feed
+        news_category = news_feed.news_category_request(request)
+        if news_category:
+            ctx.dispatched = True
+            ctx.direct_command_type = f"news:{news_category}"
+            ctx.had_tool_call = True
+            stories = await news_feed.get_category(news_category, limit=12)
+            ctx.tool_succeeded = bool(stories)
+            ctx.full_response = news_feed.render_answer(news_category, stories)
+            ctx.full_response_parts = [ctx.full_response]
+            return
+
     # ── Several steps in one request → the agent loop, not a shortcut ─────────
     # A shortcut would answer the first step and silently drop the rest.
     from server.services.agent_loop.routing import is_multi_step
     from server.services.llm.tool_calling import native_tools_supported
-    if native_tools_supported() and is_multi_step(request):
+    if forced is None and native_tools_supported() and is_multi_step(request):
+        return
+
+    # ── Store price comparison → the agent loop's compare_store_prices tool ──
+    # The product-search skill would match "cheapest … at Walmart" first, but it
+    # recommends products rather than pricing one item store by store.
+    from server.services.agent_loop.tool_selection import is_store_price_request
+    if forced is None and native_tools_supported() and is_store_price_request(request) and not has_files:
         return
 
     # ── Lookups: a matching skill (server/skills/*) or a grounded web search ─────────
@@ -112,14 +159,14 @@ async def dispatch_direct_commands(ctx: ChatContext) -> None:
     # Explicit search phrasing may use any skill; otherwise only "strong"
     # skills (whose intent alone implies a lookup) route here, and not when the
     # message is about the user's own file or data.
-    explicit = is_search_request(request) and not _GMAIL_INTENT_RE.search(request)
+    explicit = forced is not None or (is_search_request(request) and not _GMAIL_INTENT_RE.search(request))
     about_own_content = refers_to_own_content(request) or (has_files and not carried)
-    skill = pick_search_skill(request, strong_only=not explicit) if (explicit or not about_own_content) else None
+    skill = forced or (pick_search_skill(request, strong_only=not explicit) if (explicit or not about_own_content) else None)
     # "What's the news today?" has no topic to search for: today's headlines
     # come from the news feeds (daily_news in the agent loop). News *about*
     # something still goes to the news-search skill.
     from server.services.agent_loop.grounding import is_general_news
-    if skill is not None and skill.id == "news-search" and is_general_news(request) and native_tools_supported():
+    if forced is None and skill is not None and skill.id == "news-search" and is_general_news(request) and native_tools_supported():
         return
     if explicit and skill is None:
         # No skill's patterns matched ("find me good ramen"): let the model pick

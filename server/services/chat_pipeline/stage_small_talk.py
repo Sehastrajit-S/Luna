@@ -27,8 +27,8 @@ def _previous_assistant_message(ctx: ChatContext) -> str:
 
 def answer_small_talk(ctx: ChatContext) -> bool:
     """Handle the message if it is pure small talk. Returns True when handled."""
-    if settings.luna_variant == "business" or ctx.attachment_ids:
-        return False  # "thanks" + a PDF is a request about the PDF
+    if settings.luna_variant == "business" or ctx.attachment_ids or getattr(ctx, "skill", ""):
+        return False  # "thanks" + a PDF is about the PDF; a picked skill means the message is its input
     prev = _previous_assistant_message(ctx)
     kind = classify_small_talk(ctx.user_message, prev_assistant=prev, user_name=settings.user_name)
     if not kind:

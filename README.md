@@ -33,7 +33,17 @@ Luna is an open-source, local-first AI assistant. Chat with it, hand it your fil
 
 ## Quick start
 
-Requires Node.js 18+, Python 3.10+ and [Ollama](https://ollama.com) (or an API key for a cloud model).
+**Docker** (any OS):
+
+```bash
+docker run -d --name luna -p 127.0.0.1:8899:8899 -v luna_data:/app/data ghcr.io/sehastrajit-s/luna:latest
+```
+
+Open http://localhost:8899, then pick a model in **Settings → AI model** (a local Ollama model or a cloud API key).
+
+**Windows app:** download `Luna-Setup-<version>.exe` from [Releases](https://github.com/Sehastrajit-S/Luna/releases).
+
+**From source** (Node.js 18+, Python 3.10+):
 
 ```bash
 git clone https://github.com/Sehastrajit-S/Luna.git && cd Luna
@@ -42,7 +52,9 @@ npm run setup             # picks a model, installs dependencies, writes .env
 npm run web               # opens Luna at http://localhost:8899
 ```
 
-Prefer an app? Run `npm --prefix interfaces/desktop start`, or build a Windows installer with `npm run build:desktop`.
+**Use it from your phone or another computer:** share it privately over Tailscale with `npm run serve:tailscale`.
+
+The full guide, covering Local and Remote setup, Docker, models and updating, is [docs/SETUP.md](docs/SETUP.md).
 
 ## A quick tour
 
@@ -84,7 +96,7 @@ The desktop app finds shared Luna servers on your tailnet. Devices signed in to 
 
 ### Skills and integrations
 
-Built-in skills for research, coding, documents, datasets, job search and more, plus Google Workspace, Microsoft 365, GitHub and Spotify.
+Built-in skills for research, coding, documents, datasets, job search and more, plus Google Workspace, Microsoft 365, GitHub and Spotify. Pick one from **+ → Skills** in the message box, or just ask. **+ → Meeting mode** records a meeting, transcribes it on your machine and writes the minutes (summary, decisions, action items), saved to the Library. **Compare store prices** puts one product side by side at Walmart, Costco, Target, Sam's Club and Safeway (needs a free [SerpApi](https://serpapi.com) key).
 
 <img src="docs/screenshots/desktop-capabilities.png" width="100%" alt="Capabilities view listing skills and integrations" />
 
@@ -123,7 +135,7 @@ Built in: [research](server/skills/research/), [coding agent](server/skills/codi
 | Desktop app | `npm --prefix interfaces/desktop start` |
 | Share over Tailscale | `npm run serve:tailscale` |
 | Terminal chat | `npm run chat` |
-| Docker (CPU / GPU / cloud model) | `npm run docker` / `npm run docker:gpu` / `npm run docker:cloud` |
+| Docker with Ollama / GPU / cloud model | `docker compose -f deploy/compose.yml up -d` / add `-f deploy/compose.gpu.yml` / `deploy/compose.cloud.yml` |
 | Something broken? | `npm run luna -- doctor` |
 
 Luna also exposes its memory, web, workspace, GitHub, Google and Microsoft tools as [MCP servers](CLAUDE.md#claude-desktop-mcp-setup) for Claude Desktop (`python -m server.mcp.server_memory`, …), plus add-ins for [VS Code](interfaces/vscode/), [Office](interfaces/office/) and [Google Workspace](interfaces/google-workspace/).

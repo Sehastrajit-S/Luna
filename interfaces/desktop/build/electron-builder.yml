@@ -4,7 +4,7 @@ productName: Luna
 copyright: Copyright (c) 2026 L.U.N.A. contributors
 directories:
   buildResources: resources
-  output: ../../dist-electron
+  output: ../../dist/desktop
 npmRebuild: false
 files:
   - src/**/*

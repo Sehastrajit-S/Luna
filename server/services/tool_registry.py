@@ -77,6 +77,7 @@ TOOL_REGISTRY: dict[str, ToolDef] = {
     "forget_memory":    ToolDef("forget_memory", "Forget what you remember about a subject when the user asks you to", RiskLevel.SAFE, ["about"]),
     "daily_news":       ToolDef("daily_news", "Today's top news headlines with sources and links, optionally about one topic", RiskLevel.SAFE, ["topic"]),
     "calculate":        ToolDef("calculate", "Work out arithmetic exactly. Use it for any calculation instead of doing math in your head", RiskLevel.SAFE, ["expression"]),
+    "compare_store_prices": ToolDef("compare_store_prices", "Compare the current price of one product at Walmart, Costco, Target, Sam's Club and Safeway, from Google Shopping listings. Use it when the user asks where something is cheapest, wants prices compared across stores, or names these stores", RiskLevel.SAFE, ["product", "stores"]),
     # ── GitHub ──────────────────────────────────────────────────────────────────
     "github_list_repos": ToolDef("github_list_repos", "List your GitHub repositories sorted by last updated", RiskLevel.SAFE),
     "github_list_issues": ToolDef("github_list_issues", "List open issues in a GitHub repository", RiskLevel.SAFE, ["repo"]),
@@ -140,6 +141,14 @@ def _coerce(value, schema: dict):
                 return value
         if kind == "boolean" and text.lower() in _TRUE | _FALSE:
             return text.lower() in _TRUE
+        if kind == "array":
+            if text.startswith("["):
+                import json
+                try:
+                    return json.loads(text)
+                except ValueError:
+                    return value
+            return [part.strip() for part in text.split(",") if part.strip()]
         if kind == "object" and text.startswith("{"):
             import json
             try:

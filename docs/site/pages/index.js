@@ -38,9 +38,9 @@ const features = [
     desc: 'Persistent facts, personality state, and conversation summaries stored in local SQLite and ChromaDB.',
   },
   {
-    icon: ic(<><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>),
-    title: 'Vision', href: '/integrations#voice',
-    desc: 'Screen and camera awareness. Luna builds temporal visual context without storing raw frames.',
+    icon: ic(<><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></>),
+    title: 'Meeting mode', href: '/meeting-mode',
+    desc: 'Record a meeting and get a timestamped transcript plus minutes: decisions, action items and open questions.',
   },
   {
     icon: ic(<><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></>),
@@ -49,19 +49,19 @@ const features = [
   },
   {
     icon: ic(<><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></>),
-    title: 'Dashboard', href: '/integrations#data',
-    desc: 'Live news, markets, weather, and maps in a heads-up display widget layer.',
+    title: 'News & prices', href: '/news',
+    desc: "Real headlines with images by category, and one product compared across Walmart, Costco, Target, Sam's Club and Safeway.",
   },
   {
     icon: ic(<><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></>),
-    title: 'Private by Default', href: '/integrations#platforms',
-    desc: 'Inference runs on your machine via Ollama. Zero data leaves unless you opt into cloud features.',
+    title: 'Yours, anywhere', href: '/setup',
+    desc: 'Runs on your machine with Ollama or the cloud model you pick. Reach it from your phone over Tailscale, without opening it to the internet.',
   },
 ];
 
 const steps = [
-  { title: 'Speak or type', desc: 'Chat through the UI or trigger Luna by voice. Accepts text, voice, and vision frames as input.' },
-  { title: 'Context assembled', desc: 'Memory facts, personality, calendar state, vision observations, and activity history are injected into the prompt.' },
+  { title: 'Speak or type', desc: 'Chat through the UI or trigger Luna by voice. Accepts text, voice and attached files.' },
+  { title: 'Context assembled', desc: 'Memory facts, personality, calendar state, and activity history are injected into the prompt.' },
   { title: 'LLM processes', desc: 'Your local Ollama model or any OpenAI-compatible API handles inference with a full context window.' },
   { title: 'Actions & response', desc: 'Luna streams the reply, executes tools, opens widgets, updates memory, and delivers voice output.' },
 ];
@@ -72,7 +72,7 @@ export default function Home() {
     <>
       <Head>
         <title>L.U.N.A. — Local AI Companion</title>
-        <meta name="description" content="L.U.N.A. is a local-first AI companion with voice, memory, vision, and automation. Runs entirely on your machine." />
+        <meta name="description" content="L.U.N.A. is a local-first AI companion with voice, memory, meeting minutes and automation. Runs on your machine, reachable from anywhere over Tailscale." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/images/logo.svg" type="image/svg+xml" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -167,13 +167,13 @@ export default function Home() {
               <span className="lp-gradient-text">knows you.</span>
             </h1>
             <p className="lp-subheading">
-              L.U.N.A. runs entirely on your machine. Voice, memory, vision,
-              and desktop automation with zero cloud dependency.
+              L.U.N.A. runs on your machine. Voice, memory, meetings and desktop
+              automation, on your desktop, in a browser, or on your phone.
             </p>
             <div className="lp-hero-stats" aria-hidden="true">
               <span className="lp-stat"><span className="lp-stat-dot" />Open Source</span>
               <span className="lp-stat"><span className="lp-stat-dot" />Local Inference</span>
-              <span className="lp-stat"><span className="lp-stat-dot" />Electron + React</span>
+              <span className="lp-stat"><span className="lp-stat-dot" />Docker image</span>
               <span className="lp-stat"><span className="lp-stat-dot" />FastAPI Backend</span>
             </div>
             <div className="lp-hero-actions">

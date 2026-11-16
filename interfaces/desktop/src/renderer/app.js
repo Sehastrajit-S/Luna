@@ -68,6 +68,9 @@ document.querySelectorAll('.nav-item').forEach(btn => {
     if (btn.dataset.nav === 'capabilities') {
       showView(viewCapabilities)
       loadCapabilities()
+    } else if (btn.dataset.nav === 'news') {
+      showView(viewNews)
+      window.loadNewsView?.()
     } else if (btn.dataset.nav === 'library') {
       showView(viewLibrary)
       window.loadLibraryView?.()
@@ -142,6 +145,7 @@ async function loadCapabilities() {
 }
 
 document.getElementById('github-configure-btn')?.addEventListener('click', () => openSettingsView())
+document.getElementById('store-prices-configure-btn')?.addEventListener('click', () => openSettingsView())
 
 // ── Developer dashboard: local checkout + GitHub repo pulse ────────────────
 function timeAgo(iso) {
@@ -776,22 +780,63 @@ const COMMAND_TAG_RE = /\s*\[(?:LAUNCH|TASK|EVENT|SPOTIFY|BROWSE|MAP|WIDGET|FACE
 // Result cards (product photos etc.) ride along as <!--luna-cards:[...]-->.
 const CARDS_RE = /<!--luna-cards:([\s\S]*?)-->/
 
+// Follow-up buttons (e.g. news categories) ride along as <!--luna-suggest:[{label, message}]-->.
+const SUGGEST_RE = /<!--luna-suggest:([\s\S]*?)-->/
+
+function suggestionButtons(items) {
+  const valid = (Array.isArray(items) ? items : [])
+    .filter(s => s && typeof s.label === 'string' && typeof s.message === 'string').slice(0, 12)
+  if (!valid.length) return null
+  const row = document.createElement('div')
+  row.className = 'md-suggest'
+  for (const s of valid) {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'md-suggest-btn'
+    button.textContent = s.label
+    button.dataset.message = s.message
+    row.append(button)
+  }
+  return row
+}
+
 // Luna replies are Markdown; markdown.js escapes everything before adding tags.
 function setAssistantContent(element, markdown) {
   let text = String(markdown || '').replace(COMMAND_TAG_RE, '').trim()
   let cards = []
+  let suggestions = []
   const match = text.match(CARDS_RE)
   if (match) {
     try { cards = JSON.parse(match[1]) } catch { cards = [] }
     text = text.replace(CARDS_RE, '').trim()
+  }
+  const suggest = text.match(SUGGEST_RE)
+  if (suggest) {
+    try { suggestions = JSON.parse(suggest[1]) } catch { suggestions = [] }
+    text = text.replace(SUGGEST_RE, '').trim()
   }
   if (typeof window.renderMarkdown !== 'function') {
     element.textContent = text
     return
   }
   const cardsHtml = cards.length && typeof window.renderCards === 'function' ? window.renderCards(cards) : ''
-  element.innerHTML = cardsHtml + window.renderMarkdown(text)
+  const body = window.renderMarkdown(text)
+  // A short first line ("**Tech** · Sunday") reads as a heading for the cards below it.
+  const lead = body.match(/^<p>([\s\S]*?)<\/p>/)
+  element.innerHTML = lead && lead[1].replace(/<[^>]+>/g, '').length <= 80
+    ? lead[0] + cardsHtml + body.slice(lead[0].length)
+    : cardsHtml + body
+  const buttons = suggestionButtons(suggestions)
+  if (buttons) element.append(buttons)
 }
+
+// Tapping a follow-up button sends its message as if typed.
+conversation?.addEventListener('click', event => {
+  const button = event.target.closest?.('.md-suggest-btn')
+  if (!button || streamFor(activeConversationId)) return
+  composerInput.value = button.dataset.message || button.textContent
+  sendMessage()
+})
 
 // A card image that fails to load (hotlink-blocked, removed) collapses to a
 // neutral placeholder instead of a broken-image icon.
@@ -824,6 +869,8 @@ async function sendMessage({ spoken, onPart } = {}) {
   if (!text && !ready.length) return
   if (!text) text = ready.length === 1 ? 'Take a look at this file.' : 'Take a look at these files.'
 
+  // A skill picked from the + menu applies to this one message.
+  const skill = window.lunaComposerSkill?.take?.() || null
   const origin = { conversationId: activeConversationId, view: viewToken }
   const stream = { conversationId: activeConversationId, row: null }
   liveStreams.add(stream)
@@ -849,6 +896,7 @@ async function sendMessage({ spoken, onPart } = {}) {
         message: text,
         conversation_id: activeConversationId,
         attachment_ids: ready.map(a => a.id),
+        ...(skill ? { skill: skill.id } : {}),
       }),
     })
     if (!response.ok || !response.body) throw new Error(`Backend returned ${response.status}`)
@@ -948,15 +996,17 @@ const viewDashboard = document.getElementById('view-dashboard')
 const viewCapabilities = document.getElementById('view-capabilities')
 const viewSettings = document.getElementById('view-settings')
 const viewLibrary = document.getElementById('view-library')
+const viewMeeting = document.getElementById('view-meeting')
+const viewNews = document.getElementById('view-news')
 
 // Exactly one view is visible at a time — hiding only some of them left the
 // previous view stacked under the new one.
 function showView(target) {
-  ;[viewChat, viewDashboard, viewCapabilities, viewSettings, viewLibrary].forEach(view => {
+  ;[viewChat, viewDashboard, viewCapabilities, viewSettings, viewLibrary, viewMeeting, viewNews].forEach(view => {
     view?.classList.toggle('is-hidden', view !== target)
   })
-  const navFor = { [viewCapabilities?.id]: 'capabilities', [viewSettings?.id]: 'settings', [viewLibrary?.id]: 'library' }
-  document.querySelectorAll('.nav-item[data-nav="capabilities"], .nav-item[data-nav="settings"], .nav-item[data-nav="library"]').forEach(item => {
+  const navFor = { [viewCapabilities?.id]: 'capabilities', [viewSettings?.id]: 'settings', [viewLibrary?.id]: 'library', [viewNews?.id]: 'news' }
+  document.querySelectorAll('.nav-item[data-nav="capabilities"], .nav-item[data-nav="settings"], .nav-item[data-nav="library"], .nav-item[data-nav="news"]').forEach(item => {
     item.classList.toggle('is-active', navFor[target?.id] === item.dataset.nav)
   })
 }

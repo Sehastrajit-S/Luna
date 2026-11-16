@@ -98,6 +98,13 @@ TOOL_SCHEMAS: dict[str, dict] = {
         "limit": _i("How many headlines, 1-20 (default 8)", minimum=1, maximum=20),
     }),
     "calculate": _obj({"expression": _s("Arithmetic expression, e.g. 17*23 or (1200*0.15)+40")}, ("expression",)),
+    "compare_store_prices": _obj({
+        "product": _s("The one product to price, as specific as the user was: brand, size, count "
+                      "(e.g. 'Tide Pods 81 count', 'Kirkland paper towels 12 rolls')"),
+        "stores": {"type": "array", "items": {"type": "string"},
+                   "description": "Only these stores, if the user named some: Walmart, Costco, Target, Sam's Club, Safeway. "
+                                  "Leave out to compare all five"},
+    }, ("product",)),
     # GitHub
     "github_list_repos": _obj(),
     "github_list_issues": _obj({"repo": _s(_REPO)}),
@@ -163,7 +170,7 @@ TOOL_SCHEMAS: dict[str, dict] = {
 READ_ONLY_TOOLS: frozenset[str] = frozenset({
     "list_apps", "web_search", "use_skill", "web_research", "dataset_search", "web_fetch", "browser_read",
     "workspace_read", "workspace_read_base64", "list_skills", "search_conversation",
-    "get_volume", "get_brightness", "get_clipboard", "get_system_info", "calculate", "daily_news",
+    "get_volume", "get_brightness", "get_clipboard", "get_system_info", "calculate", "daily_news", "compare_store_prices",
     "github_list_repos", "github_list_issues", "github_list_prs", "github_get_pr", "github_summarize_user_pr",
     "slack_search_messages", "slack_channel_history", "jira_search_issues", "jira_get_issue",
     "code_read_file", "code_list_files", "code_search", "code_web_search", "code_web_fetch",

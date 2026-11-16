@@ -270,6 +270,15 @@ class Settings(BaseSettings):
     spotify_client_id: str = ""
     spotify_client_secret: str = ""
 
+    # ── Store price comparison (Google Shopping via SerpApi, opt-in) ─────────
+    # Compares one product's price at Walmart, Costco, Target, Sam's Club and
+    # Safeway. Free key at serpapi.com (100 searches/month).
+    serpapi_api_key: str = ""
+    # Where prices are looked up, as SerpApi expects it: "Phoenix, Arizona, United States".
+    shopping_location: str = ""
+    # Searches one comparison may use: 1 general + follow-ups for stores it missed.
+    shopping_max_searches: int = 3
+
     # ── Health Platforms (opt-in) ────────────────────────────────────────────
     # Fitbit (OAuth2) — app.fitbit.com/oauth2/applications
     fitbit_client_id: str = ""

@@ -130,4 +130,47 @@ class LocalSTT:
         return Transcript(text=text, duration_s=duration, elapsed_ms=elapsed, model=self._model_name, device=self._device)
 
 
+@dataclass
+class Segment:
+    start: float
+    end: float
+    text: str
+
+
+def _meeting_segments(model, audio_path: str, on_progress=None) -> tuple[list[Segment], float]:
+    """Timestamped segments for long recordings; on_progress(fraction) as audio is decoded."""
+    segments, info = model.transcribe(
+        audio_path,
+        language=settings.stt_language or None,
+        beam_size=5,
+        vad_filter=True,
+        vad_parameters={"min_silence_duration_ms": 700},
+        condition_on_previous_text=False,
+    )
+    duration = float(getattr(info, "duration", 0.0) or 0.0)
+    out = []
+    for seg in segments:
+        text = seg.text.strip()
+        if text:
+            out.append(Segment(float(seg.start), float(seg.end), text))
+        if on_progress and duration:
+            on_progress(min(1.0, float(seg.end) / duration))
+    return out, duration
+
+
+def transcribe_segments(audio_path: str, on_progress=None) -> tuple[list[Segment], float]:
+    """Meeting transcription with timestamps, on the shared local model (blocking: run in a thread)."""
+    stt.ensure_loaded()
+    with stt._run_lock:
+        try:
+            return _meeting_segments(stt._model, audio_path, on_progress)
+        except RuntimeError as e:
+            if stt._device != "cuda":
+                raise
+            logger.warning("STT GPU run failed on a meeting (%s); switching to CPU", e)
+            with stt._load_lock:
+                stt._load(prefer_gpu=False)
+            return _meeting_segments(stt._model, audio_path, on_progress)
+
+
 stt = LocalSTT()

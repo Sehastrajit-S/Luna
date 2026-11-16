@@ -60,6 +60,7 @@ async def chat_stream(
         speech_speed=_speech_speed,
         speech_duration=_speech_dur,
         attachment_ids=req.attachment_ids,
+        skill=(req.skill or "").strip(),
     )
 
     # Run the pipeline as an SSE stream
