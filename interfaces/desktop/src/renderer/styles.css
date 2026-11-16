@@ -998,3 +998,76 @@ select.settings-input { cursor: pointer; }
 .model-menu-text b { font-size: 13px; font-weight: 600; }
 .model-menu-text small { font-size: 11.5px; color: var(--ink-soft); overflow-wrap: anywhere; }
 .model-menu-error { padding: 8px 10px; font-size: 12px; color: #c0392b; }
+
+/* ── Mobile ──────────────────────────────────────────────────────────────────
+   Phones and narrow windows get a one-column layout automatically: the sidebar
+   becomes a slide-out drawer (mobile-nav.js adds the menu button), and wide
+   grids stack. Breakpoint by width, so it follows the screen, not the device. */
+.mobile-nav-btn, .mobile-nav-backdrop { display: none; }
+
+/* Touch screens have no hover: show controls that only appear on hover. */
+@media (hover: none) {
+  .recent-row .recent-more { opacity: 1; }
+}
+
+@media (max-width: 760px) {
+  :root { --sidebar-w: min(84vw, 300px); }
+
+  .app-frame { height: 100vh; height: 100dvh; border-radius: 0; box-shadow: none; }
+  .traffic-lights { display: none; }
+  .bg-glow { display: none; }
+
+  /* Sidebar → drawer */
+  .sidebar {
+    position: fixed; top: 0; bottom: 0; left: 0; z-index: 50;
+    padding: calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));
+    transform: translateX(-100%); transition: transform 0.22s cubic-bezier(.22,1,.36,1), box-shadow 0.22s ease;
+  }
+  body.nav-open .sidebar { transform: none; box-shadow: 0 0 40px rgba(0,0,0,0.35); }
+  .mobile-nav-backdrop {
+    display: block; position: fixed; inset: 0; z-index: 45;
+    background: rgba(12,12,15,0.38); opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
+  }
+  body.nav-open .mobile-nav-backdrop { opacity: 1; pointer-events: auto; }
+  .nav-item, .recent-item { padding: 12px 10px; font-size: 15px; }
+
+  /* Top bar: menu button left, search hidden (it lives in the drawer's Recent list) */
+  .topbar { justify-content: space-between; padding: calc(10px + env(safe-area-inset-top)) 12px 4px; }
+  .mobile-nav-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; border-radius: 12px; color: var(--ink);
+  }
+  .mobile-nav-btn:active { background: #ececee; }
+  .search-box { display: none; }
+
+  /* Chat */
+  .conversation { padding: 14px 12px 12px; }
+  .bubble { max-width: 86%; padding: 12px 14px; }
+  .composer { padding: 6px 8px calc(8px + env(safe-area-inset-bottom)); }
+  .composer-bar { gap: 2px; padding: 6px 6px 6px 8px; }
+  .composer-input { font-size: 16px; } /* below 16px iOS zooms the page on focus */
+  .model-select { max-width: 92px; padding: 7px 9px; }
+  .model-select span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .composer-icon { width: 38px; height: 38px; }
+  .quick-actions { overflow-x: auto; flex-wrap: nowrap; }
+
+  /* Dashboard, capabilities, settings */
+  .dashboard, .capabilities, .settings-page { padding: 14px 14px 24px; }
+  .dashboard-header h1 { font-size: 24px; }
+  .dashboard-body { flex-direction: column; gap: 22px; }
+  .calendar-panel { width: 100%; max-width: 360px; }
+  .insight-stats { grid-template-columns: repeat(2, 1fr); }
+  .capability-grid, .github-widget-grid { grid-template-columns: 1fr; }
+  .capability-filters { flex-wrap: wrap; }
+  .settings-row { grid-template-columns: 1fr; gap: 8px; }
+  .settings-section { padding: 14px; }
+  .settings-input { font-size: 16px; }
+  .server-actions { flex-wrap: wrap; }
+  .server-actions .settings-status { flex-basis: 100%; }
+  .dev-dash { padding: 16px; }
+
+  /* Overlays */
+  .explore-overlay { padding: 12px; align-items: flex-start; padding-top: calc(12px + env(safe-area-inset-top)); }
+  .explore-dialog { padding: 20px; border-radius: 22px; }
+  .luna-toasts { left: 12px; right: 12px; top: calc(12px + env(safe-area-inset-top)); max-width: none; }
+}
