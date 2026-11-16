@@ -1,18 +1,20 @@
+# Paths are relative to interfaces/desktop (the project folder), not to this file.
 appId: com.luna.desktop
 productName: Luna
 copyright: Copyright (c) 2026 L.U.N.A. contributors
 directories:
-  buildResources: ../resources
-  output: ../../../dist-electron
+  buildResources: resources
+  output: ../../dist-electron
 npmRebuild: false
 files:
   - src/**/*
-  - ../resources/**
+  - resources/**
+  - package.json
 extraResources:
-  - from: ../../../interfaces/web/dist
-    to: interfaces/web/dist
+  - from: ../web/dist
+    to: web/dist
     filter: ["**/*"]
-  - from: ../../../server
+  - from: ../../server
     to: server
     filter: ["**/*", "!__pycache__/**", "!*.pyc"]
 win:
@@ -22,7 +24,7 @@ win:
       arch: [x64]
     - target: zip
       arch: [x64]
-  icon: ../resources/icon.ico
+  icon: resources/logo_icon.png
 nsis:
   oneClick: false
   perMachine: false
