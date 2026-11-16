@@ -30,7 +30,7 @@ from ipaddress import ip_address
 from urllib.parse import parse_qs
 
 from server.services.settings_store import token_ok
-from server.services.tailscale_identity import trusted_logins
+from server.services.tailscale_identity import own_tailscale_ips, trusted_logins
 
 logger = logging.getLogger("luna.access")
 
@@ -93,14 +93,16 @@ def _presented_token(scope) -> str:
     return (query.get(TOKEN_QUERY) or [""])[0].strip()
 
 
-def tailscale_login(scope) -> str:
+def tailscale_login(scope, own_ips: frozenset[str] = frozenset()) -> str:
     """The tailnet user behind a request proxied by tailscaled on this machine, else ''.
 
-    Only a loopback peer counts: that's tailscaled, which strips client-sent
-    Tailscale-* headers. From any other address the header could be forged.
+    Only a connection from tailscaled itself counts, since it strips client-sent
+    Tailscale-* headers: loopback, or this machine's own Tailscale IP (tailscaled
+    on Windows connects from that). From any other address the header could be forged.
     """
     client = scope.get("client")
-    if not _is_loopback(client[0] if client else None):
+    peer = client[0] if client else None
+    if not (_is_loopback(peer) or peer in own_ips):
         return ""
     if _header(scope, b"tailscale-funnel-request") is not None:
         return ""  # public internet via Funnel: no identity
@@ -112,7 +114,7 @@ async def authorization(scope, require_token_on_lan: bool = False) -> str:
     client = scope.get("client")
     if not is_remote(scope.get("headers", []), client[0] if client else None, require_token_on_lan):
         return "local"
-    login = tailscale_login(scope)
+    login = tailscale_login(scope, await own_tailscale_ips())
     if login and login in await trusted_logins():
         return "tailscale"
     if token_ok(_presented_token(scope)):
@@ -138,8 +140,11 @@ class RemoteAccessMiddleware:
             return await self.app(scope, receive, send)
 
         client = scope.get("client")
-        who = tailscale_login(scope) or (client[0] if client else "unknown")
-        logger.warning("Rejected remote %s %s from %s: not a trusted Tailscale user and no valid access token", scope.get("method", "WS"), path, who)
+        login = _header(scope, b"tailscale-user-login")
+        logger.warning(
+            "Rejected remote %s %s from %s (Tailscale login: %s): not a trusted Tailscale user and no valid access token",
+            scope.get("method", "WS"), path, client[0] if client else "unknown", login or "none sent",
+        )
         if scope["type"] == "websocket":
             await send({"type": "websocket.close", "code": 4401})
             return

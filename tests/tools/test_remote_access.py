@@ -19,6 +19,7 @@ from server.services import settings_store
 
 TOKEN = "s3cret-token"
 OWNER = "owner@example.com"
+OWN_TS_IP = "100.77.92.118"
 PROXIED = {"X-Forwarded-Host": "my-pc.tailnet.ts.net:8899", "X-Forwarded-For": "100.101.102.103"}
 
 
@@ -53,6 +54,9 @@ class RemoteAccessTests(unittest.TestCase):
         trusted = mock.patch.object(access, "trusted_logins", mock.AsyncMock(return_value=frozenset({OWNER})))
         trusted.start()
         self.addCleanup(trusted.stop)
+        own_ips = mock.patch.object(access, "own_tailscale_ips", mock.AsyncMock(return_value=frozenset({OWN_TS_IP})))
+        own_ips.start()
+        self.addCleanup(own_ips.stop)
         self.addCleanup(self._tmp.cleanup)
 
     def _client(self, client_host: str = "127.0.0.1", **kwargs) -> TestClient:
@@ -96,9 +100,16 @@ class RemoteAccessTests(unittest.TestCase):
         self.assertEqual(self._client().get("/api/settings", headers=headers).status_code, 401)
 
     def test_identity_header_from_non_loopback_peer_is_ignored(self) -> None:
-        # Only tailscaled on this machine (a loopback peer) can vouch for the header.
+        # Only tailscaled on this machine can vouch for the header.
         res = self._client("192.168.1.20").get("/api/settings", headers={**PROXIED, "Tailscale-User-Login": OWNER})
         self.assertEqual(res.status_code, 401)
+        res = self._client("100.64.0.9").get("/api/settings", headers={**PROXIED, "Tailscale-User-Login": OWNER})
+        self.assertEqual(res.status_code, 401, "another tailnet device must not be able to claim an identity")
+
+    def test_tailscaled_connecting_from_own_tailscale_ip_is_trusted(self) -> None:
+        # tailscaled on Windows reaches 127.0.0.1:8899 from this machine's 100.x address.
+        res = self._client(OWN_TS_IP).get("/api/settings", headers={**PROXIED, "Tailscale-User-Login": OWNER})
+        self.assertEqual(res.status_code, 200)
 
     def test_public_routes_stay_open_through_proxy(self) -> None:
         client = self._client()
@@ -134,7 +145,8 @@ class ServerWiringTests(unittest.TestCase):
     def test_hello_reports_whether_caller_is_authorized(self) -> None:
         from server.main import app
         client = TestClient(app, client=("127.0.0.1", 50000))
-        with mock.patch.object(access, "trusted_logins", mock.AsyncMock(return_value=frozenset({OWNER}))):
+        with mock.patch.object(access, "trusted_logins", mock.AsyncMock(return_value=frozenset({OWNER}))), \
+             mock.patch.object(access, "own_tailscale_ips", mock.AsyncMock(return_value=frozenset())):
             stranger = client.get("/api/remote/hello", headers=PROXIED).json()
             owner = client.get("/api/remote/hello", headers={**PROXIED, "Tailscale-User-Login": OWNER}).json()
             local = client.get("/api/remote/hello").json()
@@ -145,7 +157,7 @@ class ServerWiringTests(unittest.TestCase):
 
 
 class TailscaleIdentityTests(unittest.TestCase):
-    STATUS = '{"Self": {"UserID": 42}, "User": {"42": {"LoginName": "Owner@Example.com"}}}'
+    STATUS = '{"Self": {"UserID": 42, "TailscaleIPs": ["100.77.92.118"]}, "User": {"42": {"LoginName": "Owner@Example.com"}}}'
 
     def _load(self, **overrides):
         from server.services import tailscale_identity as ti
@@ -156,14 +168,12 @@ class TailscaleIdentityTests(unittest.TestCase):
              mock.patch.object(ti.subprocess, "run", return_value=done):
             return ti._load()
 
-    def test_owner_login_is_trusted(self) -> None:
-        self.assertEqual(self._load(), frozenset({"owner@example.com"}))
+    def test_owner_login_and_own_ips_are_loaded(self) -> None:
+        self.assertEqual(self._load(), (frozenset({"owner@example.com"}), frozenset({"100.77.92.118"})))
 
     def test_extra_logins_and_owner_opt_out(self) -> None:
-        self.assertEqual(
-            self._load(tailscale_trust_owner=False, tailscale_trusted_logins="Friend@Example.com, "),
-            frozenset({"friend@example.com"}),
-        )
+        logins, _ = self._load(tailscale_trust_owner=False, tailscale_trusted_logins="Friend@Example.com, ")
+        self.assertEqual(logins, frozenset({"friend@example.com"}))
 
     def test_no_tailscale_means_no_identity_trust(self) -> None:
         from server.services import tailscale_identity as ti
