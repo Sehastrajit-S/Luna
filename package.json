@@ -19,6 +19,8 @@
     "dev:lan": "npm run web:lan",
     "web": "node ./interfaces/cli/luna.mjs web",
     "web:lan": "node ./interfaces/cli/luna.mjs web:lan",
+    "serve:tailscale": "node ./interfaces/cli/luna.mjs serve --tailscale",
+    "serve:tailscale:off": "node ./interfaces/cli/luna.mjs serve --tailscale --off",
     "mobile:dev": "concurrently -n api,vite -c green,cyan \"node ./interfaces/cli/luna.mjs backend\" \"npm run dev --workspace=interfaces/web -- --host 0.0.0.0\"",
     "tunnel": "npx --yes cloudflared tunnel --url http://localhost:5173",
     "tunnel:lt": "npx --yes localtunnel --port 5173",

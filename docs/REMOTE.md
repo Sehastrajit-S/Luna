@@ -7,14 +7,17 @@ Run Luna's server on one computer and use it from your laptop, phone or browser 
 On the computer that runs Luna (Tailscale installed and signed in):
 
 ```bash
-luna serve --tailscale
+luna serve --tailscale        # or, without the global `luna` command:
+npm run serve:tailscale       # works in PowerShell too
 ```
+
+In PowerShell, avoid `npm run luna -- serve --tailscale`: PowerShell drops the `--`, so npm swallows `--tailscale` and the server starts without sharing.
 
 This starts the server and runs `tailscale serve` so it's reachable at `https://<this-computer>.<your-tailnet>.ts.net:8899`, by devices on your tailnet only. It prints that URL and Luna's **access token**.
 
 - Luna keeps listening on `127.0.0.1`. Tailscale forwards to it, so leave `host=127.0.0.1` in `.env`.
 - It uses HTTPS port 8899, so other `tailscale serve` mappings (for example Ollama on 443) are left alone. Pick another with `--https=<port>`.
-- Stop sharing with `luna serve --tailscale --off`.
+- Stop sharing with `luna serve --tailscale --off` (or `npm run serve:tailscale:off`).
 
 ## 2. Connect a client
 
