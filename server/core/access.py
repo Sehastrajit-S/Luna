@@ -30,7 +30,7 @@ from ipaddress import ip_address
 from urllib.parse import parse_qs
 
 from server.services.settings_store import token_ok
-from server.services.tailscale_identity import own_tailscale_ips, trusted_logins
+from server.services.tailscale_identity import trusted_logins
 
 logger = logging.getLogger("luna.access")
 
@@ -93,16 +93,20 @@ def _presented_token(scope) -> str:
     return (query.get(TOKEN_QUERY) or [""])[0].strip()
 
 
-def tailscale_login(scope, own_ips: frozenset[str] = frozenset()) -> str:
+def tailscale_login(scope) -> str:
     """The tailnet user behind a request proxied by tailscaled on this machine, else ''.
 
-    Only a connection from tailscaled itself counts, since it strips client-sent
-    Tailscale-* headers: loopback, or this machine's own Tailscale IP (tailscaled
-    on Windows connects from that). From any other address the header could be forged.
+    The header is only believed when the connection arrived on a loopback
+    address (scope["server"]). Nothing off this machine can connect to
+    127.0.0.1, so such a connection came from tailscaled, which strips
+    client-sent Tailscale-* headers, or from a local app, which is trusted
+    anyway. The client address can't be used for this: tailscaled passes on
+    the remote device's tailnet IP. A direct LAN/tailnet connection (when
+    host=0.0.0.0) arrives on a non-loopback address, where the header could be
+    forged.
     """
-    client = scope.get("client")
-    peer = client[0] if client else None
-    if not (_is_loopback(peer) or peer in own_ips):
+    server = scope.get("server")
+    if not (server and _is_loopback(server[0])):
         return ""
     if _header(scope, b"tailscale-funnel-request") is not None:
         return ""  # public internet via Funnel: no identity
@@ -114,7 +118,7 @@ async def authorization(scope, require_token_on_lan: bool = False) -> str:
     client = scope.get("client")
     if not is_remote(scope.get("headers", []), client[0] if client else None, require_token_on_lan):
         return "local"
-    login = tailscale_login(scope, await own_tailscale_ips())
+    login = tailscale_login(scope)
     if login and login in await trusted_logins():
         return "tailscale"
     if token_ok(_presented_token(scope)):
