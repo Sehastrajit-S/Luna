@@ -1,7 +1,7 @@
 {
   "name": "luna-desktop",
-  "version": "0.1.0",
-  "description": "L.U.N.A. desktop shell — reference architecture",
+  "version": "0.2.0",
+  "description": "L.U.N.A. desktop shell \u2014 reference architecture",
   "author": "L.U.N.A. contributors",
   "license": "MIT",
   "main": "src/main/index.js",

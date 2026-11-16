@@ -1853,7 +1853,7 @@ function check() {
 
 // ── Clean ─────────────────────────────────────────────────────────────────────
 function clean() {
-  const targets = ['data', 'dist', 'dist-electron', 'interfaces/web/dist', '.pytest_cache']
+  const targets = ['data', 'dist', 'interfaces/web/dist', '.pytest_cache']
   const files   = ['.env', 'run.log', 'run_err.log', 'server.log', 'server_err.log', 'cloudflared.exe']
   for (const t of [...targets, ...files]) {
     const p = join(root, t)

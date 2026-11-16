@@ -17,13 +17,13 @@ chromadb==0.5.20
 pydantic==2.10.3
 pydantic-settings==2.6.1
 python-dotenv==1.0.1
-python-certifi-win32
+python-certifi-win32 ; sys_platform == "win32"
 apscheduler==3.10.4
 aiofiles==24.1.0
 python-multipart==0.0.18
-pywin32==308
-pycaw
-comtypes
+pywin32==308 ; sys_platform == "win32"
+pycaw ; sys_platform == "win32"
+comtypes ; sys_platform == "win32"
 psutil>=5.9                # system info (RAM, CPU, disk, battery) without PowerShell
 spotipy==2.24.0
 # file attachments (chat uploads: PDF, Word, PowerPoint, Excel)

@@ -5,10 +5,6 @@ node_modules/
 dist/
 build/
 !interfaces/desktop/build/
-build-backend/
-dist-backend/
-dist-electron/
-dist-mobile/
 docs/site/.next/
 docs/site/out/
 *.tsbuildinfo
@@ -88,3 +84,9 @@ data/*.backup-*.json
 data/chroma/
 data/rlhf_pairs.json
 data/smoke*.png
+
+# Old build output folders from before dist/<target>/ (safe to delete)
+build-backend/
+dist-backend/
+dist-electron/
+dist-mobile/

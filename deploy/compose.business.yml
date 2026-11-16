@@ -34,10 +34,15 @@ services:
 
   # ── Luna — business backend + frontend ────────────────────────────────────────
   luna:
+    # Prebuilt image from GitHub releases; `docker compose up --build` builds it from this checkout instead.
+    image: ghcr.io/sehastrajit-s/luna:latest
     build:
       context: ..
       dockerfile: Dockerfile
+    pull_policy: missing
     ports:
+      # Open to the network on purpose: business mode has JWT logins and rate
+      # limits. Put it behind HTTPS (see the nginx block below).
       - "8899:8899"
     env_file:
       - path: ../.env

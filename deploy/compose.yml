@@ -1,23 +1,20 @@
-# L.U.N.A. — default stack (CPU Ollama + Luna backend)
+# Luna + Ollama (local models on CPU).
 #
-# Quick start:
-#   cp .env.example .env   # edit ollama_model if needed
-#   docker compose up -d
+#   docker compose -f deploy/compose.yml up -d
 #   open http://localhost:8899
 #
-# With NVIDIA GPU:
-#   docker compose -f deploy/compose.yml -f deploy/compose.gpu.yml up -d
+# Settings (model, API keys, name…) are set in the browser and kept in the
+# luna_data volume. A .env in the repo root is optional and read if present.
 #
-# With cloud LLM (no Ollama):
-#   docker compose -f deploy/compose.cloud.yml up -d
+# NVIDIA GPU:   docker compose -f deploy/compose.yml -f deploy/compose.gpu.yml up -d
+# Cloud model:  docker compose -f deploy/compose.cloud.yml up -d   (no Ollama)
+# Pull a model: docker compose -f deploy/compose.yml exec ollama ollama pull qwen2.5:7b
 
 services:
 
-  # ── Ollama — local LLM inference ──────────────────────────────────────────
+  # ── Ollama: local model inference ───────────────────────────────────────────
   ollama:
     image: ollama/ollama:latest
-    ports:
-      - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama
     restart: unless-stopped
@@ -28,23 +25,24 @@ services:
       retries: 5
       start_period: 20s
 
-  # ── Luna backend + frontend ────────────────────────────────────────────────
+  # ── Luna: server + web UI ───────────────────────────────────────────────────
   luna:
+    # Prebuilt image from GitHub releases; `docker compose up --build` builds it from this checkout instead.
+    image: ghcr.io/sehastrajit-s/luna:latest
     build:
       context: ..
       dockerfile: Dockerfile
-    # Uncomment once published to GHCR:
-    # image: ghcr.io/sehastrajit/luna:latest
+    pull_policy: missing
     ports:
-      - "8899:8899"
+      # This computer only. To reach Luna from other devices, use Tailscale
+      # (docs/SETUP.md) rather than publishing the port on your network.
+      - "127.0.0.1:8899:8899"
     env_file:
       - path: ../.env
-        required: true
+        required: false
       - path: ../.env.personal
         required: false
     environment:
-      # Override host and Ollama URL for Docker networking
-      - host=0.0.0.0
       - ollama_base_url=http://ollama:11434
     volumes:
       - luna_data:/app/data

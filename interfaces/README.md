@@ -19,7 +19,7 @@ From the repo root:
 ```bash
 npm run build           # web
 npm run build:mobile    # web + Capacitor sync (then open android/ or ios/ in Android Studio / Xcode)
-npm run build:desktop   # web + Windows installer in dist-electron/
+npm run build:desktop   # web + Windows installer in dist/desktop/
 ```
 
 The Google Workspace add-on runs on Google's servers, so it needs a server URL reachable from the public internet. The other interfaces run on your device and can use a local or private-network URL.
