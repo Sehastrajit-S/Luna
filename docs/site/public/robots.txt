@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://luna-frontend-tan.vercel.app/sitemap.xml
+Sitemap: https://www.luna-ai-engine.com/sitemap.xml

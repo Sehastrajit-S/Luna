@@ -68,6 +68,66 @@ const steps = [
 ];
 
 
+const RELEASES = 'https://github.com/Sehastrajit-S/Luna/releases/latest';
+
+const gallery = [
+  { src: '/screenshots/meeting-minutes.png', w: 600, h: 1298, phone: true,
+    alt: 'Luna meeting mode: AI-written meeting minutes with summary, decisions and action items',
+    caption: 'Meeting minutes, written for you' },
+  { src: '/screenshots/store-prices.png', w: 1280, h: 800,
+    alt: 'Luna comparing the price of one product at Walmart, Costco, Target, Sam’s Club and Safeway',
+    caption: 'Compare prices across five stores' },
+  { src: '/screenshots/desktop-library.png', w: 1600, h: 1000,
+    alt: 'Luna Library with every uploaded and AI-created file in one place',
+    caption: 'Every file in one Library' },
+  { src: '/screenshots/mobile-library.png', w: 780, h: 1688, phone: true,
+    alt: 'Luna self-hosted AI assistant on a phone, showing the Library of files',
+    caption: 'Same Luna on your phone' },
+];
+
+const modelGroups = [
+  { label: 'Run locally', items: ['Ollama', 'LM Studio', 'llama.cpp', 'any OpenAI-compatible server'] },
+  { label: 'Or use the cloud', items: ['Claude', 'Gemini', 'OpenAI', 'Groq', 'Mistral', 'Cohere', 'NVIDIA NIM', 'OpenRouter'] },
+];
+
+const platforms = [
+  { name: 'Windows', file: 'Installer (.exe)', href: RELEASES },
+  { name: 'macOS', file: 'Apple silicon & Intel (.dmg)', href: RELEASES },
+  { name: 'Linux', file: 'AppImage, x86_64 & arm64', href: RELEASES },
+  { name: 'Android', file: 'App (.apk)', href: RELEASES },
+  { name: 'Docker', file: 'Server + web UI, any OS', href: '/docker' },
+  { name: 'iPhone & iPad', file: 'In Safari: Add to Home Screen', href: '/setup#remote' },
+];
+
+const faqs = [
+  { q: 'What is Luna?',
+    a: 'Luna is a free, open-source AI assistant and agent engine that you run yourself. It chats, listens, remembers, writes meeting minutes, works with your files and connects to apps like GitHub, Google Workspace and Microsoft 365. Your conversations and files stay on your own hardware.' },
+  { q: 'Is Luna free?',
+    a: 'Yes. Luna is MIT-licensed and free to use, modify and self-host. Local models through Ollama cost nothing to run. If you choose a cloud model such as Claude or Gemini, that provider bills you for your own API key.' },
+  { q: 'Can Luna run offline, without the cloud?',
+    a: 'Yes. With a local model through Ollama, chat, memory, voice transcription and meeting minutes run entirely on your computer. Features that look things up online, such as web search, news and store prices, need an internet connection.' },
+  { q: 'Which AI models does Luna support?',
+    a: 'Local models through Ollama, LM Studio, llama.cpp or any OpenAI-compatible server, and cloud models from Anthropic (Claude), Google (Gemini), OpenAI, Groq, Mistral, Cohere, NVIDIA NIM and OpenRouter. You can switch models at any time in Settings.' },
+  { q: 'Can I use Luna on my phone?',
+    a: 'Yes. Open your Luna in any phone browser, or install the Android app, and connect to the computer running it privately over Tailscale. Nothing is exposed to the public internet.' },
+  { q: 'Is my data private?',
+    a: 'Luna stores chats, memory and files in a database on your own machine or server, and nothing is sent to the Luna project. If you pick a cloud model, your messages go only to the provider you chose.' },
+  { q: 'How is Luna different from ChatGPT?',
+    a: 'You host Luna yourself, choose any model including fully local ones, and keep your data. It is open source, so you can add skills, connect tools over MCP and change how it works.' },
+  { q: 'What do I need to run Luna?',
+    a: 'A Windows, macOS or Linux computer. The desktop app needs Python 3.10 or newer for its built-in server, or you can run the server with Docker. For local models, install Ollama; a GPU speeds things up, but small models also run on a CPU.' },
+];
+
+const FAQ_JSON_LD = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: faqs.map((f) => ({
+    '@type': 'Question',
+    name: f.q,
+    acceptedAnswer: { '@type': 'Answer', text: f.a },
+  })),
+};
+
 const SEO_DESCRIPTION =
   'Luna is an open-source, self-hosted AI assistant. Run local LLMs with Ollama or use Claude, Gemini or OpenAI. Voice, memory, meeting notes, MCP and skills on desktop, web and phone, private over Tailscale.';
 
@@ -110,6 +170,11 @@ export default function Home() {
           // eslint-disable-next-line react/no-danger
           dangerouslySetInnerHTML={{ __html: JSON.stringify(SOFTWARE_JSON_LD) }}
         />
+        <script
+          type="application/ld+json"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(FAQ_JSON_LD) }}
+        />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/images/logo.svg" type="image/svg+xml" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -136,9 +201,9 @@ export default function Home() {
         {/* ── Nav ── */}
         <nav className="site-nav">
           <div className="site-nav-inner">
-            <Link href="/" className="site-nav-brand" aria-label="L.U.N.A. home">
+            <Link href="/" className="site-nav-brand" aria-label="Luna home">
               <img src="/images/logo.svg" alt="" width={26} height={26} />
-              <span className="site-nav-logo">L.U.N.A.</span>
+              <span className="site-nav-logo">Luna</span>
             </Link>
             <div className="site-nav-links">
               <a href="https://github.com/Sehastrajit-S/Luna" target="_blank" rel="noopener noreferrer" className="site-nav-link">
@@ -197,29 +262,30 @@ export default function Home() {
           <div className="lp-hero-inner" style={{ position: 'relative', zIndex: 3 }}>
             <div className="lp-eyebrow">
               <span className="lp-badge">Open Source</span>
-              Local-first AI companion
+              Self-hosted AI assistant
             </div>
             <h1 className="lp-h1">
-              The AI that<br />
-              <span className="lp-gradient-text">knows you.</span>
+              The AI engine<br />
+              <span className="lp-gradient-text">you own.</span>
             </h1>
             <p className="lp-subheading">
-              L.U.N.A. runs on your machine. Voice, memory, meetings and desktop
-              automation, on your desktop, in a browser, or on your phone.
+              Luna is a free, open-source AI assistant that runs on your own computer. Use local
+              LLMs with Ollama or any cloud model, talk to it, let it take meeting notes, and reach
+              it from your desktop, browser or phone.
             </p>
             <div className="lp-hero-stats" aria-hidden="true">
-              <span className="lp-stat"><span className="lp-stat-dot" />Open Source</span>
-              <span className="lp-stat"><span className="lp-stat-dot" />Local Inference</span>
-              <span className="lp-stat"><span className="lp-stat-dot" />Docker image</span>
-              <span className="lp-stat"><span className="lp-stat-dot" />FastAPI Backend</span>
+              <span className="lp-stat"><span className="lp-stat-dot" />Any model</span>
+              <span className="lp-stat"><span className="lp-stat-dot" />Runs locally</span>
+              <span className="lp-stat"><span className="lp-stat-dot" />Windows · macOS · Linux · Android</span>
+              <span className="lp-stat"><span className="lp-stat-dot" />MIT licensed</span>
             </div>
             <div className="lp-hero-actions">
-              <a href="https://github.com/Sehastrajit-S/Luna" target="_blank" rel="noopener noreferrer" className="lp-btn lp-btn-primary">
+              <Link href="#download" className="lp-btn lp-btn-primary">
+                Download Luna free
+              </Link>
+              <a href="https://github.com/Sehastrajit-S/Luna" target="_blank" rel="noopener noreferrer" className="lp-btn lp-btn-outline">
                 <GitHubIcon />View on GitHub
               </a>
-              <Link href="/downloads" className="lp-btn lp-btn-outline">
-                Downloads
-              </Link>
               <Link href="/getting-started" className="lp-btn lp-btn-outline">
                 Read the Docs →
               </Link>
@@ -253,11 +319,45 @@ export default function Home() {
           </div>
         </section>
 
+        {/* ── Gallery ── */}
+        <section className="lp-section" aria-labelledby="see-it">
+          <div className="lp-section-inner">
+            <p className="lp-eyebrow-label">See it</p>
+            <h2 id="see-it" className="lp-section-h2">Your AI assistant, at work.</h2>
+            <p className="lp-section-sub">Real screens from Luna: meeting minutes, price comparison, your files, and the phone app.</p>
+            <div className="lp-gallery">
+              {gallery.map((g) => (
+                <figure key={g.src} className={`lp-shot${g.phone ? ' lp-shot-phone' : ' lp-shot-wide'}`}>
+                  <img src={g.src} alt={g.alt} width={g.w} height={g.h} loading="lazy" decoding="async" />
+                  <figcaption>{g.caption}</figcaption>
+                </figure>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Any model ── */}
+        <section className="lp-section" aria-labelledby="any-model">
+          <div className="lp-section-inner">
+            <p className="lp-eyebrow-label">Any model</p>
+            <h2 id="any-model" className="lp-section-h2">Local LLMs or the cloud. Your choice.</h2>
+            <p className="lp-section-sub">Run open models on your own hardware, or plug in your own API key. Switch any time in Settings.</p>
+            <div className="lp-models">
+              {modelGroups.map((g) => (
+                <div key={g.label} className="lp-model-group">
+                  <h3>{g.label}</h3>
+                  <ul>{g.items.map((m) => <li key={m}>{m}</li>)}</ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* ── How it works ── */}
         <section className="lp-section">
           <div className="lp-section-inner">
             <p className="lp-eyebrow-label">Workflow</p>
-            <h2 className="lp-section-h2">How L.U.N.A. works.</h2>
+            <h2 className="lp-section-h2">How Luna works.</h2>
             <p className="lp-section-sub">Four stages, entirely on your machine.</p>
             <div className="lp-steps-grid">
               {steps.map((s, i) => (
@@ -272,6 +372,41 @@ export default function Home() {
               <Link href="/workflow" className="lp-btn lp-btn-outline" style={{ display: 'inline-flex' }}>
                 See full workflow →
               </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Download ── */}
+        <section className="lp-section" id="download" aria-labelledby="download-h">
+          <div className="lp-section-inner">
+            <p className="lp-eyebrow-label">Download</p>
+            <h2 id="download-h" className="lp-section-h2">Get Luna for every device.</h2>
+            <p className="lp-section-sub">Free downloads from the latest release. Run the server once, then use it anywhere.</p>
+            <div className="lp-platforms">
+              {platforms.map((p) => (
+                p.href.startsWith('http')
+                  ? <a key={p.name} href={p.href} className="lp-platform" target="_blank" rel="noopener noreferrer"><strong>{p.name}</strong><span>{p.file}</span></a>
+                  : <Link key={p.name} href={p.href} className="lp-platform"><strong>{p.name}</strong><span>{p.file}</span></Link>
+              ))}
+            </div>
+            <p className="lp-download-note">
+              New to self-hosting? Follow the <Link href="/setup">step-by-step setup guide</Link>.
+            </p>
+          </div>
+        </section>
+
+        {/* ── FAQ ── */}
+        <section className="lp-section" aria-labelledby="faq">
+          <div className="lp-section-inner">
+            <p className="lp-eyebrow-label">FAQ</p>
+            <h2 id="faq" className="lp-section-h2">Questions about Luna.</h2>
+            <div className="lp-faq">
+              {faqs.map((f) => (
+                <details key={f.q} className="lp-faq-item">
+                  <summary><h3>{f.q}</h3></summary>
+                  <p>{f.a}</p>
+                </details>
+              ))}
             </div>
           </div>
         </section>
@@ -293,15 +428,17 @@ export default function Home() {
         <footer className="lp-footer">
           <div className="lp-footer-inner">
             <div className="lp-footer-brand">
-              <img src="/images/logo.svg" alt="" width={22} height={22} />
+              <img src="/images/logo.svg" alt="Luna logo" width={22} height={22} />
               <div className="lp-footer-brand-text">
-                <span className="lp-footer-name">L.U.N.A.</span>
-                <span className="lp-footer-tagline">Large Unified Nexus Mind AI</span>
+                <span className="lp-footer-name">Luna</span>
+                <span className="lp-footer-tagline">The open-source AI engine you own</span>
               </div>
             </div>
             <nav className="lp-footer-links">
               <a href="https://github.com/Sehastrajit-S/Luna" target="_blank" rel="noopener noreferrer">GitHub</a>
               <Link href="/downloads">Downloads</Link>
+              <Link href="/setup">Setup</Link>
+              <Link href="/meeting-mode">Meeting mode</Link>
               <Link href="/workflow">Workflow</Link>
               <Link href="/getting-started">Docs</Link>
               <Link href="/architecture">Architecture</Link>
