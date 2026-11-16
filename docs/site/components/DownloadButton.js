@@ -1,25 +1,28 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import PlatformIcon from './PlatformIcon';
 
 const LATEST = 'https://github.com/Sehastrajit-S/Luna/releases/latest/download';
 
 // Fixed-name release files: these always point at the newest version.
 export const DOWNLOADS = {
-  windows: { label: 'Download for Windows', href: `${LATEST}/Luna-Setup.exe`, note: 'Windows 10 and 11 · 64-bit' },
+  windows: { icon: 'windows', label: 'Download for Windows', href: `${LATEST}/Luna-Setup.exe`, note: 'Windows 10 and 11 · 64-bit' },
   mac: {
+    icon: 'apple',
     label: 'Download for Mac',
     href: `${LATEST}/Luna-macos-arm64.dmg`,
     note: 'Apple silicon',
     alt: { label: 'Intel Mac', href: `${LATEST}/Luna-macos-x64.dmg` },
   },
   linux: {
+    icon: 'linux',
     label: 'Download for Linux',
     href: `${LATEST}/Luna-linux-x86_64.AppImage`,
     note: 'AppImage · x86_64',
     alt: { label: 'arm64', href: `${LATEST}/Luna-linux-arm64.AppImage` },
   },
-  android: { label: 'Download for Android', href: `${LATEST}/Luna-android.apk`, note: 'APK' },
-  ios: { label: 'Use Luna on iPhone', href: '/setup#remote', note: 'In Safari: Add to Home Screen', internal: true },
+  android: { icon: 'android', label: 'Download for Android', href: `${LATEST}/Luna-android.apk`, note: 'APK' },
+  ios: { icon: 'apple', label: 'Use Luna on iPhone', href: '/setup#remote', note: 'In Safari: Add to Home Screen', internal: true },
 };
 
 export const INSTALL_COMMANDS = {
@@ -55,8 +58,8 @@ export default function DownloadButton({ className = 'lp-btn lp-btn-primary', fa
   }
 
   const button = target.internal
-    ? <Link href={target.href} className={className}>{target.label}</Link>
-    : <a href={target.href} className={className}>{target.label}</a>;
+    ? <Link href={target.href} className={className}><PlatformIcon name={target.icon} size={18} className="btn-platform-icon" />{target.label}</Link>
+    : <a href={target.href} className={className}><PlatformIcon name={target.icon} size={18} className="btn-platform-icon" />{target.label}</a>;
 
   return (
     <span className="lp-download-cta">
