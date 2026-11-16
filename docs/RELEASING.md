@@ -6,7 +6,7 @@ One GitHub Release publishes everything:
 |---|---|
 | Windows: `Luna-Setup-<version>.exe`, portable `Luna-<version>-windows-x64.zip` | Release assets |
 | macOS (unsigned): `Luna-<version>-macos-arm64.dmg`, `-macos-x64.dmg`, plus `.zip` | Release assets |
-| Linux: `Luna-<version>-linux-x64.AppImage`, `-linux-arm64.AppImage` | Release assets |
+| Linux: `Luna-<version>-linux-x86_64.AppImage`, `-linux-arm64.AppImage` | Release assets |
 | Android (debug-signed): `Luna-<version>-android.apk` | Release assets |
 | iOS simulator build: `Luna-<version>-ios-simulator.zip` | Release assets |
 | Server + web UI for any OS with Python: `Luna-<version>-server.zip` | Release assets |

@@ -34,7 +34,7 @@ const platforms = [
     name: 'Linux',
     status: 'AppImage',
     device: 'x64 and arm64',
-    download: 'Luna-<version>-linux-x64.AppImage',
+    download: 'Luna-<version>-linux-x86_64.AppImage',
     href: releasesUrl,
     notes: 'Make it executable and run it. For a headless server, use the Docker image or the server zip.',
   },

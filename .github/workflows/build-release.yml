@@ -4,7 +4,7 @@ name: Build & Release
 #
 #   Luna-Setup-<v>.exe, Luna-<v>-windows-x64.zip       Windows desktop app
 #   Luna-<v>-macos-arm64.dmg / -macos-x64.dmg (+ zip)   macOS desktop app (unsigned)
-#   Luna-<v>-linux-x64.AppImage / -linux-arm64.AppImage Linux desktop app
+#   Luna-<v>-linux-x86_64.AppImage / -linux-arm64.AppImage Linux desktop app
 #   Luna-<v>-android.apk                                Android app (debug-signed)
 #   Luna-<v>-ios-simulator.zip                          iOS simulator build
 #   Luna-<v>-server.zip                                 Server + web UI, any OS with Python
