@@ -570,7 +570,11 @@ body.explore-open { overflow: hidden; }
   box-shadow: 0 0 0 1px var(--hairline); font-size: 11px; color: var(--ink-faint);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;
 }
-.bubble .md .md-refs-more { font-size: 11px; color: var(--ink-faint); }
+.bubble .md .md-refs-more { font-size: 11px; color: var(--ink-faint); white-space: nowrap; flex-shrink: 0; }
+/* Phones: site chips get squeezed to "kyot…"; the count alone reads better. */
+@media (max-width: 760px) {
+  .bubble .md .md-refs-chip, .bubble .md .md-refs-more { display: none; }
+}
 .bubble .md .md-refs-caret {
   width: 6px; height: 6px; margin-left: 2px; flex-shrink: 0;
   border-right: 1.5px solid var(--ink-faint); border-bottom: 1.5px solid var(--ink-faint);
@@ -1105,6 +1109,7 @@ select.settings-input { cursor: pointer; }
   .library-toolbar { margin: 16px 0 12px; }
   .library-search { display: flex; width: 100%; }
   .library-search input { font-size: 16px; }
-  .library-item { flex-wrap: wrap; padding: 6px; }
-  .library-chat { margin: 0 0 4px 52px; max-width: calc(100% - 56px); }
+  .library-item { flex-wrap: wrap; padding: 6px; gap: 2px; }
+  .library-open { flex-basis: 100%; }
+  .library-chat { margin: 0 0 6px 52px; max-width: calc(100% - 58px); }
 }
