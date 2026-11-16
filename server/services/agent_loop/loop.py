@@ -212,6 +212,7 @@ class AgentLoop:
         self.tools_used: list[str] = []
         self.tool_errors = 0
         self.streamed = False
+        self.drafted = False                    # a live draft is on the chat UI (see _model_step)
         self.events: asyncio.Queue = asyncio.Queue()
         self.auto_calls = 0                     # calls the loop ran itself before the model's first step
         self.saved: list[str] = []              # read-back lines from create_task / create_event
@@ -525,8 +526,17 @@ class AgentLoop:
         return _promises_lookup(content or "", "")
 
     async def _model_step(self, messages: list[dict], tools: list[dict] | None, stream_tokens: bool) -> AssistantTurn:
+        """One model call. Voice/CLI stream the reply itself (message_part). The chat UI
+        gets a live draft (message_delta) instead: the final reply is still sent at the end,
+        after formatting, cards and saved-file links, and replaces the draft."""
         held: list[str] = []
         decided = {"stream": None}
+        # Voice/CLI: real reply parts. Chat UI: draft deltas the client replaces at the end.
+        event_type = "message_part" if stream_tokens else "message_delta"
+        if not stream_tokens and self.drafted:
+            # A previous step's draft (e.g. "Let me check…" before a tool call) is stale.
+            await self.events.put({"type": "draft_reset"})
+            self.drafted = False
 
         async def on_token(token: str) -> None:
             # Hold the first characters: a reply that opens with "{" or "<tool_call>"
@@ -538,18 +548,28 @@ class AgentLoop:
                     return
                 decided["stream"] = not start.startswith(("{", "<tool_call>", "[{"))
                 if decided["stream"]:
-                    self.streamed = True
-                    await self.events.put({"type": "message_part", "content": "".join(held)})
+                    self._mark_streamed(stream_tokens)
+                    await self.events.put({"type": event_type, "content": "".join(held)})
                 return
             if decided["stream"]:
-                await self.events.put({"type": "message_part", "content": token})
+                await self.events.put({"type": event_type, "content": token})
 
         temperature = 0.5 if self.ctx.cli else 0.6
-        turn = await chat_step(messages, tools, temperature=temperature, on_token=on_token if stream_tokens else None)
-        if stream_tokens and decided["stream"] is None and held and not turn.tool_calls:
-            self.streamed = True
-            await self.events.put({"type": "message_part", "content": "".join(held)})
+        turn = await chat_step(messages, tools, temperature=temperature, on_token=on_token)
+        if decided["stream"] is None and held and not turn.tool_calls:
+            self._mark_streamed(stream_tokens)
+            await self.events.put({"type": event_type, "content": "".join(held)})
+        if turn.tool_calls and self.drafted:
+            # Text the model wrote before deciding to call a tool isn't the answer.
+            await self.events.put({"type": "draft_reset"})
+            self.drafted = False
         return turn
+
+    def _mark_streamed(self, stream_tokens: bool) -> None:
+        if stream_tokens:
+            self.streamed = True   # voice/CLI: the reply went out live; don't resend it
+        else:
+            self.drafted = True    # chat UI: a draft is on screen; the final reply replaces it
 
     async def _pump(self, task: asyncio.Task) -> AsyncGenerator[dict, None]:
         """Yield events (tokens, confirmations, results) while the task runs."""
