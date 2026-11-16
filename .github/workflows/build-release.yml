@@ -1,6 +1,15 @@
 name: Build & Release
 
-# Publishing a GitHub Release builds every app and attaches it to the release.
+# Publishing a GitHub Release builds every app and attaches it to the release:
+#
+#   Luna-Setup-<v>.exe, Luna-<v>-windows-x64.zip       Windows desktop app
+#   Luna-<v>-macos-arm64.dmg / -macos-x64.dmg (+ zip)   macOS desktop app (unsigned)
+#   Luna-<v>-linux-x64.AppImage / -linux-arm64.AppImage Linux desktop app
+#   Luna-<v>-android.apk                                Android app (debug-signed)
+#   Luna-<v>-ios-simulator.zip                          iOS simulator build
+#   Luna-<v>-server.zip                                 Server + web UI, any OS with Python
+#   SHA256SUMS-<v>.txt, Luna-<v>.intoto.jsonl           Checksums and build provenance
+#
 # "Run workflow" (manual) builds them as downloadable artifacts only.
 # The version is interfaces/desktop/package.json's "version"; see docs/RELEASING.md.
 
@@ -35,20 +44,75 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Attach to release
-        if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v2
+      - uses: actions/upload-artifact@v4
         with:
-          files: |
+          name: windows
+          path: |
             dist/desktop/Luna-Setup-*.exe
-            dist/desktop/Luna-Setup-*.zip
+            dist/desktop/Luna-*-windows-x64.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  # ── macOS desktop app (unsigned) ────────────────────────────────────────────
+  macos:
+    name: macOS desktop app
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm ci --prefix interfaces/desktop
+
+      - name: Build web UI and app (arm64 + x64)
+        run: |
+          npm run build
+          npm --prefix interfaces/desktop run build:mac
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
 
       - uses: actions/upload-artifact@v4
         with:
-          name: windows-desktop
+          name: macos
           path: |
-            dist/desktop/Luna-Setup-*.exe
-            dist/desktop/Luna-Setup-*.zip
+            dist/desktop/Luna-*-macos-*.dmg
+            dist/desktop/Luna-*-macos-*.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  # ── Linux desktop app ───────────────────────────────────────────────────────
+  linux:
+    name: Linux desktop app
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm ci --prefix interfaces/desktop
+
+      - name: Build web UI and AppImages (x64 + arm64)
+        run: |
+          npm run build
+          npm --prefix interfaces/desktop run build:linux
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: dist/desktop/Luna-*-linux-*.AppImage
+          if-no-files-found: error
           retention-days: 14
 
   # ── Android app ─────────────────────────────────────────────────────────────
@@ -87,16 +151,11 @@ jobs:
           mkdir -p dist/android
           cp interfaces/mobile/android/app/build/outputs/apk/debug/app-debug.apk "dist/android/Luna-${VERSION}-android.apk"
 
-      - name: Attach to release
-        if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v2
-        with:
-          files: dist/android/Luna-*-android.apk
-
       - uses: actions/upload-artifact@v4
         with:
           name: android
           path: dist/android/Luna-*-android.apk
+          if-no-files-found: error
           retention-days: 14
 
   # ── iOS (simulator build; App Store builds need signing) ─────────────────────
@@ -134,14 +193,97 @@ jobs:
           mkdir -p dist/ios
           (cd "$(dirname "$APP")" && zip -qr "$GITHUB_WORKSPACE/dist/ios/Luna-${VERSION}-ios-simulator.zip" "$(basename "$APP")")
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios
+          path: dist/ios/Luna-*-ios-simulator.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  # ── Server + web UI bundle (web local / web remote without Docker) ──────────
+  server:
+    name: Server bundle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bundle the server and web UI
+        run: |
+          VERSION=$(node -p "require('./interfaces/desktop/package.json').version")
+          NAME="Luna-${VERSION}-server"
+          STAGE="dist/server/stage/${NAME}"
+          mkdir -p "$STAGE/interfaces/desktop/src"
+          cp -r server alembic.ini LICENSE README.md .env.example "$STAGE/"
+          cp -r interfaces/desktop/src/renderer "$STAGE/interfaces/desktop/src/"
+          cp -r interfaces/desktop/resources "$STAGE/interfaces/desktop/"
+          cp -r interfaces/office "$STAGE/interfaces/"
+          mkdir -p "$STAGE/docs" && cp docs/SETUP.md docs/REMOTE.md "$STAGE/docs/"
+          find "$STAGE" -name "__pycache__" -type d -prune -exec rm -rf {} +
+          cat > "$STAGE/START.txt" <<EOF
+          Luna ${VERSION} server: the API plus the web UI, for any OS with Python 3.10+.
+
+            python -m venv .venv
+            .venv/bin/pip install -r server/requirements.txt        (Windows: .venv\Scripts\pip)
+            .venv/bin/python server/server.py                       (Windows: .venv\Scripts\python)
+
+          Then open http://localhost:8899 and pick a model in Settings.
+          To use it from your other devices, see docs/REMOTE.md (Tailscale).
+          EOF
+          (cd dist/server/stage && zip -qr "../${NAME}.zip" "$NAME")
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: server
+          path: dist/server/Luna-*-server.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  # ── Checksums, provenance, and attach everything to the release ─────────────
+  publish:
+    name: Checksums and release assets
+    needs: [windows, macos, linux, android, ios, server]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist/release
+          merge-multiple: true
+
+      - name: Write SHA256SUMS
+        id: sums
+        run: |
+          VERSION=$(node -p "require('./interfaces/desktop/package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          cd dist/release
+          sha256sum Luna-* | sort -k2 > "SHA256SUMS-${VERSION}.txt"
+          cat "SHA256SUMS-${VERSION}.txt"
+
+      - name: Attest build provenance
+        id: attest
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/release/Luna-*
+
+      - name: Save the provenance bundle
+        run: cp "${{ steps.attest.outputs.bundle-path }}" "dist/release/Luna-${{ steps.sums.outputs.version }}.intoto.jsonl"
+
       - name: Attach to release
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/ios/Luna-*-ios-simulator.zip
+          files: dist/release/*
 
       - uses: actions/upload-artifact@v4
+        if: github.event_name != 'release'
         with:
-          name: ios-simulator
-          path: dist/ios/Luna-*-ios-simulator.zip
+          name: checksums
+          path: |
+            dist/release/SHA256SUMS-*.txt
+            dist/release/*.intoto.jsonl
           retention-days: 14

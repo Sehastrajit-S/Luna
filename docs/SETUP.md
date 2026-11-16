@@ -119,7 +119,7 @@ Details: [REMOTE.md](REMOTE.md).
 | Desktop app | Download the new `Luna-Setup-<version>.exe` from Releases, quit Luna (including the tray icon), and run it. Settings and chats are kept. |
 | From source | `git pull`, `npm install`, `pip install -r server/requirements.txt`, then restart the server. |
 
-Building installers yourself: `npm run build:desktop` writes `dist/desktop/Luna-Setup-<version>.exe`. All build output goes under `dist/<target>/` (desktop, android, ios) and is never committed.
+Building installers yourself: `npm run build:desktop` writes `dist/desktop/Luna-Setup-<version>.exe`. All build output goes under `dist/<target>/` (desktop, android, ios, server) and is never committed.
 
 ## Troubleshooting
 

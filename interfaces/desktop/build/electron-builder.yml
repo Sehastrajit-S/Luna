@@ -18,14 +18,34 @@ extraResources:
     to: server
     filter: ["**/*", "!__pycache__/**", "!*.pyc"]
 win:
-  artifactName: Luna-Setup-${version}.${ext}
+  # The zip uses this name; the installer sets its own below.
+  artifactName: Luna-${version}-windows-${arch}.${ext}
   target:
     - target: nsis
       arch: [x64]
     - target: zip
       arch: [x64]
   icon: resources/logo_icon.png
+mac:
+  artifactName: Luna-${version}-macos-${arch}.${ext}
+  category: public.app-category.productivity
+  icon: resources/icon.png
+  # Unsigned: Gatekeeper asks once (right-click, Open). Signing needs an Apple Developer ID.
+  identity: null
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+    - target: zip
+      arch: [arm64, x64]
+linux:
+  artifactName: Luna-${version}-linux-${arch}.${ext}
+  category: Utility
+  icon: resources/icon.png
+  target:
+    - target: AppImage
+      arch: [x64, arm64]
 nsis:
+  artifactName: Luna-Setup-${version}.${ext}
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true
