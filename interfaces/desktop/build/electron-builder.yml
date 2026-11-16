@@ -6,8 +6,12 @@ directories:
   buildResources: resources
   output: ../../dist/desktop
 npmRebuild: false
-# No auto-update feed: releases are downloaded from GitHub by hand.
-publish: null
+# The in-app updater reads latest*.yml from GitHub Releases. Builds run with
+# --publish never; the release workflow attaches the files.
+publish:
+  provider: github
+  owner: Sehastrajit-S
+  repo: Luna
 files:
   - src/**/*
   - resources/**

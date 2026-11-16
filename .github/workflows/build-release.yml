@@ -49,7 +49,9 @@ jobs:
           name: windows
           path: |
             dist/desktop/Luna-Setup-*.exe
+            dist/desktop/Luna-Setup-*.exe.blockmap
             dist/desktop/Luna-*-windows-x64.zip
+            dist/desktop/latest.yml
           if-no-files-found: error
           retention-days: 14
 
@@ -83,6 +85,8 @@ jobs:
           path: |
             dist/desktop/Luna-*-macos-*.dmg
             dist/desktop/Luna-*-macos-*.zip
+            dist/desktop/Luna-*-macos-*.blockmap
+            dist/desktop/latest-mac.yml
           if-no-files-found: error
           retention-days: 14
 
@@ -111,7 +115,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: linux
-          path: dist/desktop/Luna-*-linux-*.AppImage
+          path: |
+            dist/desktop/Luna-*-linux-*.AppImage
+            dist/desktop/latest-linux*.yml
           if-no-files-found: error
           retention-days: 14
 
@@ -261,7 +267,7 @@ jobs:
           VERSION=$(node -p "require('./interfaces/desktop/package.json').version")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           cd dist/release
-          sha256sum Luna-* | sort -k2 > "SHA256SUMS-${VERSION}.txt"
+          sha256sum Luna-* latest*.yml | sort -k2 > "SHA256SUMS-${VERSION}.txt"
           cat "SHA256SUMS-${VERSION}.txt"
 
       - name: Attest build provenance
