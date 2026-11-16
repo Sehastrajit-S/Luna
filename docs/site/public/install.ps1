@@ -8,6 +8,9 @@
 param([switch]$Docker)
 
 $ErrorActionPreference = 'Stop'
+# Windows PowerShell 5.1 may default to TLS 1.0/1.1, which GitHub rejects
+# ("The connection was closed unexpectedly"). Make sure TLS 1.2 is on.
+[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 $Repo = 'Sehastrajit-S/Luna'
 $Image = 'ghcr.io/sehastrajit-s/luna:latest'
 
@@ -30,11 +33,24 @@ if ($Docker) {
   return
 }
 
-$url = "https://github.com/$Repo/releases/latest/download/Luna-Setup.exe"
-$installer = Join-Path $env:TEMP 'Luna-Setup.exe'
-Say 'Downloading the latest Luna installer'
+# Ask GitHub for the newest release's installer instead of guessing its file name.
+Say 'Finding the latest Luna release'
+try {
+  $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases/latest" -Headers @{ 'User-Agent' = 'luna-installer' }
+} catch {
+  throw "Couldn't reach GitHub ($($_.Exception.Message)). Check your internet connection, or download Luna from https://www.luna-ai-engine.com/#download"
+}
+$asset = $release.assets | Where-Object { $_.name -match '^Luna-Setup(-[\d.]+)?\.exe$' } | Select-Object -First 1
+if (-not $asset) { throw "Release $($release.tag_name) has no Windows installer. Download Luna from https://www.luna-ai-engine.com/#download" }
+
+$installer = Join-Path $env:TEMP $asset.name
+Say "Downloading $($asset.name) ($([math]::Round($asset.size / 1MB)) MB)"
 $ProgressPreference = 'SilentlyContinue'  # Invoke-WebRequest is far slower with the progress bar
-Invoke-WebRequest -Uri $url -OutFile $installer -UseBasicParsing
+try {
+  Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $installer -UseBasicParsing
+} catch {
+  throw "Download failed ($($_.Exception.Message)). Try again, or download it from $($release.html_url)"
+}
 
 $signature = Get-AuthenticodeSignature $installer
 if ($signature.Status -ne 'Valid') {
