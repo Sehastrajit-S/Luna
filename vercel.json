@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "docs-site/package.json",
+      "src": "docs/site/package.json",
       "use": "@vercel/next"
     }
   ]

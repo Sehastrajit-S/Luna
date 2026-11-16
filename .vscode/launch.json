@@ -5,7 +5,7 @@
       "name": "LUNA: Backend",
       "type": "debugpy",
       "request": "launch",
-      "program": "${workspaceFolder}/backend/server.py",
+      "program": "${workspaceFolder}/server/server.py",
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "justMyCode": true,
@@ -18,7 +18,7 @@
       "name": "LUNA: CLI Processes",
       "type": "node",
       "request": "launch",
-      "program": "${workspaceFolder}/cli/luna.mjs",
+      "program": "${workspaceFolder}/interfaces/cli/luna.mjs",
       "args": ["processes"],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal"
@@ -27,7 +27,7 @@
       "name": "LUNA: CLI Doctor",
       "type": "node",
       "request": "launch",
-      "program": "${workspaceFolder}/cli/luna.mjs",
+      "program": "${workspaceFolder}/interfaces/cli/luna.mjs",
       "args": ["doctor"],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal"

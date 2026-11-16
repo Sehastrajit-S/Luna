@@ -5,14 +5,14 @@
     "**/*.pyc": true,
     "data": true,
     "dist-electron": true,
-    "frontend/dist": true,
+    "interfaces/web/dist": true,
     "node_modules": true
   },
   "python.defaultInterpreterPath": "python",
   "python.analysis.extraPaths": [
     "${workspaceFolder}"
   ],
-  "typescript.tsdk": "frontend/node_modules/typescript/lib",
+  "typescript.tsdk": "interfaces/web/node_modules/typescript/lib",
   "tailwindCSS.includeLanguages": {
     "typescript": "javascript",
     "typescriptreact": "javascript"

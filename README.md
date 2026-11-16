@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs-site/public/images/banner.svg" width="100%" alt="L.U.N.A. - Large Unified Nexus Mind AI" />
+  <img src="docs/site/public/images/banner.svg" width="100%" alt="L.U.N.A. - Large Unified Nexus Mind AI" />
   <br />
 
   <p>
@@ -88,7 +88,7 @@ Luna is the engine underneath. It handles:
 
 - **LLM routing** - one config line switches between 8 providers. Ollama by default, any OpenAI-compatible endpoint, or every major cloud model.
 - **Memory** - facts, personality, and conversation summaries persist in local SQLite + ChromaDB. Luna remembers across sessions.
-- **Skill system** - extend the engine by dropping a folder into `skills/`. No Python, no restarts, no wiring - just a `skill.json` and a plain-text `SKILL.md`. Skills are loaded per-request at runtime.
+- **Skill system** - extend the engine by dropping a folder into `server/skills/`. No Python, no restarts, no wiring - just a `skill.json` and a plain-text `SKILL.md`. Skills are loaded per-request at runtime.
 - **Health data engine** - 7 platforms, 23 metric types, normalized and stored locally. Add a new platform by writing one Python file.
 - **Voice + vision pipeline** - wake-word detection, faster-whisper STT, edge-tts TTS, and moondream camera analysis running fully on-device.
 - **Tool layer** - web search, page fetch, Spotify, calendar, desktop automation, workspace file ops, 3D scene generation. Every tool goes through an audit log and permission system.
@@ -163,10 +163,10 @@ openai_model=anthropic/claude-opus-4
 
 ## Skills - extend without code
 
-Skills teach Luna new behaviors. Drop a folder into `skills/` and it's live on the next request - no Python, no restarts, no wiring.
+Skills teach Luna new behaviors. Drop a folder into `server/skills/` and it's live on the next request - no Python, no restarts, no wiring.
 
 ```
-skills/
+server/skills/
 └── my-skill/
     ├── skill.json   ← what it does, what tools it can use
     └── SKILL.md     ← instructions Luna follows
@@ -176,24 +176,24 @@ skills/
 
 | Skill | What it does |
 |---|---|
-| [`research/`](skills/research/) | Web search with source comparison and cited answers |
-| [`coding-agent/`](skills/coding-agent/) | Write, edit, debug, and run code in the workspace |
-| [`desktop-agent/`](skills/desktop-agent/) | Multi-step desktop automation with confirmation gates |
-| [`dataset-builder/`](skills/dataset-builder/) | Fetch or generate datasets from real sources with provenance |
-| [`document-drafter/`](skills/document-drafter/) | Draft reports, proposals, memos, and policies |
-| [`file-builder/`](skills/file-builder/) | Create and convert files of any format in the workspace |
-| [`job-application-assistant/`](skills/job-application-assistant/) | Tailor resumes, draft cover letters, prep for interviews |
-| [`resume-checker/`](skills/resume-checker/) | Review, score, and rewrite resumes against a job post |
-| [`workspace-suite/`](skills/workspace-suite/) | Gmail, Calendar, Drive, Outlook, OneDrive, Teams - all in one |
+| [`research/`](server/skills/research/) | Web search with source comparison and cited answers |
+| [`coding-agent/`](server/skills/coding-agent/) | Write, edit, debug, and run code in the workspace |
+| [`desktop-agent/`](server/skills/desktop-agent/) | Multi-step desktop automation with confirmation gates |
+| [`dataset-builder/`](server/skills/dataset-builder/) | Fetch or generate datasets from real sources with provenance |
+| [`document-drafter/`](server/skills/document-drafter/) | Draft reports, proposals, memos, and policies |
+| [`file-builder/`](server/skills/file-builder/) | Create and convert files of any format in the workspace |
+| [`job-application-assistant/`](server/skills/job-application-assistant/) | Tailor resumes, draft cover letters, prep for interviews |
+| [`resume-checker/`](server/skills/resume-checker/) | Review, score, and rewrite resumes against a job post |
+| [`workspace-suite/`](server/skills/workspace-suite/) | Gmail, Calendar, Drive, Outlook, OneDrive, Teams - all in one |
 
-See [`skills/README.md`](skills/README.md) for a full contributor guide and [`skills/_template/`](skills/_template/) for a ready-to-copy starter.
+See [`server/skills/README.md`](server/skills/README.md) for a full contributor guide and [`server/skills/_template/`](server/skills/_template/) for a ready-to-copy starter.
 
 ---
 
 ## Health Platforms
 
 <div align="center">
-  <img src="docs-site/public/images/health-platforms.svg" width="100%" alt="Health platform integrations" />
+  <img src="docs/site/public/images/health-platforms.svg" width="100%" alt="Health platform integrations" />
 </div>
 
 Luna connects to 7 health platforms and normalizes everything into 23 metric types stored locally in SQLite. Adding a new platform takes one Python file - no changes to the router, sync dispatcher, or frontend.
@@ -267,7 +267,7 @@ luna docker:gpu
 luna docker:cloud
 
 # Business
-cp .env.business.example .env
+cp deploy/.env.business.example .env
 luna docker:business
 ```
 
@@ -348,7 +348,7 @@ Memory update  (fact extraction · personality update · conversation compaction
 Response streamed to UI  (or plain-text reply to channel)
 ```
 
-Full diagrams: [architecture.svg](utilities/docs/architecture.svg) · [architecture_ai.svg](utilities/docs/architecture_ai.svg)
+Full diagrams: [architecture.svg](docs/architecture.svg) · [architecture_ai.svg](docs/architecture_ai.svg)
 
 ---
 
@@ -428,25 +428,32 @@ luna web:lan
 
 Open `http://YOUR-LAN-IP:5173` on any phone, tablet, or second computer. Voice, camera, and OS-level features depend on browser permissions and are fully supported on the host desktop.
 
+To use Luna from anywhere, share it over Tailscale with `luna serve --tailscale`. In the desktop app on another computer, open Settings → Server and pick **Remote over Tailscale**. See [docs/REMOTE.md](docs/REMOTE.md).
+
 ---
 
 ## Project Layout
 
 ```
 Luna/
-├── backend/             # FastAPI server - chat, voice, memory, tools, integrations
-│   ├── routers/         # Thin API layer - logic lives in services/
-│   ├── services/        # LLM, memory, personality, vision, health platforms, dashboard
-│   └── processes/       # Background jobs - memory maintenance, reminders, voice runtime
-├── frontend/            # React + Vite UI
-│   └── src/components/  # Chat, voice, dashboard, widgets, maps, settings
-├── electron/            # Desktop shell - window management, tray, preload
-├── skills/              # Built-in agent skills (plain-text, auto-loaded at runtime)
-│   └── _template/       # Copy this to create a new skill
-├── integrations/        # Platform add-ons - Google Workspace, Office, VS Code extension
-├── cli/                 # luna CLI entrypoint and command handlers
-├── docs-site/           # Next.js documentation site
-├── utilities/           # Scripts, tests, architecture diagrams
+├── server/              # FastAPI server (Python package `server`)
+│   ├── routers/         # Thin HTTP layer - logic lives in services/
+│   ├── services/        # LLM, memory, agent loop, tools, connectors (GitHub, Jira, Google, Microsoft)
+│   ├── processes/       # Background jobs - memory maintenance, reminders, voice runtime
+│   ├── mcp/             # MCP servers for Claude Desktop
+│   ├── skills/          # Built-in skills - copy _template/ to create one
+│   └── migrations/      # Alembic database migrations
+├── interfaces/          # Every client of the server
+│   ├── web/             # React + Vite UI
+│   ├── mobile/          # Capacitor shell (Android, iOS) around the web build
+│   ├── desktop/         # Electron app
+│   ├── cli/             # `luna` command
+│   └── vscode/ office/ google-workspace/   # Editor and productivity add-ins
+├── tests/               # Unit tests (tests/tools) and evals (tests/evals)
+├── scripts/             # Build, Docker, icon and screenshot helpers
+├── docs/                # Reference docs; docs/site is the documentation website
+├── deploy/              # Docker Compose files and variant .env templates
+├── data/                # Runtime data (not committed)
 └── .env.example
 ```
 
@@ -473,9 +480,9 @@ Smoke tests are non-destructive - they do not launch apps, type, lock the screen
 3. Run `npm run test:smoke` (backend/CLI changes) or `npm run build` (frontend changes).
 4. Open a pull request with a clear description of what changed and why.
 
-**Adding a skill** - the easiest contribution. Copy [`skills/_template/`](skills/_template/), fill in `skill.json` and `SKILL.md`, and open a PR. No Python knowledge needed. See [`skills/README.md`](skills/README.md).
+**Adding a skill** - the easiest contribution. Copy [`server/skills/_template/`](server/skills/_template/), fill in `skill.json` and `SKILL.md`, and open a PR. No Python knowledge needed. See [`server/skills/README.md`](server/skills/README.md).
 
-**Adding a health integration** - copy [`backend/services/health_integrations/_template.py`](backend/services/health_integrations/_template.py), subclass `HealthIntegration`, fill in the `manifest` and `sync()` method. Auto-discovered on restart, zero other changes needed. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+**Adding a health integration** - copy [`server/services/health_integrations/_template.py`](server/services/health_integrations/_template.py), subclass `HealthIntegration`, fill in the `manifest` and `sync()` method. Auto-discovered on restart, zero other changes needed. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ---
 

@@ -1,18 +1,16 @@
 # Dependencies
 node_modules/
-frontend/node_modules/
-electron/node_modules/
-docs-site/node_modules/
 
 # Build output
 dist/
 build/
+!interfaces/desktop/build/
 build-backend/
 dist-backend/
-frontend/dist/
 dist-electron/
-docs-site/.next/
-docs-site/out/
+dist-mobile/
+docs/site/.next/
+docs/site/out/
 *.tsbuildinfo
 
 # Environment and local secrets
@@ -75,14 +73,6 @@ coverage/
 .DS_Store
 Thumbs.db
 
-# Screenshot capture scripts (images committed in docs-site/public/screenshots/)
-scripts/screenshots/
-
-
-/data/chroma/635dbf62-1766-4f14-b898-a5716114bbe2
-/data/chroma/635dbf62-1766-4f14-b898-a5716114bbe2
-/data/chroma/635dbf62-1766-4f14-b898-a5716114bbe2
-
 .vercel
 .env*.local
 
@@ -95,3 +85,6 @@ scripts/screenshots/
 data/uploads/
 data/decisions/
 data/*.backup-*.json
+data/chroma/
+data/rlhf_pairs.json
+data/smoke*.png

@@ -1,0 +1,38 @@
+# Cloud LLM mode — no local Ollama required.
+# Point Luna at OpenAI, Groq, Anthropic (via OpenRouter), or any OpenAI-compatible API.
+#
+# Usage:
+#   cp .env.example .env
+#   # Set in .env:
+#   #   llm_provider=openai-compatible
+#   #   openai_base_url=https://api.openai.com/v1       (or OpenRouter, Groq, etc.)
+#   #   openai_api_key=sk-...
+#   #   openai_model=gpt-4o-mini
+#   #   embedding_provider=openai-compatible
+#   docker compose -f deploy/compose.cloud.yml up -d
+#   open http://localhost:8899
+#
+# OpenRouter covers every major model behind one key:
+#   openai_base_url=https://openrouter.ai/api/v1
+#   openai_api_key=sk-or-...
+#   openai_model=anthropic/claude-3-5-sonnet          (or google/gemini-2.0-flash, etc.)
+
+services:
+  luna:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    # image: ghcr.io/sehastrajit/luna:latest
+    ports:
+      - "8899:8899"
+    env_file:
+      - ../.env
+    environment:
+      - host=0.0.0.0
+    volumes:
+      - luna_data:/app/data
+    restart: unless-stopped
+
+volumes:
+  luna_data:
+    driver: local

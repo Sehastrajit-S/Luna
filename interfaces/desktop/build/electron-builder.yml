@@ -1,0 +1,36 @@
+# Paths are relative to interfaces/desktop (the project folder), not to this file.
+appId: com.luna.desktop
+productName: Luna
+copyright: Copyright (c) 2026 L.U.N.A. contributors
+directories:
+  buildResources: resources
+  output: ../../dist-electron
+npmRebuild: false
+files:
+  - src/**/*
+  - resources/**
+  - package.json
+extraResources:
+  - from: ../web/dist
+    to: web/dist
+    filter: ["**/*"]
+  - from: ../../server
+    to: server
+    filter: ["**/*", "!__pycache__/**", "!*.pyc"]
+win:
+  artifactName: Luna-Setup-${version}.${ext}
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: zip
+      arch: [x64]
+  icon: resources/logo_icon.png
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  deleteAppDataOnUninstall: false
+  runAfterFinish: true
+  uninstallDisplayName: L.U.N.A.

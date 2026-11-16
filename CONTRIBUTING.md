@@ -37,13 +37,13 @@ npm run luna -- web       # FastAPI + browser UI only
 
 Skills are plain-text files. Anyone can write one.
 
-1. Copy `skills/_template/` to a new folder: `skills/my-skill/`
+1. Copy `server/skills/_template/` to a new folder: `server/skills/my-skill/`
 2. Edit `skill.json` — set the id, name, description, permissions, and tools
 3. Edit `SKILL.md` — write the workflow Luna should follow
 4. Test by restarting Luna and sending a matching prompt
 5. Open a PR with 2–3 example prompts that trigger the skill
 
-Full guide: [`skills/README.md`](skills/README.md)
+Full guide: [`server/skills/README.md`](server/skills/README.md)
 
 ---
 
@@ -51,7 +51,7 @@ Full guide: [`skills/README.md`](skills/README.md)
 
 Health platforms are auto-discovered. Adding one requires zero changes to the router, sync dispatcher, or frontend.
 
-1. Copy `backend/services/health_integrations/_template.py` to `backend/services/health_integrations/myplatform.py`
+1. Copy `server/services/health_integrations/_template.py` to `server/services/health_integrations/myplatform.py`
 2. Subclass `HealthIntegration` and implement three methods:
    - `manifest` — declare the platform name, auth type, and env var fields
    - `is_configured` — return `True` when credentials are present
@@ -69,9 +69,9 @@ Platform-specific extensions live in `integrations/`:
 
 | Folder | Type | Entry point |
 |---|---|---|
-| `integrations/google-workspace/` | Google Apps Script | `Code.gs` |
-| `integrations/office/` | Office Add-in | `manifest.xml` + `taskpane/` |
-| `integrations/vscode/` | VS Code Extension | `src/extension.ts` |
+| `interfaces/google-workspace/` | Google Apps Script | `Code.gs` |
+| `interfaces/office/` | Office Add-in | `manifest.xml` + `taskpane/` |
+| `interfaces/vscode/` | VS Code Extension | `src/extension.ts` |
 
 See the README inside each folder for setup and development instructions.
 
@@ -79,10 +79,10 @@ See the README inside each folder for setup and development instructions.
 
 ## Pull request guidelines
 
-- Read `utilities/docs/architecture.svg` or `utilities/docs/architecture_ai.svg` before broad structural changes.
-- Keep routers thin — logic lives in `backend/services/`.
-- Background jobs belong in `backend/processes/`.
-- Split large UI features by folder under `frontend/src/components/`.
+- Read `docs/architecture.svg` or `docs/architecture_ai.svg` before broad structural changes.
+- Keep routers thin — logic lives in `server/services/`.
+- Background jobs belong in `server/processes/`.
+- Split large UI features by folder under `interfaces/web/src/components/`.
 - One clear behaviour per PR. Include a description of what changed and how to test it.
 
 ---
@@ -101,8 +101,8 @@ Smoke tests are non-destructive — they do not launch apps, type, lock the scre
 
 ## Code style
 
-- **Python:** PEP 8. Routers stay thin; logic goes in `backend/services/`. No non-ASCII characters in log messages (Windows `cp1252` compatibility).
-- **TypeScript:** strict mode is on. Named exports. Components in feature folders under `frontend/src/components/`.
+- **Python:** PEP 8. Routers stay thin; logic goes in `server/services/`. No non-ASCII characters in log messages (Windows `cp1252` compatibility).
+- **TypeScript:** strict mode is on. Named exports. Components in feature folders under `interfaces/web/src/components/`.
 - **Skills:** plain English. Numbered workflow steps. Under ~150 lines per `SKILL.md`.
 
 ---
