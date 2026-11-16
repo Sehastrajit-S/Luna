@@ -471,6 +471,7 @@ async function loadConversations() {
     const response = await fetch(`${API_BASE}/api/chat/conversations?limit=20`)
     if (!response.ok) throw new Error(`Conversations returned ${response.status}`)
     const conversations = await response.json()
+    conversationRetries = 0
     list.innerHTML = ''
     if (!conversations.length) {
       list.innerHTML = '<li class="recent-empty">No conversations yet</li>'
@@ -503,10 +504,20 @@ async function loadConversations() {
       list.append(li)
     })
   } catch (error) {
+    // A network error (not an HTTP error) usually means the server is still starting
+    // or briefly unreachable: keep trying for a minute before giving up.
+    const offline = error instanceof TypeError
+    if (offline && conversationRetries < 30) {
+      conversationRetries += 1
+      list.innerHTML = '<li class="recent-empty">Connecting to Luna…</li>'
+      setTimeout(loadConversations, 2000)
+      return
+    }
     list.innerHTML = '<li class="recent-empty">Could not load conversations</li>'
     console.error('Could not load conversations', error)
   }
 }
+let conversationRetries = 0
 
 async function loadTasks() {
   const list = document.getElementById('task-list')
