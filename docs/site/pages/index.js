@@ -2,6 +2,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { SITE_URL } from '../components/DocsLayout';
 import DownloadButton, { DOWNLOADS, INSTALL_COMMANDS } from '../components/DownloadButton';
+import PlatformIcon from '../components/PlatformIcon';
 
 const GitHubIcon = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -101,12 +102,13 @@ const modelGroups = [
 ];
 
 const platforms = [
-  { name: 'Windows', file: 'Installer (.exe)', href: DOWNLOADS.windows.href },
-  { name: 'macOS · Apple silicon', file: 'Disk image (.dmg)', href: DOWNLOADS.mac.href },
-  { name: 'macOS · Intel', file: 'Disk image (.dmg)', href: DOWNLOADS.mac.alt.href },
-  { name: 'Linux', file: 'AppImage · x86_64', href: DOWNLOADS.linux.href },
-  { name: 'Android', file: 'App (.apk)', href: DOWNLOADS.android.href },
-  { name: 'iPhone & iPad', file: 'In Safari: Add to Home Screen', href: '/setup#remote' },
+  { name: 'Windows', icon: 'windows', file: 'Installer (.exe)', href: DOWNLOADS.windows.href },
+  { name: 'macOS', icon: 'apple', file: 'Apple silicon · .dmg', href: DOWNLOADS.mac.href },
+  { name: 'macOS', icon: 'apple', file: 'Intel · .dmg', href: DOWNLOADS.mac.alt.href },
+  { name: 'Linux', icon: 'linux', file: 'x86_64 · AppImage', href: DOWNLOADS.linux.href },
+  { name: 'Android', icon: 'android', file: 'App (.apk)', href: DOWNLOADS.android.href },
+  { name: 'iPhone & iPad', icon: 'apple', file: 'Safari · Add to Home Screen', href: '/setup#remote' },
+  { name: 'Docker', icon: 'docker', file: 'Server + web UI, any OS', href: '/docker' },
 ];
 
 const faqs = [
@@ -396,8 +398,8 @@ export default function Home() {
             <div className="lp-platforms" id="all-platforms">
               {platforms.map((p) => (
                 p.href.startsWith('http')
-                  ? <a key={p.name} href={p.href} className="lp-platform"><strong>{p.name}</strong><span>{p.file}</span></a>
-                  : <Link key={p.name} href={p.href} className="lp-platform"><strong>{p.name}</strong><span>{p.file}</span></Link>
+                  ? <a key={p.href} href={p.href} className="lp-platform"><PlatformIcon name={p.icon} size={28} className="lp-platform-icon" /><span className="lp-platform-text"><strong>{p.name}</strong><span>{p.file}</span></span></a>
+                  : <Link key={p.href} href={p.href} className="lp-platform"><PlatformIcon name={p.icon} size={28} className="lp-platform-icon" /><span className="lp-platform-text"><strong>{p.name}</strong><span>{p.file}</span></span></Link>
               ))}
             </div>
             <div className="lp-install-cmds">

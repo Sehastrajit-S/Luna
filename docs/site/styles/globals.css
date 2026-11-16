@@ -2390,3 +2390,37 @@ img, svg {
     grid-template-columns: repeat(4, 1fr);
   }
 }
+
+/* Platform icons on download cards and buttons */
+.lp-platform {
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+}
+.lp-platform-icon {
+  flex-shrink: 0;
+  color: #c4b5fd;
+  opacity: 0.9;
+  transition: color 0.2s, opacity 0.2s;
+}
+.lp-platform:hover .lp-platform-icon {
+  color: #fff;
+  opacity: 1;
+}
+.lp-platform-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.btn-platform-icon {
+  margin-right: 9px;
+  vertical-align: -3px;
+  flex-shrink: 0;
+}
+
+@media (min-width: 1000px) {
+  .lp-platforms {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
