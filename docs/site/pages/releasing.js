@@ -20,9 +20,13 @@ export default function Releasing() {
         <table>
           <thead><tr><th>What</th><th>Where</th></tr></thead>
           <tbody>
-            <tr><td>Windows installer <code>Luna-Setup-&lt;version&gt;.exe</code> (+ zip)</td><td>Attached to the release</td></tr>
-            <tr><td>Android app <code>Luna-&lt;version&gt;-android.apk</code></td><td>Attached to the release</td></tr>
-            <tr><td>iOS simulator build</td><td>Attached to the release</td></tr>
+            <tr><td>Windows: <code>Luna-Setup-&lt;version&gt;.exe</code> and a portable zip</td><td>Release assets</td></tr>
+            <tr><td>macOS (unsigned): <code>.dmg</code> and <code>.zip</code> for Apple silicon and Intel</td><td>Release assets</td></tr>
+            <tr><td>Linux: <code>.AppImage</code> for x64 and arm64</td><td>Release assets</td></tr>
+            <tr><td>Android app <code>Luna-&lt;version&gt;-android.apk</code></td><td>Release assets</td></tr>
+            <tr><td>iOS simulator build</td><td>Release assets</td></tr>
+            <tr><td>Server + web UI <code>Luna-&lt;version&gt;-server.zip</code></td><td>Release assets</td></tr>
+            <tr><td><code>SHA256SUMS-&lt;version&gt;.txt</code> and <code>Luna-&lt;version&gt;.intoto.jsonl</code> provenance</td><td>Release assets</td></tr>
             <tr><td>Container image</td><td><code>ghcr.io/sehastrajit-s/luna:&lt;version&gt;</code> and <code>:latest</code></td></tr>
           </tbody>
         </table>

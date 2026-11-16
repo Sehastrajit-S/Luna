@@ -24,19 +24,19 @@ const platforms = [
   },
   {
     name: 'macOS',
-    status: 'Source',
-    device: 'Apple Silicon or Intel',
-    download: 'Docker or run from source',
-    href: '#web',
-    notes: 'Run the server in Docker and use Luna in your browser, or run from source. A signed DMG is not published yet.',
+    status: 'DMG',
+    device: 'Apple silicon or Intel',
+    download: 'Luna-<version>-macos-arm64.dmg / -x64.dmg',
+    href: releasesUrl,
+    notes: 'Not signed yet: right-click the app and choose Open the first time. Needs Python 3.10+ for the built-in server, or point it at a remote one.',
   },
   {
     name: 'Linux',
-    status: 'Source',
-    device: 'Ubuntu/Debian/Fedora and similar',
-    download: 'Docker image or source',
-    href: '#web',
-    notes: 'The container image runs on amd64 and arm64, including a Raspberry Pi or NAS.',
+    status: 'AppImage',
+    device: 'x64 and arm64',
+    download: 'Luna-<version>-linux-x86_64.AppImage',
+    href: releasesUrl,
+    notes: 'Make it executable and run it. For a headless server, use the Docker image or the server zip.',
   },
   {
     name: 'Android',
@@ -48,7 +48,7 @@ const platforms = [
   },
   {
     name: 'iPhone / iPad',
-    status: 'Build required',
+    status: 'Simulator',
     device: 'iOS and iPadOS',
     download: 'iOS simulator build or signed local build',
     href: '#mobile',
@@ -95,8 +95,8 @@ export default function Downloads() {
     >
       <section>
         <p>
-          Every release publishes a Windows installer, an Android APK, an iOS simulator build and a
-          container image. Not sure which you need? Start with <Link href="/setup">Setup</Link>.
+          Every release publishes desktop apps for Windows, macOS and Linux, an Android APK, an iOS simulator
+          build, a server zip, and a container image, with SHA-256 checksums and build provenance. Not sure which you need? Start with <Link href="/setup">Setup</Link>.
         </p>
         <p>
           <a className="docs-inline-button" href={releasesUrl} target="_blank" rel="noopener noreferrer">

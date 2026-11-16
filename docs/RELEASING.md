@@ -4,10 +4,16 @@ One GitHub Release publishes everything:
 
 | What | Where it ends up |
 |---|---|
-| Windows installer `Luna-Setup-<version>.exe` (+ `.zip`) | Attached to the release |
-| Android app `Luna-<version>-android.apk` (debug-signed) | Attached to the release |
-| iOS simulator build `Luna-<version>-ios-simulator.zip` | Attached to the release |
+| Windows: `Luna-Setup-<version>.exe`, portable `Luna-<version>-windows-x64.zip` | Release assets |
+| macOS (unsigned): `Luna-<version>-macos-arm64.dmg`, `-macos-x64.dmg`, plus `.zip` | Release assets |
+| Linux: `Luna-<version>-linux-x86_64.AppImage`, `-linux-arm64.AppImage` | Release assets |
+| Android (debug-signed): `Luna-<version>-android.apk` | Release assets |
+| iOS simulator build: `Luna-<version>-ios-simulator.zip` | Release assets |
+| Server + web UI for any OS with Python: `Luna-<version>-server.zip` | Release assets |
+| Checksums `SHA256SUMS-<version>.txt` and build provenance `Luna-<version>.intoto.jsonl` | Release assets |
 | Container image | `ghcr.io/sehastrajit-s/luna:<version>` and `:latest` |
+
+Verify a download: `sha256sum -c SHA256SUMS-<version>.txt --ignore-missing`, or check its provenance with `gh attestation verify <file> --repo Sehastrajit-S/Luna`.
 
 Workflows: [`build-release.yml`](../.github/workflows/build-release.yml) (apps) and [`docker.yml`](../.github/workflows/docker.yml) (image; also smoke-tests the image on every pull request).
 
@@ -27,7 +33,9 @@ Workflows: [`build-release.yml`](../.github/workflows/build-release.yml) (apps) 
 All build output goes under `dist/<target>/` and is never committed:
 
 ```bash
-npm run build:desktop            # dist/desktop/Luna-Setup-<version>.exe
+npm run build:desktop            # dist/desktop/Luna-Setup-<version>.exe (Windows)
+npm --prefix interfaces/desktop run build:mac     # on a Mac: dmg + zip
+npm --prefix interfaces/desktop run build:linux   # on Linux: AppImage
 docker build -t luna .           # the container image
 ```
 
@@ -35,6 +43,7 @@ Android and iOS builds need Android Studio / Xcode: `npm run build:mobile` syncs
 
 ## Notes
 
+- The macOS app isn't signed or notarized: right-click it and choose Open the first time.
 - The Windows installer isn't code-signed, so Windows SmartScreen shows a warning on first run ("More info → Run anyway"). Signing needs a code-signing certificate added to the workflow.
 - The Android APK is debug-signed for sideloading. Play Store builds need a release keystore.
 - The iOS build runs on the simulator only; device and App Store builds need an Apple developer account and signing.

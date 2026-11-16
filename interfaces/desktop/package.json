@@ -1,13 +1,15 @@
 {
   "name": "luna-desktop",
   "version": "0.2.0",
-  "description": "L.U.N.A. desktop shell \u2014 reference architecture",
+  "description": "L.U.N.A. desktop shell — reference architecture",
   "author": "L.U.N.A. contributors",
   "license": "MIT",
   "main": "src/main/index.js",
   "scripts": {
     "start": "electron .",
     "build:win": "electron-builder --win --config build/electron-builder.yml --publish never",
+    "build:mac": "electron-builder --mac --config build/electron-builder.yml --publish never",
+    "build:linux": "electron-builder --linux --config build/electron-builder.yml --publish never",
     "build:dir": "electron-builder --dir --config build/electron-builder.yml"
   },
   "devDependencies": {
@@ -16,5 +18,10 @@
   },
   "dependencies": {
     "electron-updater": "^6.6.2"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sehastrajit-S/Luna.git"
+  },
+  "homepage": "https://github.com/Sehastrajit-S/Luna"
 }
