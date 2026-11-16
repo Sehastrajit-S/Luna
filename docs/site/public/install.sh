@@ -11,7 +11,6 @@ set -eu
 
 REPO="Sehastrajit-S/Luna"
 IMAGE="ghcr.io/sehastrajit-s/luna:latest"
-LATEST="https://github.com/${REPO}/releases/latest/download"
 
 say() { printf '\033[1;35m==>\033[0m %s\n' "$1"; }
 fail() { printf '\033[1;31merror:\033[0m %s\n' "$1" >&2; exit 1; }
@@ -50,15 +49,30 @@ download() {
   else fail "curl or wget is required"; fi
 }
 
+# URL of the newest release's file whose name matches an extended regex.
+# Asks the GitHub API rather than guessing the name, so it works with
+# versioned (Luna-0.2.1-macos-arm64.dmg) and fixed (Luna-macos-arm64.dmg) names.
+asset_url() {
+  api="https://api.github.com/repos/${REPO}/releases/latest"
+  if command -v curl >/dev/null 2>&1; then json="$(curl -fsSL -H 'User-Agent: luna-installer' "$api")" || json=""
+  else json="$(wget -qO- --header='User-Agent: luna-installer' "$api")" || json=""; fi
+  [ -n "$json" ] || fail "couldn't reach GitHub. Check your connection, or download from https://www.luna-ai-engine.com/#download"
+  url="$(printf '%s\n' "$json" | grep -o '"browser_download_url": *"[^"]*"' | sed 's/.*"\(https[^"]*\)"$/\1/' | grep -E "/$1\$" | head -1)"
+  [ -n "$url" ] || fail "the latest release has no file matching $1. Download from https://www.luna-ai-engine.com/#download"
+  printf '%s' "$url"
+}
+
 install_app() {
   os="$(uname -s)"
   arch="$(uname -m)"
   case "$os" in
     Darwin)
-      case "$arch" in arm64) file="Luna-macos-arm64.dmg" ;; *) file="Luna-macos-x64.dmg" ;; esac
+      case "$arch" in arm64) march="arm64" ;; *) march="x64" ;; esac
+      url="$(asset_url "Luna-([0-9.]+-)?macos-${march}\.dmg")"
+      file="${url##*/}"
       tmp="$(mktemp -d)"
       say "Downloading ${file}"
-      download "${LATEST}/${file}" "${tmp}/${file}"
+      download "$url" "${tmp}/${file}"
       say "Installing to /Applications"
       mount="$(hdiutil attach -nobrowse -quiet "${tmp}/${file}" | tail -1 | awk -F '\t' '{print $NF}')"
       rm -rf /Applications/Luna.app
@@ -71,14 +85,15 @@ install_app() {
       ;;
     Linux)
       case "$arch" in
-        x86_64|amd64) file="Luna-linux-x86_64.AppImage" ;;
-        aarch64|arm64) file="Luna-linux-arm64.AppImage" ;;
+        x86_64|amd64) larch="x86_64" ;;
+        aarch64|arm64) larch="arm64" ;;
         *) fail "no desktop build for ${arch}; use --docker" ;;
       esac
       dest="${HOME}/.local/bin"
       mkdir -p "$dest"
-      say "Downloading ${file}"
-      download "${LATEST}/${file}" "${dest}/luna.AppImage"
+      url="$(asset_url "Luna-([0-9.]+-)?linux-${larch}\.AppImage")"
+      say "Downloading ${url##*/}"
+      download "$url" "${dest}/luna.AppImage"
       chmod +x "${dest}/luna.AppImage"
       apps="${HOME}/.local/share/applications"
       mkdir -p "$apps"
