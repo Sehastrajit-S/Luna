@@ -96,11 +96,11 @@ Drop in a PDF, spreadsheet or slide deck and ask about it. Luna reads the text, 
 
 <img src="docs/screenshots/desktop-attachments.png" width="100%" alt="A chat with a PDF and a spreadsheet attached and a five-bullet summary" />
 
-### Library
+### A personality that learns you
 
-Every file you've shared and every file Luna created, such as reports, datasets and code, in one searchable place, each linked back to its chat.
+Luna has moods. They shift with the time of day, how you're talking and the tone of your voice, and they change how she replies. Over time she learns your preferred style: how much humor, warmth, depth and detail, how often to ask questions, how formal to be. The sidebar panel shows her current mood, energy and learned style; turn it off in **Settings → Appearance**.
 
-<img src="docs/screenshots/desktop-library.png" width="100%" alt="Library view listing uploaded files with links to their chats" />
+<img src="docs/screenshots/desktop-personality.png" width="100%" alt="Luna's personality panel in the sidebar, enlarged: mood Warm, energy 86%, and learned style bars for humor, warmth, depth, detail, curiosity and formality, shaped by 148 conversations" />
 
 ### On your phone
 
