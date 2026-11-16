@@ -1422,3 +1422,16 @@ select.settings-input { cursor: pointer; }
 .settings-switch .settings-input:checked + .settings-switch-track { background: #7c3aed; }
 .settings-switch .settings-input:checked + .settings-switch-track::after { transform: translateX(17px); }
 .settings-switch .settings-input:focus-visible + .settings-switch-track { box-shadow: 0 0 0 2px #93c5fd; }
+
+/* ── Streaming reply: blinking cursor after the last line while tokens arrive ── */
+.md.is-streaming > :last-child::after,
+.md.is-streaming > ul:last-child > li:last-child::after,
+.md.is-streaming > ol:last-child > li:last-child::after {
+  content: ''; display: inline-block; width: 0.5em; height: 1.05em; margin-left: 2px;
+  vertical-align: -0.17em; border-radius: 2px; background: currentColor; opacity: 0.55;
+  animation: stream-caret 1s steps(2, start) infinite;
+}
+/* Lists get the cursor inside their last item; code blocks and tables get none */
+.md.is-streaming > ul:last-child::after, .md.is-streaming > ol:last-child::after,
+.md.is-streaming > pre:last-child::after, .md.is-streaming > table:last-child::after { display: none; }
+@keyframes stream-caret { to { visibility: hidden; } }

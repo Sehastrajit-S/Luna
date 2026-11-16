@@ -867,6 +867,23 @@ conversation?.addEventListener('click', event => {
   window.electronAPI?.openUrl?.(anchor.href)
 })
 
+// What a streaming draft should show: no hidden reasoning (<think>…</think>, including an
+// unfinished block), no internal command tags ([LAUNCH: …]) or UI markers (<!--luna-…-->).
+function visibleDraft(text) {
+  let out = String(text || '').replace(/<think>[\s\S]*?<\/think>/gi, '')
+  const open = out.search(/<think>/i)
+  if (open !== -1) out = out.slice(0, open)
+  out = out
+    .replace(/\[(?:LAUNCH|TASK|EVENT|SPOTIFY|BROWSE|MAP|WIDGET|FACE|WEB_SEARCH|WEB_RESEARCH|WEB_FETCH):[^\]]*(?:\]|$)/g, '')
+    .replace(/<!--[\s\S]*?(?:-->|$)/g, '')
+  return out.trim()
+}
+
+// Keep following the reply only if the user hasn't scrolled up to read something.
+function nearBottom() {
+  return conversation.scrollHeight - conversation.scrollTop - conversation.clientHeight < 160
+}
+
 async function sendMessage({ spoken, onPart } = {}) {
   let text = (spoken ?? composerInput.value).trim()
   if (streamFor(activeConversationId) || (!text && !pendingAttachments.length)) return
@@ -917,6 +934,25 @@ async function sendMessage({ spoken, onPart } = {}) {
     const steps = typeof window.createAgentSteps === 'function' ? window.createAgentSteps(assistantText) : null
     let buffer = ''
     let assistant = ''
+    // Live draft: tokens as the model writes them (message_delta). The finished reply
+    // (message_part, after formatting and cards) replaces it at the end.
+    let draft = ''
+    let draftFrame = 0
+    const paintDraft = () => {
+      draftFrame = 0
+      if (assistant) return
+      const visible = visibleDraft(draft)
+      if (!visible) return
+      setAssistantContent(assistantText, visible)
+      assistantText.classList.add('is-streaming')
+      if (stream.row?.isConnected && nearBottom()) conversation.scrollTop = conversation.scrollHeight
+    }
+    const clearDraft = () => {
+      draft = ''
+      if (draftFrame) cancelAnimationFrame(draftFrame)
+      draftFrame = 0
+      assistantText.classList.remove('is-streaming')
+    }
     while (true) {
       const { value, done } = await reader.read()
       buffer += decoder.decode(value || new Uint8Array(), { stream: !done })
@@ -928,13 +964,28 @@ async function sendMessage({ spoken, onPart } = {}) {
         const payload = JSON.parse(line.slice(5).trim())
         if (steps && steps.handle(payload)) {
           // Tool steps render in their own panel; drop the "Thinking…" placeholder.
-          if (!assistant && payload.type === 'tool_call') assistantText.textContent = ''
+          if (!assistant && payload.type === 'tool_call') {
+            clearDraft()
+            assistantText.textContent = ''
+          }
+        } else if (payload.type === 'message_delta') {
+          if (!assistant) {
+            draft += payload.content || ''
+            if (!draftFrame) draftFrame = requestAnimationFrame(paintDraft)
+          }
+        } else if (payload.type === 'draft_reset') {
+          // The model's text before a tool call wasn't the answer.
+          if (!assistant && draft) {
+            clearDraft()
+            assistantText.textContent = 'Thinking…'
+          }
         } else if (payload.type === 'meta' || payload.type === 'done') {
           if (payload.conversation_id) {
             stream.conversationId = payload.conversation_id
             if (stillHere()) activeConversationId = payload.conversation_id
           }
         } else if (payload.type === 'message_part') {
+          if (draft) clearDraft()   // the finished reply replaces the live draft
           // The backend streams one paragraph per part without separators.
           const part = payload.content || ''
           const needsBreak = assistant && part && !/\n\s*$/.test(assistant) && !/^\s*\n/.test(part)
@@ -947,6 +998,13 @@ async function sendMessage({ spoken, onPart } = {}) {
         if (stream.row?.isConnected) conversation.scrollTop = conversation.scrollHeight
       }
       if (done) break
+    }
+    if (draftFrame) cancelAnimationFrame(draftFrame)
+    assistantText.classList.remove('is-streaming')
+    if (!assistant && draft && visibleDraft(draft)) {
+      // The stream ended without a final reply (e.g. dropped connection): keep what arrived.
+      assistant = visibleDraft(draft)
+      setAssistantContent(assistantText, assistant)
     }
     if (!assistant) assistantText.textContent = 'I did not receive a response.'
     await loadConversations()
