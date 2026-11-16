@@ -118,16 +118,20 @@ Built-in skills for research, coding, documents, datasets, job search and more, 
 
 ## Any model
 
+<p>
+  <img src="docs/images/logos/ollama.png" width="36" height="36" alt="Ollama" align="center" /> <img src="docs/images/logos/claude.png" width="36" height="36" alt="Claude" align="center" /> <img src="docs/images/logos/gemini.png" width="36" height="36" alt="Gemini" align="center" /> <img src="docs/images/logos/openai.png" width="36" height="36" alt="OpenAI" align="center" /> <img src="docs/images/logos/groq.png" width="36" height="36" alt="Groq" align="center" /> <img src="docs/images/logos/mistral.png" width="36" height="36" alt="Mistral" align="center" /> <img src="docs/images/logos/cohere.png" width="36" height="36" alt="Cohere" align="center" /> <img src="docs/images/logos/nvidia.png" width="36" height="36" alt="NVIDIA NIM" align="center" /> <img src="docs/images/logos/lmstudio.png" width="36" height="36" alt="LM Studio" align="center" /> <img src="docs/images/logos/llamacpp.png" width="36" height="36" alt="llama.cpp" align="center" />
+</p>
+
 | Provider | `llm_provider` | Key |
 |---|---|---|
-| **Ollama** (local, default) | `ollama` | none |
-| **Anthropic Claude** | `anthropic` | `anthropic_api_key` |
-| **Google Gemini** | `google` | `google_api_key` |
-| **Groq** | `groq` | `groq_api_key` |
-| **Mistral AI** | `mistral` | `mistral_api_key` |
-| **Cohere** | `cohere` | `cohere_api_key` |
-| **NVIDIA NIM** | `nvidia-nim` | `nvidia_nim_api_key` |
-| **OpenAI, OpenRouter, LM Studio, llama.cpp** | `openai-compatible` | `openai_api_key` (optional for local) |
+| <img src="docs/images/logos/ollama.png" width="20" height="20" alt="Ollama" align="center" /> **Ollama** (local, default) | `ollama` | none |
+| <img src="docs/images/logos/claude.png" width="20" height="20" alt="Claude" align="center" /> **Anthropic Claude** | `anthropic` | `anthropic_api_key` |
+| <img src="docs/images/logos/gemini.png" width="20" height="20" alt="Gemini" align="center" /> **Google Gemini** | `google` | `google_api_key` |
+| <img src="docs/images/logos/groq.png" width="20" height="20" alt="Groq" align="center" /> **Groq** | `groq` | `groq_api_key` |
+| <img src="docs/images/logos/mistral.png" width="20" height="20" alt="Mistral" align="center" /> **Mistral AI** | `mistral` | `mistral_api_key` |
+| <img src="docs/images/logos/cohere.png" width="20" height="20" alt="Cohere" align="center" /> **Cohere** | `cohere` | `cohere_api_key` |
+| <img src="docs/images/logos/nvidia.png" width="20" height="20" alt="NVIDIA" align="center" /> **NVIDIA NIM** | `nvidia-nim` | `nvidia_nim_api_key` |
+| <img src="docs/images/logos/openai.png" width="20" height="20" alt="OpenAI" align="center" /> <img src="docs/images/logos/lmstudio.png" width="20" height="20" alt="LM Studio" align="center" /> <img src="docs/images/logos/llamacpp.png" width="20" height="20" alt="llama.cpp" align="center" /> **OpenAI, OpenRouter, LM Studio, llama.cpp** | `openai-compatible` | `openai_api_key` (optional for local) |
 
 You can also list several Ollama servers in priority order with a cloud fallback, and switch models from the model pill in the chat box. Every option is documented in [`.env.example`](.env.example).
 
