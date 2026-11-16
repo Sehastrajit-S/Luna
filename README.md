@@ -25,7 +25,9 @@
 </div>
 
 <p align="center">
-  <img src="docs/screenshots/desktop-chat.png" width="100%" alt="Luna desktop app answering a trip-planning question with sources" />
+  <img src="docs/media/luna-demo.webp" width="100%" alt="Luna demo: any model, voice and meeting minutes, memory, store prices, every device, and an expanding graph of skills and integrations" />
+  <br />
+  <sub><a href="docs/media/luna-demo.mp4">▶ Watch with sound</a></sub>
 </p>
 
 Luna is an open-source, self-hosted AI assistant and agent engine, a private alternative to hosted chatbots. Chat with it or talk to it, hand it your files, let it take meeting notes, search the web and write documents, and keep everything on hardware you own. It runs local LLMs through Ollama out of the box, or any cloud model you choose: Claude, Gemini, OpenAI, Groq, Mistral and more.
