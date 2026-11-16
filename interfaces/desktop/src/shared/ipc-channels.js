@@ -37,4 +37,10 @@ module.exports = Object.freeze({
     showSettings: 'system:show-settings',
     quit: 'system:quit',
   },
+  server: {
+    connection: 'server:connection',
+    getConfig: 'server:get-config',
+    test: 'server:test',
+    save: 'server:save',
+  },
 })

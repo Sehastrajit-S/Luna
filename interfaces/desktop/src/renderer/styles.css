@@ -852,6 +852,10 @@ select.settings-input { cursor: pointer; }
 .settings-save { background: var(--ink); color: #fff; }
 .settings-reset { background: var(--bg-card); color: var(--ink); box-shadow: 0 0 0 1px var(--hairline); }
 .settings-save:disabled, .settings-reset:disabled { opacity: 0.4; cursor: default; }
+.server-connection { max-width: 760px; }
+.server-connection code { font-size: 11.5px; }
+.server-connection.is-local .server-remote-row { display: none; }
+.server-actions { position: static; background: none; padding-top: 14px; }
 
 /* ── Developer dashboard ─────────────────────────────────────────────────── */
 .dev-dash {

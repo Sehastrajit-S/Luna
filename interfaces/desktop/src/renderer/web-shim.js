@@ -45,11 +45,13 @@
       if (typeof url === 'string' && /^https?:\/\//i.test(url)) window.open(url, '_blank', 'noopener')
     },
     getLocalToken: async () => token,
-    // Called after the backend rejects a settings write: ask for the token once.
+    // Called after the server rejects a request (a settings save, or any API
+    // call when Luna is reached remotely): ask for the token once.
     requestLocalToken: async () => {
       const entered = window.prompt(
-        'Saving settings needs Luna\'s local access token.\n' +
-        'Run `luna web` for a link that includes it, or paste the contents of data/local_api_token:'
+        'Luna needs its access token.\n' +
+        'Run `luna web` (or `luna serve --tailscale` for remote access) for a link that includes it,\n' +
+        'or paste the contents of data/local_api_token from the server:'
       )
       token = (entered || '').trim()
       storeToken(token)

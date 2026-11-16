@@ -12,8 +12,78 @@ export function getApiBase(): string {
   return BASE
 }
 
+// Access token for a remote server (`luna serve --tailscale`). A server on the
+// same machine accepts requests without it; a proxied one answers 401.
+let TOKEN = ''
+
+export function initApiToken(token: string) {
+  TOKEN = token.trim()
+}
+
 export function authHeaders(): Record<string, string> {
-  return {}
+  return TOKEN ? { 'X-Luna-Token': TOKEN } : {}
+}
+
+function isServerApiUrl(url: string): boolean {
+  if (!BASE) return false
+  try {
+    const target = new URL(url, location.href)
+    return target.origin === new URL(BASE).origin && target.pathname.startsWith('/api/')
+  } catch {
+    return false
+  }
+}
+
+/** For EventSource URLs, which can't carry headers. */
+export function withAuthQuery(url: string): string {
+  if (!TOKEN || !isServerApiUrl(url)) return url
+  const target = new URL(url, location.href)
+  target.searchParams.set('luna_token', TOKEN)
+  return target.toString()
+}
+
+/**
+ * Checks a server before saving it: health is public, settings needs the
+ * token when the server is remote, so passing both proves the pair works.
+ */
+export async function testServer(base: string, token: string): Promise<{ ok: boolean; message: string }> {
+  try {
+    const health = await fetch(`${base}/api/system/health`, { signal: AbortSignal.timeout(6000) })
+    if (!health.ok) return { ok: false, message: `Server returned ${health.status}` }
+  } catch (e: any) {
+    return {
+      ok: false,
+      message: e?.name === 'TimeoutError'
+        ? 'Connection timed out. Is the server reachable from this device (same Wi-Fi or tailnet)?'
+        : `Cannot reach server: ${e?.message ?? e}`,
+    }
+  }
+  const headers: Record<string, string> = token.trim() ? { 'X-Luna-Token': token.trim() } : {}
+  try {
+    const settings = await fetch(`${base}/api/settings`, { headers, signal: AbortSignal.timeout(6000) })
+    if (settings.status === 401 || settings.status === 403) {
+      return { ok: false, message: token.trim() ? 'Server reached, but it rejected the access token.' : 'Server reached. It needs the access token printed by `luna serve --tailscale`.' }
+    }
+  } catch {
+    // Older servers or blocked settings: health already proved reachability.
+  }
+  return { ok: true, message: 'Connected. Server is reachable.' }
+}
+
+let fetchPatched = false
+
+/** Adds the token to every fetch() aimed at the server's /api, wherever it's called from. */
+export function installAuthFetch() {
+  if (fetchPatched) return
+  fetchPatched = true
+  const nativeFetch = window.fetch.bind(window)
+  window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof input === 'string' || input instanceof URL ? String(input) : input.url
+    if (!TOKEN || !isServerApiUrl(url)) return nativeFetch(input, init)
+    const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined))
+    if (!headers.has('X-Luna-Token')) headers.set('X-Luna-Token', TOKEN)
+    return nativeFetch(input, { ...init, headers })
+  }
 }
 
 async function request<T>(path: string, opts: RequestInit = {}): Promise<T> {

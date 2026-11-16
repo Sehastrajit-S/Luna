@@ -28,6 +28,7 @@ const { registerAllHandlers } = require('./ipc')
 const { buildAppMenu } = require('./menu')
 const trayService = require('./services/tray-service')
 const updaterService = require('./services/updater-service')
+const connectionStore = require('./services/connection-store')
 
 const ROOT = path.join(__dirname, '..', '..', '..', '..')
 const ENV_PATH = path.join(ROOT, '.env')
@@ -37,12 +38,16 @@ if (!enforceSingleInstance()) {
   // (enforceSingleInstance already called app.quit()).
 } else {
   app.whenReady().then(() => {
-    logger.info('App ready — starting backend and creating main window')
-
-    backend.spawnBackend({
-      cwd: ROOT,
-      scriptPath: path.join(ROOT, 'server', 'server.py'),
-    })
+    const connection = connectionStore.load()
+    if (connection.mode === 'remote') {
+      logger.info(`App ready — using remote server ${connection.url}`)
+    } else {
+      logger.info('App ready — starting local server and creating main window')
+      backend.spawnBackend({
+        cwd: ROOT,
+        scriptPath: path.join(ROOT, 'server', 'server.py'),
+      })
+    }
 
     const mainWindow = createMainWindow()
     windowRegistry.register('main', mainWindow)

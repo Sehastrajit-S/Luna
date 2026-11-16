@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { authHeaders } from '../../api/client'
+import { authHeaders, withAuthQuery } from '../../api/client'
 import { useStore } from '../../store'
 
 type VoiceState = 'idle' | 'listening' | 'followup' | 'active' | 'processing' | 'speaking'
@@ -54,7 +54,7 @@ export function VoiceOrb({ size = 36, showLabel = false, onToggle }: VoiceOrbPro
     syncState()
     const pollTimer = setInterval(syncState, 4000)
 
-    const es = new EventSource(`${base}/api/voice/events`)
+    const es = new EventSource(withAuthQuery(`${base}/api/voice/events`))
     esRef.current = es
     es.onmessage = e => {
       if (e.data === 'ping') return

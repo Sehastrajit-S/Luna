@@ -56,7 +56,11 @@ function buildFileChip(att, { sent = false, pending = null } = {}) {
   if (sent && att.id) {
     chip.type = 'button'
     chip.title = `Open ${name}`
-    chip.addEventListener('click', () => window.electronAPI?.openUrl?.(`${ATTACH_API}/api/files/${att.id}/raw`))
+    // Opens in the system browser, which can't send headers, so a remote server gets the token in the URL.
+    chip.addEventListener('click', () => {
+      const url = `${ATTACH_API}/api/files/${att.id}/raw`
+      window.electronAPI?.openUrl?.(window.lunaAuthUrl ? window.lunaAuthUrl(url) : url)
+    })
   }
 
   const icon = document.createElement('span')
@@ -113,6 +117,7 @@ function uploadFile(entry) {
     const xhr = new XMLHttpRequest()
     entry.xhr = xhr
     xhr.open('POST', `${ATTACH_API}/api/files`)
+    for (const [name, value] of Object.entries(window.lunaAuthHeaders?.() || {})) xhr.setRequestHeader(name, value)
     xhr.upload.onprogress = e => {
       if (!e.lengthComputable) return
       entry.progress = Math.min(100, Math.round((e.loaded / e.total) * 100))

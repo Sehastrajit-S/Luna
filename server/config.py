@@ -308,6 +308,12 @@ class Settings(BaseSettings):
     # Example: "http://localhost:5173,https://luna.example.com"
     cors_origins: str = ""
 
+    # ── Remote access ─────────────────────────────────────────────────────────
+    # Requests through a reverse proxy (e.g. `tailscale serve`) always need the
+    # access token in data/local_api_token. Turn this on to also require it for
+    # direct connections from other devices (host=0.0.0.0 / LAN / Docker).
+    require_token_on_lan: bool = False
+
     # ── Skills marketplace ────────────────────────────────────────────────────
     # URL of the curated registry index. Override with a self-hosted JSON file
     # to run a private/team marketplace.

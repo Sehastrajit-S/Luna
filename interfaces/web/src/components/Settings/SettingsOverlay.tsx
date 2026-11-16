@@ -3,9 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, LayoutDashboard, Puzzle, CheckCircle, AlertCircle, RefreshCw, Save, ChevronDown, Download, Volume2, Keyboard, Mic, Sun, Moon, Server } from 'lucide-react'
 import { siAnthropic, siMistralai, siNvidia, siOllama } from 'simple-icons'
 import { useStore } from '../../store'
-import { api, streamVoskInstall, getApiBase, initApiBase } from '../../api/client'
+import { api, streamVoskInstall, getApiBase, initApiBase, initApiToken, testServer } from '../../api/client'
 import { IntegrationStore, INTEGRATIONS } from './IntegrationStore'
-import { isMobile, setServerUrl, getServerUrl } from '../../platform'
+import { isMobile, setServerUrl, getServerUrl, getServerToken, setServerToken } from '../../platform'
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 
@@ -463,11 +463,14 @@ function ModelsTab() {
 
 function ServerTab() {
   const [url, setUrl]         = useState(getApiBase())
+  const [token, setToken]     = useState('')
   const [saving, setSaving]   = useState(false)
   const [saved, setSaved]     = useState(false)
   const [testing, setTesting] = useState(false)
   const [testOk, setTestOk]   = useState<boolean | null>(null)
   const [err, setErr]         = useState('')
+
+  useEffect(() => { getServerToken().then(setToken) }, [])
 
   const normalise = (raw: string) => {
     let u = raw.trim().replace(/\/$/, '')
@@ -480,16 +483,10 @@ function ServerTab() {
     const base = normalise(url)
     if (!base) { setErr('Enter a URL first.'); return }
     setTesting(true)
-    try {
-      const res = await fetch(`${base}/api/system/health`, { signal: AbortSignal.timeout(6000) })
-      if (!res.ok) throw new Error(`${res.status}`)
-      setTestOk(true)
-    } catch (e: any) {
-      setTestOk(false)
-      setErr(`Cannot reach server: ${e?.message ?? e}`)
-    } finally {
-      setTesting(false)
-    }
+    const result = await testServer(base, token)
+    setTestOk(result.ok)
+    if (!result.ok) setErr(result.message)
+    setTesting(false)
   }
 
   const save = async () => {
@@ -497,7 +494,9 @@ function ServerTab() {
     const base = normalise(url)
     try {
       await setServerUrl(base)
+      await setServerToken(token)
       initApiBase(base)
+      initApiToken(token)
       setSaved(true); setTimeout(() => setSaved(false), 2500)
     } catch (e: any) {
       setErr(e?.message ?? 'Failed to save')
@@ -522,6 +521,19 @@ function ServerTab() {
           autoCorrect="off"
           className="w-full bg-luna-card border border-luna-border rounded-xl px-4 py-2.5 text-sm text-luna-text focus:outline-none focus:border-luna-primary/60"
         />
+      </div>
+      <div className="space-y-2">
+        <label className="text-xs text-luna-dim font-medium uppercase tracking-wide">Access token</label>
+        <input
+          type="password"
+          value={token}
+          onChange={e => { setToken(e.target.value); setTestOk(null); setErr('') }}
+          placeholder="Needed for a server shared over Tailscale"
+          autoCapitalize="none"
+          autoCorrect="off"
+          className="w-full bg-luna-card border border-luna-border rounded-xl px-4 py-2.5 text-sm text-luna-text focus:outline-none focus:border-luna-primary/60"
+        />
+        <p className="text-[11px] text-luna-dim">Printed by <code>luna serve --tailscale</code> on the computer running Luna.</p>
       </div>
       {testOk === true && (
         <p className="flex items-center gap-1.5 text-green-400 text-xs"><CheckCircle size={12} />Server reachable.</p>

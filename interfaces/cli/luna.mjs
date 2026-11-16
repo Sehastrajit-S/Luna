@@ -95,6 +95,11 @@ const COMMANDS = {
     summary: 'Start only the FastAPI backend',
     run: () => python(['server/server.py', ...rest]),
   },
+  serve: {
+    group: 'Dev',
+    summary: 'Start the server; --tailscale shares it with your tailnet (--off stops sharing)',
+    run: () => serve(rest),
+  },
   frontend: {
     group: 'Dev',
     summary: 'Start only the Vite dev server (mobile React UI)',
@@ -326,6 +331,79 @@ function webUi({ lan = false } = {}) {
   if (lan) console.log(`  ${c.dim}On other devices: http://<this-pc-ip>:${port}  (saving settings asks for the token)${c.reset}`)
   console.log()
   python(['server/server.py', ...rest])
+}
+
+// ── Remote access over Tailscale ──────────────────────────────────────────────
+// `tailscale serve` proxies https://<this-machine>.<tailnet>.ts.net:<port> to the
+// local server, reachable only by devices on your tailnet. Luna keeps listening
+// on 127.0.0.1; proxied requests must carry the access token (server/core/access.py).
+// A dedicated HTTPS port is used so other `tailscale serve` mappings stay intact.
+function tailscale(args) {
+  const res = spawnSync('tailscale', args, { encoding: 'utf8', shell: false })
+  if (res.error) return { ok: false, out: '', error: res.error.code === 'ENOENT' ? 'not-installed' : res.error.message }
+  return { ok: res.status === 0, out: (res.stdout || '').trim(), error: (res.stderr || '').trim() }
+}
+
+function tailscaleDnsName() {
+  const res = tailscale(['status', '--json'])
+  if (!res.ok) return { error: res.error || 'tailscale status failed' }
+  try {
+    const status = JSON.parse(res.out)
+    if (status.BackendState !== 'Running') return { error: `Tailscale is ${status.BackendState || 'not running'}. Run \`tailscale up\` first.` }
+    return { dns: String(status.Self?.DNSName || '').replace(/\.$/, '') }
+  } catch {
+    return { error: 'Could not read `tailscale status --json`.' }
+  }
+}
+
+function serve(args) {
+  const env = readEnvFile()
+  const port = env.port || '8899'
+  const flag = name => args.includes(name)
+  const httpsPortArg = args.find(a => a.startsWith('--https='))
+  const httpsPort = httpsPortArg ? httpsPortArg.split('=')[1] : port
+
+  if (!flag('--tailscale')) {
+    python(['server/server.py', ...args])
+    return
+  }
+
+  head('Sharing Luna over Tailscale')
+  const { dns, error } = tailscaleDnsName()
+  if (error === 'not-installed') { err('Tailscale is not installed. Get it from https://tailscale.com/download'); process.exit(1) }
+  if (error) { err(error); process.exit(1) }
+
+  if (flag('--off')) {
+    const res = tailscale(['serve', `--https=${httpsPort}`, 'off'])
+    if (!res.ok) { err(res.error || 'tailscale serve off failed'); process.exit(1) }
+    ok(`Stopped sharing https://${dns}:${httpsPort}`)
+    return
+  }
+
+  const host = (process.env.HOST || env.host || '127.0.0.1').trim()
+  if (host !== '127.0.0.1' && host !== 'localhost') {
+    warn(`host=${host} also exposes Luna directly on your network. Set host=127.0.0.1 in .env so only Tailscale can reach it,`)
+    warn('or set require_token_on_lan=true to require the token for direct connections too.')
+  }
+
+  const res = tailscale(['serve', '--bg', `--https=${httpsPort}`, `http://127.0.0.1:${port}`])
+  if (!res.ok) {
+    err(res.error || 'tailscale serve failed')
+    if (/access denied|operator/i.test(res.error)) warn('Run once as admin, or allow your user: tailscale set --operator=$USER')
+    process.exit(1)
+  }
+
+  const url = `https://${dns}:${httpsPort}`
+  const token = localApiToken()
+  ok(`Shared with your tailnet: ${c.cyan}${url}${c.reset}`)
+  console.log()
+  console.log(`  ${c.bold}Connect from another device on your tailnet${c.reset}`)
+  console.log(`    Desktop app  Settings → Server → Remote, then paste the URL and token`)
+  console.log(`    Browser      ${c.cyan}${url}/#token=${encodeURIComponent(token)}${c.reset}`)
+  console.log(`    Token        ${token}`)
+  console.log(`  ${c.dim}Keep the token private: it gives full access to this Luna. Stop sharing with: luna serve --tailscale --off${c.reset}`)
+  console.log()
+  python(['server/server.py', ...args.filter(a => a !== '--tailscale' && !a.startsWith('--https='))])
 }
 
 // ── Runners ───────────────────────────────────────────────────────────────────

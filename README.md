@@ -428,6 +428,8 @@ luna web:lan
 
 Open `http://YOUR-LAN-IP:5173` on any phone, tablet, or second computer. Voice, camera, and OS-level features depend on browser permissions and are fully supported on the host desktop.
 
+To use Luna from anywhere, share it over Tailscale with `luna serve --tailscale`. In the desktop app on another computer, open Settings → Server and pick **Remote over Tailscale**. See [docs/REMOTE.md](docs/REMOTE.md).
+
 ---
 
 ## Project Layout

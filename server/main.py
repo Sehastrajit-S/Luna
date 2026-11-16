@@ -21,6 +21,7 @@ from server.routers.settings import router as settings_router
 from server.middleware.rate_limit import RateLimitMiddleware
 from server.middleware.logging_middleware import RequestIDMiddleware
 from server.core.logging import configure_logging
+from server.core.access import RemoteAccessMiddleware
 from server.processes.registry import start_lifecycle_processes, stop_lifecycle_processes
 from server.services.telemetry import tracer
 from server.models.database import SessionLocal
@@ -70,6 +71,9 @@ app = FastAPI(
 # RequestID → RateLimit → CORS → route handler
 app.add_middleware(RequestIDMiddleware)
 app.add_middleware(RateLimitMiddleware)
+# Remote requests (via Tailscale or another proxy) need the access token.
+# Added before CORS so CORS wraps it and 401s still carry CORS headers.
+app.add_middleware(RemoteAccessMiddleware, require_token_on_lan=settings.require_token_on_lan)
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
 # allow_origins=["*"] + allow_credentials=True is invalid per the CORS spec
@@ -82,6 +86,9 @@ _DEFAULT_ORIGINS = [
     "http://localhost:8899",
     "http://127.0.0.1:5173",
     "http://127.0.0.1:8899",
+    # Mobile app WebViews (Capacitor on Android and iOS).
+    "https://localhost",
+    "capacitor://localhost",
 ]
 _configured_origins = (
     [o.strip() for o in settings.cors_origins.split(",") if o.strip()]

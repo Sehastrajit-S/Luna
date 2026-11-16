@@ -9,12 +9,14 @@ const { registerWindowHandlers } = require('./window.handlers')
 const { registerEnvHandlers } = require('./env.handlers')
 const { registerUpdaterHandlers } = require('./updater.handlers')
 const { registerSystemHandlers } = require('./system.handlers')
+const { registerServerHandlers } = require('./server.handlers')
 
 function registerAllHandlers({ getMainWindow, envPath, openSettings }) {
   registerWindowHandlers(getMainWindow)
   registerEnvHandlers(envPath)
   registerUpdaterHandlers()
   registerSystemHandlers({ openSettings, envPath })
+  registerServerHandlers({ envPath })
 }
 
 module.exports = { registerAllHandlers }

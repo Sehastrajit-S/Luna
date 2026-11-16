@@ -37,11 +37,27 @@ const IPC = {
     showSettings: 'system:show-settings',
     quit: 'system:quit',
   },
+  server: {
+    connection: 'server:connection',
+    getConfig: 'server:get-config',
+    test: 'server:test',
+    save: 'server:save',
+  },
 }
+
+// Local server or a remote one (Settings → Server). Fetched synchronously so
+// every renderer script sees the right API base from its first line.
+let connection = {}
+try { connection = ipcRenderer.sendSync(IPC.server.connection) || {} } catch { /* fall back to local */ }
 
 contextBridge.exposeInMainWorld('electronAPI', {
   isElectron: true,
-  apiBase: 'http://127.0.0.1:8899',
+  apiBase: connection.apiBase || 'http://127.0.0.1:8899',
+  apiToken: connection.token || '',
+  serverMode: connection.mode === 'remote' ? 'remote' : 'local',
+  getServerConfig: () => ipcRenderer.invoke(IPC.server.getConfig),
+  testServer: (url, token) => ipcRenderer.invoke(IPC.server.test, { url, token }),
+  saveServer: config => ipcRenderer.invoke(IPC.server.save, config),
 
   // Window controls
   minimize: () => ipcRenderer.invoke(IPC.window.minimize),

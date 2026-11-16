@@ -2,19 +2,14 @@
 
 const { ipcMain, Notification, shell, clipboard, app } = require('electron')
 const IPC = require('../../shared/ipc-channels')
+const { currentToken } = require('./server.handlers')
 
 function registerSystemHandlers({ openSettings, envPath }) {
-  // The backend writes data/local_api_token next to .env; handing it to our
-  // own renderer lets the settings page save, while web pages that can reach
-  // localhost still can't (they can't read this file).
-  ipcMain.handle(IPC.system.localToken, () => {
-    try {
-      const tokenPath = require('path').join(require('path').dirname(envPath), 'data', 'local_api_token')
-      return require('fs').readFileSync(tokenPath, 'utf8').trim()
-    } catch {
-      return ''
-    }
-  })
+  // The local server writes data/local_api_token next to .env; handing it to
+  // our own renderer lets the settings page save, while web pages that can
+  // reach localhost still can't (they can't read this file). When connected
+  // to a remote server this is that server's token instead.
+  ipcMain.handle(IPC.system.localToken, () => currentToken(envPath))
 
   ipcMain.handle(IPC.system.notify, (_event, { title, body }) => {
     new Notification({ title, body }).show()

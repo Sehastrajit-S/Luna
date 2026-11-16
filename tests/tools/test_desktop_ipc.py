@@ -16,7 +16,7 @@ const out = {};
 for (const file of process.argv.slice(2)) {
   let exposed = null;
   const electron = { contextBridge: { exposeInMainWorld: (_n, api) => { exposed = api } },
-                     ipcRenderer: { invoke: (c) => c, on() {}, removeListener() {} } };
+                     ipcRenderer: { invoke: (c) => c, sendSync: () => ({}), on() {}, removeListener() {} } };
   const sandboxRequire = (name) => {
     if (name === 'electron') return electron;
     throw new Error(`sandboxed preload cannot require ${name}`);

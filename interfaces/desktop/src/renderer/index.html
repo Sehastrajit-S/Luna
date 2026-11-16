@@ -235,6 +235,38 @@
             <h1>Settings</h1>
             <p class="sub">Saved to Luna's .env and applied right away.</p>
           </div>
+          <section class="settings-section server-connection" id="server-connection" hidden>
+            <h2>Server</h2>
+            <div class="settings-row">
+              <div class="settings-text">
+                <label for="server-mode">Luna server <span class="settings-badge" id="server-mode-badge"></span></label>
+                <p class="settings-help">Run Luna on this computer, or connect to one shared from another computer with <code>luna serve --tailscale</code>.</p>
+              </div>
+              <select class="server-input settings-input" id="server-mode">
+                <option value="local">This computer</option>
+                <option value="remote">Remote over Tailscale</option>
+              </select>
+            </div>
+            <div class="settings-row server-remote-row">
+              <div class="settings-text">
+                <label for="server-url">Server URL</label>
+                <p class="settings-help">Printed by <code>luna serve --tailscale</code>, e.g. https://my-pc.tailnet.ts.net:8899</p>
+              </div>
+              <input class="server-input settings-input" id="server-url" type="url" placeholder="https://my-pc.tailnet.ts.net:8899" autocomplete="off" spellcheck="false" />
+            </div>
+            <div class="settings-row server-remote-row">
+              <div class="settings-text">
+                <label for="server-token">Access token</label>
+                <p class="settings-help">Also printed by <code>luna serve --tailscale</code>. Stored only on this computer.</p>
+              </div>
+              <input class="server-input settings-input" id="server-token" type="password" autocomplete="new-password" spellcheck="false" />
+            </div>
+            <div class="settings-actions server-actions">
+              <span class="settings-status" id="server-status" role="status"></span>
+              <button type="button" class="settings-reset" id="server-test">Test connection</button>
+              <button type="button" class="settings-save" id="server-save" disabled>Save and restart</button>
+            </div>
+          </section>
           <form id="settings-form" autocomplete="off">
             <div id="settings-sections"><p class="settings-loading">Loading settings…</p></div>
             <div class="settings-actions">
@@ -302,6 +334,8 @@
   </div>
 
   <script src="web-shim.js"></script>
+  <script src="auth-fetch.js"></script>
+  <script src="server-connection.js"></script>
   <script src="markdown.js"></script>
   <script src="attachments.js"></script>
   <script src="voice-input.js"></script>
