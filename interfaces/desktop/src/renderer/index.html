@@ -133,9 +133,24 @@
         <div class="attachment-tray" id="attachment-tray" hidden></div>
         <input type="file" id="attach-input" multiple hidden />
         <div class="composer-bar">
-          <button class="composer-icon" id="attach-btn" type="button" aria-label="Attach files" title="Attach files (PDF, Word, Excel, CSV, PowerPoint, images, text, code)">
-            <svg viewBox="0 0 24 24" width="17" height="17"><path d="M21 11.5l-8.7 8.7a4.6 4.6 0 0 1-6.5-6.5l8.4-8.4a3 3 0 0 1 4.3 4.3l-8.1 8.1a1.5 1.5 0 0 1-2.1-2.1l7.1-7.1" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
+          <div class="plus-wrap">
+            <button class="composer-icon plus-btn" id="plus-btn" type="button" aria-label="Attach files or use a skill" aria-haspopup="menu" aria-expanded="false" aria-controls="plus-menu" title="Attach files or use a skill">
+              <svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+            <div class="plus-menu" id="plus-menu" role="menu" aria-label="Attach or use a skill" hidden>
+              <button class="plus-item" id="attach-btn" type="button" role="menuitem">
+                <span class="plus-item-icon"><svg viewBox="0 0 24 24" width="16" height="16"><path d="M21 11.5l-8.7 8.7a4.6 4.6 0 0 1-6.5-6.5l8.4-8.4a3 3 0 0 1 4.3 4.3l-8.1 8.1a1.5 1.5 0 0 1-2.1-2.1l7.1-7.1" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                <span class="plus-item-text"><span class="plus-item-name">Attach files</span><span class="plus-item-desc">PDF, Word, Excel, slides, images, code</span></span>
+              </button>
+              <div class="plus-divider" role="separator"></div>
+              <p class="plus-label">Skills</p>
+              <div class="plus-skills" id="plus-skills"><p class="plus-empty">Loading skills…</p></div>
+            </div>
+          </div>
+          <span class="skill-chip" id="skill-chip" hidden>
+            <span class="skill-chip-name" id="skill-chip-name"></span>
+            <button class="skill-chip-remove" id="skill-chip-remove" type="button" aria-label="Stop using this skill">×</button>
+          </span>
           <input type="text" class="composer-input" placeholder="Message Luna..." />
           <div class="voice-wave" id="voice-wave" aria-hidden="true"><div class="voice-wave-bars"></div><span class="voice-wave-time"></span></div>
           <button class="model-select" type="button">
@@ -330,6 +345,7 @@
               <article class="capability-card" data-capability-category="integration"><span class="capability-icon">◈</span><div><h3>Google Workspace</h3><p>Gmail, Calendar, Drive, and Google Tasks.</p></div></article>
               <article class="capability-card" data-capability-category="integration"><span class="capability-icon">▣</span><div><h3>Microsoft 365</h3><p>Outlook, OneDrive, Teams, and To Do.</p></div></article>
               <article class="capability-card" data-capability-category="integration"><span class="capability-icon">⌘</span><div><h3>GitHub</h3><p>Repository pulse on the dashboard, plus PR and issue tools in chat. Add your token and default repo in Settings.</p><button class="capability-action" id="github-configure-btn" type="button">Open Settings</button></div></div></article>
+              <article class="capability-card" data-capability-category="integration"><span class="capability-icon">$</span><div><h3>Store prices</h3><p>Compare one product’s price at Walmart, Costco, Target, Sam’s Club and Safeway. Add a free SerpApi key in Settings.</p><button class="capability-action" id="store-prices-configure-btn" type="button">Open Settings</button></div></article>
               <article class="capability-card" data-capability-category="integration"><span class="capability-icon">♫</span><div><h3>Spotify</h3><p>Play, pause, queue, and inspect what’s playing.</p></div></article>
               <article class="capability-card" data-capability-category="integration"><span class="capability-icon">◎</span><div><h3>Web research</h3><p>Search, browse, fetch pages, and summarize sources.</p></div></article>
               <article class="capability-card" data-capability-category="integration"><span class="capability-icon">◌</span><div><h3>Calendar & tasks</h3><p>Create events, manage tasks, and send reminders.</p></div></article>
@@ -371,6 +387,7 @@
   <script src="mobile-nav.js"></script>
   <script src="markdown.js"></script>
   <script src="attachments.js"></script>
+  <script src="composer-plus.js"></script>
   <script src="voice-input.js"></script>
   <script src="settings.js"></script>
   <script src="agent-steps.js"></script>

@@ -59,6 +59,14 @@ async def execute_tool_call(tc: dict, db: Session, conversation_id: int) -> str:
             from server.services.calculator import calculate
             return calculate(str(args.get("expression", "")))
 
+        elif tool_name == "compare_store_prices":
+            from server.services.shopping import ShoppingError, compare_store_prices, format_for_chat
+            try:
+                result = await compare_store_prices(str(args.get("product", "")), args.get("stores") or None)
+            except ShoppingError as e:
+                return f"Error: {e.message}"
+            return format_for_chat(result)
+
         elif tool_name == "spotify_play":
             ok = spotify_service.play(args.get("query") or None)
             if ok:

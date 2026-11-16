@@ -25,6 +25,7 @@ class ChatContext:
     speech_speed: float = 0.0
     speech_duration: float = 0.0
     attachment_ids: list[str] = field(default_factory=list)  # files attached to this message
+    skill: str = ""  # skill picked in the composer's + menu ("store-prices" or a lookup skill id)
 
     # ── Resolved by persist stage ─────────────────────────────────────────────
     conv: Any = None  # Conversation ORM object

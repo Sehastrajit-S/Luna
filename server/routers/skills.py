@@ -47,6 +47,27 @@ async def get_installed():
     return {"skills": list_installed()}
 
 
+@router.get("/pickable")
+async def get_pickable():
+    """Skills the composer's + menu can force for one message (POST /api/chat/stream `skill`)."""
+    from server.config import settings
+    from server.services.skill_runtime.registry import load_search_skills
+    from server.services.shopping import STORES
+
+    skills = [{
+        "id": "store-prices",
+        "name": "Compare store prices",
+        "description": "Walmart, Costco, Target, Sam's Club and Safeway",
+        "placeholder": "Which product? e.g. Tide Pods 81 count",
+        "ready": bool(settings.serpapi_api_key),
+        "setup": "Add a SerpApi key in Settings → Integrations",
+        "icons": [{"name": store.name, "url": store.icon} for store in STORES],
+    }]
+    skills += [{"id": s.id, "name": s.name, "description": s.description, "placeholder": f"{s.name}: what should I look up?",
+                "ready": True} for s in sorted(load_search_skills(), key=lambda s: s.name.lower())]
+    return {"skills": skills}
+
+
 # ── Registry ──────────────────────────────────────────────────────────────────
 
 

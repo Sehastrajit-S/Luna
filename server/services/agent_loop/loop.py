@@ -257,6 +257,11 @@ class AgentLoop:
             content = f"Error: {name} failed: {e}"
 
         content = str(content if content is not None else "")
+        # Any tool may attach result cards (e.g. store prices); keep them for the
+        # answer and out of what the model reads.
+        if name not in ("use_skill", "web_search") and "<!--luna-cards:" in content:
+            self.cards.extend(_CARDS_RE.findall(content))
+            content = _CARDS_RE.sub("", content).strip()
         if name == "google_workspace" and args.get("service") == "gmail":
             from server.services.chat_pipeline.stage_tools import gmail_widget_from_result
             self.ctx.gmail_widget_cmd = gmail_widget_from_result(content) or self.ctx.gmail_widget_cmd

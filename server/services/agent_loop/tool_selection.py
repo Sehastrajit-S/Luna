@@ -13,6 +13,21 @@ from server.services.tool_registry import TOOL_REGISTRY
 
 TOOL_SEARCH = "tool_search"
 
+# Asking about prices at Walmart, Costco, Target, Sam's Club or Safeway, or to
+# compare prices across stores. Also used to route these away from the
+# product-search skill (stage_dispatch), which can't compare stores.
+STORE_PRICE_PATTERN = (
+    r"\b(?:walmart|costco|sam'?s\s*club|safeway)\b"
+    r"|\btarget\b.{0,40}\b(?:price|cost|cheap|deal)|\b(?:price|cost|cheap|deal)\w*\b.{0,40}\btarget\b"
+    r"|\bcompare\s+(?:the\s+)?prices?\b|\bprice\s+(?:check|comparison)\b"
+    r"|\bwhich\s+(?:store|shop)\b|\bcheapest\s+(?:place|store)\b"
+)
+_STORE_PRICE_RE = re.compile(STORE_PRICE_PATTERN, re.IGNORECASE)
+
+
+def is_store_price_request(text: str) -> bool:
+    return bool(_STORE_PRICE_RE.search(text or ""))
+
 CORE_TOOLS = (
     "web_search", "use_skill", "web_fetch", "browse_url",
     "launch_app", "close_app", "spotify_play", "spotify_pause", "spotify_next", "spotify_queue",
@@ -48,6 +63,8 @@ TOOL_GROUPS: tuple[tuple[re.Pattern, tuple[str, ...]], ...] = tuple(
         (r"\b(?:download|save\s+(?:the|this)\s+(?:file|pdf|image))\b", ("web_download_file",)),
         (r"\b(?:skills?|capabilit(?:y|ies))\b", ("list_skills",)),
         (r"\b(?:news|headlines?|what'?s\s+happening|current\s+events|briefing)\b", ("daily_news",)),
+        # Store price comparison. "Target" alone is too common a word; it needs a price word nearby.
+        (STORE_PRICE_PATTERN, ("compare_store_prices",)),
         (r"\b(?:remember|memor(?:y|ies)|keep\s+in\s+mind|note\s+that|don'?t\s+forget)\b", ("save_memory",)),
         (r"\b(?:forget|erase|wipe|delete|remove)\b.{0,40}\b(?:know|remember|memor(?:y|ies)|about\s+me|about\s+my)\b"
          r"|^\s*(?:please\s+)?forget\b", ("forget_memory",)),

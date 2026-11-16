@@ -58,6 +58,10 @@ SCHEMA: list[dict] = [
      "pattern": r"^$|^[\w.-]+/[\w.-]+$", "help": "owner/name"},
     {"key": "spotify_client_id", "label": "Spotify client ID", "section": "Integrations", "type": "text"},
     {"key": "spotify_client_secret", "label": "Spotify client secret", "section": "Integrations", "type": "secret"},
+    {"key": "serpapi_api_key", "label": "SerpApi key (store prices)", "section": "Integrations", "type": "secret",
+     "help": "Compares prices at Walmart, Costco, Target, Sam's Club and Safeway. Free key at serpapi.com (100 searches a month)."},
+    {"key": "shopping_location", "label": "Shopping location", "section": "Integrations", "type": "text",
+     "help": "City for local prices, e.g. Phoenix, Arizona, United States. Leave empty for online prices."},
 ]
 _BY_KEY = {field["key"]: field for field in SCHEMA}
 TOKEN_PATH = DATA_DIR / "local_api_token"

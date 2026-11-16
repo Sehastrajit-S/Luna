@@ -84,7 +84,7 @@ The desktop app finds shared Luna servers on your tailnet. Devices signed in to 
 
 ### Skills and integrations
 
-Built-in skills for research, coding, documents, datasets, job search and more, plus Google Workspace, Microsoft 365, GitHub and Spotify.
+Built-in skills for research, coding, documents, datasets, job search and more, plus Google Workspace, Microsoft 365, GitHub and Spotify. Pick one from the **+** button in the message box, or just ask. **Compare store prices** puts one product side by side at Walmart, Costco, Target, Sam's Club and Safeway (needs a free [SerpApi](https://serpapi.com) key).
 
 <img src="docs/screenshots/desktop-capabilities.png" width="100%" alt="Capabilities view listing skills and integrations" />
 

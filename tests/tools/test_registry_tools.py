@@ -37,6 +37,7 @@ class RegistryToolTests(unittest.TestCase):
             "get_brightness", "set_brightness", "lock_screen", "turn_off_display", "sleep_system",
             "get_clipboard", "set_clipboard", "get_system_info",
             "calculate", "save_memory", "forget_memory", "daily_news",  # test_grounding.py
+            "compare_store_prices",  # test_store_prices.py
             "github_list_repos", "github_list_issues", "github_create_issue", "github_comment",
             "github_list_prs", "github_get_pr", "github_summarize_user_pr", "github_create_pr",
             "slack_search_messages", "slack_channel_history",

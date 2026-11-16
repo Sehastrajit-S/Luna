@@ -142,6 +142,7 @@ async function loadCapabilities() {
 }
 
 document.getElementById('github-configure-btn')?.addEventListener('click', () => openSettingsView())
+document.getElementById('store-prices-configure-btn')?.addEventListener('click', () => openSettingsView())
 
 // ── Developer dashboard: local checkout + GitHub repo pulse ────────────────
 function timeAgo(iso) {
@@ -824,6 +825,8 @@ async function sendMessage({ spoken, onPart } = {}) {
   if (!text && !ready.length) return
   if (!text) text = ready.length === 1 ? 'Take a look at this file.' : 'Take a look at these files.'
 
+  // A skill picked from the + menu applies to this one message.
+  const skill = window.lunaComposerSkill?.take?.() || null
   const origin = { conversationId: activeConversationId, view: viewToken }
   const stream = { conversationId: activeConversationId, row: null }
   liveStreams.add(stream)
@@ -849,6 +852,7 @@ async function sendMessage({ spoken, onPart } = {}) {
         message: text,
         conversation_id: activeConversationId,
         attachment_ids: ready.map(a => a.id),
+        ...(skill ? { skill: skill.id } : {}),
       }),
     })
     if (!response.ok || !response.body) throw new Error(`Backend returned ${response.status}`)
