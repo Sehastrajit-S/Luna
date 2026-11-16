@@ -1,5 +1,6 @@
 import Head from 'next/head';
 import Link from 'next/link';
+import { SITE_URL } from '../components/DocsLayout';
 
 const GitHubIcon = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -67,12 +68,48 @@ const steps = [
 ];
 
 
+const SEO_DESCRIPTION =
+  'Luna is an open-source, self-hosted AI assistant. Run local LLMs with Ollama or use Claude, Gemini or OpenAI. Voice, memory, meeting notes, MCP and skills on desktop, web and phone, private over Tailscale.';
+
+const SOFTWARE_JSON_LD = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'Luna',
+  description: SEO_DESCRIPTION,
+  applicationCategory: 'ProductivityApplication',
+  operatingSystem: 'Windows, macOS, Linux, Android, Docker',
+  license: 'https://opensource.org/licenses/MIT',
+  url: SITE_URL,
+  downloadUrl: 'https://github.com/Sehastrajit-S/Luna/releases/latest',
+  sameAs: ['https://github.com/Sehastrajit-S/Luna'],
+  image: `${SITE_URL}/images/og.png`,
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+};
+
 export default function Home() {
   return (
     <>
       <Head>
-        <title>L.U.N.A. — Local AI Companion</title>
-        <meta name="description" content="L.U.N.A. is a local-first AI companion with voice, memory, meeting minutes and automation. Runs on your machine, reachable from anywhere over Tailscale." />
+        <title>Luna: open-source, self-hosted AI assistant and agent engine</title>
+        <meta name="description" content={SEO_DESCRIPTION} />
+        <link rel="canonical" href={`${SITE_URL}/`} />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Luna" />
+        <meta property="og:title" content="Luna: the open-source AI engine you own" />
+        <meta property="og:description" content={SEO_DESCRIPTION} />
+        <meta property="og:url" content={`${SITE_URL}/`} />
+        <meta property="og:image" content={`${SITE_URL}/images/og.png`} />
+        <meta property="og:image:width" content="1280" />
+        <meta property="og:image:height" content="640" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Luna: the open-source AI engine you own" />
+        <meta name="twitter:description" content={SEO_DESCRIPTION} />
+        <meta name="twitter:image" content={`${SITE_URL}/images/og.png`} />
+        <script
+          type="application/ld+json"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(SOFTWARE_JSON_LD) }}
+        />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/images/logo.svg" type="image/svg+xml" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
