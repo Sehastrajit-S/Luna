@@ -2,18 +2,18 @@
 
 GET /api/library/uploads           attachments from sent messages, newest first
 GET /api/library/created           files Luna wrote into its workspace (data/workspace)
-GET /api/library/created/raw       download one workspace file (path checked against the workspace root)
+GET /api/library/created/raw       one workspace file, inline for preview or ?download=1
+                                   (path checked against the workspace root)
 """
 from __future__ import annotations
 
-import mimetypes
 from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
+from server.core.file_response import file_response
 from server.models.database import Attachment, Conversation, get_db
 from server.services.workspace import WORKSPACE_DIR, _resolve_workspace_path
 
@@ -90,7 +90,7 @@ def list_created(q: str = Query("", max_length=200)):
 
 
 @router.get("/created/raw")
-def download_created(path: str = Query(..., min_length=1, max_length=1000)):
+def download_created(path: str = Query(..., min_length=1, max_length=1000), download: bool = Query(False)):
     try:
         target = _resolve_workspace_path(path)
     except ValueError as e:
@@ -98,5 +98,4 @@ def download_created(path: str = Query(..., min_length=1, max_length=1000)):
     rel = target.relative_to(WORKSPACE_DIR.resolve())
     if _is_hidden(rel) or not target.is_file():
         raise HTTPException(status_code=404, detail="File not found in Luna's workspace")
-    media_type = mimetypes.guess_type(target.name)[0] or "application/octet-stream"
-    return FileResponse(target, media_type=media_type, filename=target.name)
+    return file_response(target, target.name, download=download)

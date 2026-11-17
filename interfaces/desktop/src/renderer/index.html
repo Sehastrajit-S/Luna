@@ -406,6 +406,20 @@
           </div>
           <ul class="library-list" id="library-list" aria-live="polite"></ul>
         </div>
+        <div class="meeting-sheet library-preview" id="library-preview" hidden>
+          <div class="meeting-sheet-card library-preview-card" role="dialog" aria-modal="true" aria-labelledby="library-preview-name">
+            <div class="library-preview-head">
+              <div class="library-preview-title">
+                <span class="library-preview-name" id="library-preview-name"></span>
+                <span class="library-meta" id="library-preview-meta"></span>
+              </div>
+              <button class="meeting-sheet-copy" id="library-preview-open" type="button" title="Open in your browser">Open</button>
+              <button class="meeting-sheet-copy library-preview-download" id="library-preview-download" type="button">Download</button>
+              <button class="meeting-sheet-close" id="library-preview-close" type="button" aria-label="Close preview">×</button>
+            </div>
+            <div class="library-preview-body" id="library-preview-body"></div>
+          </div>
+        </div>
       </div>
 
       <div id="view-capabilities" class="view is-hidden">
