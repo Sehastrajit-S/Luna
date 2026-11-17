@@ -149,6 +149,17 @@ office_addin_dir = Path(__file__).parent.parent / "interfaces" / "office"
 if office_addin_dir.exists():
     app.mount("/addin/office", StaticFiles(directory=str(office_addin_dir)), name="office-addin")
 
+class _RevalidatedStaticFiles(StaticFiles):
+    """UI files without version hashes: browsers must check for a newer copy on
+    every load (a 304 when unchanged). Without this, phones guessed a cache
+    lifetime and mixed an old styles.css with a new news.js after an update."""
+
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        response.headers.setdefault("Cache-Control", "no-cache")
+        return response
+
+
 # Serve the browser UI: the desktop app's renderer, so web and desktop are one UI.
 # The renderer links its images as ../../resources/…, which resolves to /resources/.
 web_ui_dir = Path(settings.web_ui_dir)
@@ -156,8 +167,8 @@ frontend_dist = Path(settings.frontend_dist)
 if (web_ui_dir / "index.html").exists():
     web_ui_resources = Path(settings.web_ui_resources)
     if web_ui_resources.exists():
-        app.mount("/resources", StaticFiles(directory=str(web_ui_resources)), name="web-ui-resources")
-    app.mount("/", StaticFiles(directory=str(web_ui_dir), html=True), name="web-ui")
+        app.mount("/resources", _RevalidatedStaticFiles(directory=str(web_ui_resources)), name="web-ui-resources")
+    app.mount("/", _RevalidatedStaticFiles(directory=str(web_ui_dir), html=True), name="web-ui")
 # Fallback: React frontend (production build)
 elif frontend_dist.exists():
     app.mount("/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="assets")
