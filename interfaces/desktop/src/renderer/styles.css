@@ -268,6 +268,7 @@ ul { list-style: none; margin: 0; padding: 0; }
 .bubble { max-width: 480px; padding: 14px 18px; border-radius: 20px; }
 .bubble p { margin: 0; font-size: 14px; line-height: 1.5; }
 .bubble-user { background: var(--ink); color: #fff; border-bottom-right-radius: 6px; }
+.bubble-user p { white-space: pre-line; overflow-wrap: anywhere; }
 .bubble-luna {
   background: var(--bg-card);
   box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 0 0 1px var(--hairline);
@@ -1345,6 +1346,54 @@ select.settings-input { cursor: pointer; }
 .news-card.is-lead .news-card-img { flex: 0 0 58%; aspect-ratio: 16 / 9; }
 .news-card.is-lead .news-card-body { justify-content: center; padding: 22px 26px; gap: 10px; }
 .news-card.is-lead .news-card-title { font-size: 22px; letter-spacing: -0.02em; }
+/* Swipe a story left to reveal "Ask Luna" */
+/* Clip sideways only, so the sliding card stays in its column but the hover shadow still shows. */
+.news-item { position: relative; min-width: 0; display: flex; --swipe: 0px; clip-path: inset(-24px -2px -32px -2px); }
+.news-item.is-lead { grid-column: 1 / -1; }
+.news-item > .news-card { flex: 1; position: relative; z-index: 1; transform: translateX(var(--swipe)); touch-action: pan-y; user-select: none; -webkit-user-drag: none; }
+.news-item:not(.is-dragging) > .news-card { transition: transform 0.32s cubic-bezier(.22,1,.36,1), box-shadow 0.15s ease; }
+.news-item:not(.is-open):not(.is-dragging) > .news-card:hover { transform: translateY(-2px); }
+.news-item.is-open > .news-card { box-shadow: 0 10px 26px rgba(0,0,0,0.1), 0 0 0 1px var(--hairline); }
+.news-swipe-action {
+  position: absolute; top: 3px; bottom: 3px; right: 0; width: 60%; z-index: 0;
+  display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 6px;
+  padding: 0 18px; border-radius: var(--radius-md);
+  font-size: 12px; font-weight: 700; color: #fff; text-align: center;
+  background: linear-gradient(135deg, #6d5dfc, #a855f7);
+  opacity: 0; transition: opacity 0.2s ease;
+}
+.news-swipe-action svg, .news-swipe-action span { width: 80px; }
+.news-item.is-open .news-swipe-action, .news-item.is-dragging .news-swipe-action { opacity: 1; }
+.news-swipe-action:hover { filter: brightness(1.08); }
+.news-ask-btn {
+  position: absolute; top: 10px; right: 10px; z-index: 2; padding: 6px 12px; border-radius: var(--radius-full);
+  font-size: 12px; font-weight: 700; color: #fff; background: rgba(17,17,22,0.78); backdrop-filter: blur(6px);
+  opacity: 0; transform: translateY(-3px); transition: opacity 0.15s ease, transform 0.15s ease; pointer-events: none;
+}
+.news-item:not(.is-open):not(.is-dragging):hover .news-ask-btn, .news-ask-btn:focus-visible { opacity: 1; transform: none; pointer-events: auto; }
+.news-hint { max-width: 1100px; margin: 16px 0 0; font-size: 12.5px; color: var(--ink-faint); text-align: center; }
+.news-hint[hidden] { display: none; }
+@media (hover: hover) { .news-hint { display: none; } }
+
+/* Ask sheet */
+.news-ask-card { width: min(560px, 100%); display: flex; flex-direction: column; gap: 14px; padding: 18px 20px 20px; }
+.news-ask-head { display: flex; align-items: flex-start; gap: 10px; }
+.news-ask-story { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.news-ask-title { font-size: 16px; font-weight: 700; line-height: 1.35; letter-spacing: -0.01em; }
+.news-ask-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.news-ask-chips button {
+  padding: 7px 13px; border-radius: var(--radius-full); font-size: 12.5px; font-weight: 600; color: var(--ink-soft);
+  background: var(--bg-main); box-shadow: 0 0 0 1px var(--hairline);
+}
+.news-ask-chips button:hover { color: var(--ink); background: #ececee; }
+.news-ask-input {
+  display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 16px; border-radius: var(--radius-full);
+  background: var(--bg-main); box-shadow: 0 0 0 1px var(--hairline);
+}
+.news-ask-input:focus-within { box-shadow: 0 0 0 2px #8b7cf6; }
+.news-ask-input input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font: inherit; font-size: 14px; color: var(--ink); }
+.news-ask-send { width: 34px; height: 34px; flex-shrink: 0; display: grid; place-items: center; border-radius: 50%; color: #fff; background: var(--ink); }
+.news-ask-send:hover { background: #2a2a30; }
 .news-empty { grid-column: 1 / -1; padding: 30px 4px; color: var(--ink-faint); font-size: 13.5px; }
 .news-empty.is-error { color: #b42318; }
 
@@ -1360,6 +1409,9 @@ select.settings-input { cursor: pointer; }
   .news-card.is-lead .news-card-title { font-size: 19px; }
   .news-card:not(.is-lead):not(.no-image) { flex-direction: row; }
   .news-card:not(.is-lead):not(.no-image) .news-card-img { flex: 0 0 108px; aspect-ratio: auto; }
+  .news-ask-btn { display: none; }
+  .news-ask-input input { font-size: 16px; }
+  .news-ask-card { padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
 }
 
 /* ── Personality panel (sidebar) ─────────────────────────────────────────── */

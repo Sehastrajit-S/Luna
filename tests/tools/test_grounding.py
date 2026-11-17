@@ -148,6 +148,34 @@ class ScheduleTests(unittest.TestCase):
         self.assertEqual(text, "Node 22 is the current LTS.\n\nAdded task “Upgrade”.")
 
 
+class LinkedPageTests(unittest.TestCase):
+    """News "Ask Luna" sends the question plus the story's blurb and link."""
+
+    def test_question_about_a_link_reads_the_page(self) -> None:
+        from server.services.agent_loop.grounding import required_calls
+        message = ("Summarize this\n\nNews story: “Stolen trophies”\nThe Guardian · 1h ago\n"
+                   "Get our breaking news email, free app or daily news podcast\n"
+                   "https://www.theguardian.com/sport/2026/nov/17/trophies-stolen")
+        # The blurb says "daily news", but this is not a request for headlines.
+        self.assertEqual(required_calls(message),
+                         [("web_fetch", {"url": "https://www.theguardian.com/sport/2026/nov/17/trophies-stolen"})])
+
+    def test_link_ending_in_html_is_not_a_workspace_file(self) -> None:
+        from server.services.agent_loop.grounding import required_calls
+        self.assertEqual(required_calls("summarize https://example.com/story.html."),
+                         [("web_fetch", {"url": "https://example.com/story.html"})])
+
+    def test_bare_link_or_command_is_not_a_question(self) -> None:
+        from server.services.agent_loop.grounding import linked_page
+        self.assertIsNone(linked_page("https://example.com"))
+        self.assertIsNone(linked_page("open https://example.com"))
+        self.assertIsNone(linked_page("what's the news today?"))
+
+    def test_plain_news_requests_still_get_headlines(self) -> None:
+        from server.services.agent_loop.grounding import required_calls
+        self.assertEqual(required_calls("what's the news today?"), [("daily_news", {"topic": ""})])
+
+
 class ToolSearchTests(unittest.TestCase):
     def test_finds_tools_that_are_already_loaded(self) -> None:
         from server.services.agent_loop.tool_selection import search_tools

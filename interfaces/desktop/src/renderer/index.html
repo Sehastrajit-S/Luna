@@ -384,6 +384,30 @@
           </div>
           <div class="capability-filters news-tabs" id="news-tabs" role="tablist" aria-label="News categories"></div>
           <div class="news-grid" id="news-grid" aria-live="polite"></div>
+          <p class="news-hint" id="news-hint">Swipe a story left to ask Luna about it.</p>
+        </div>
+        <div class="meeting-sheet news-ask" id="news-ask" hidden>
+          <form class="meeting-sheet-card news-ask-card" id="news-ask-form" role="dialog" aria-modal="true" aria-labelledby="news-ask-title">
+            <div class="news-ask-head">
+              <div class="news-ask-story">
+                <span class="news-card-meta" id="news-ask-meta"></span>
+                <span class="news-ask-title" id="news-ask-title"></span>
+              </div>
+              <button class="meeting-sheet-close" id="news-ask-close" type="button" aria-label="Close">×</button>
+            </div>
+            <div class="news-ask-chips" id="news-ask-chips">
+              <button type="button">Summarize this</button>
+              <button type="button">Why does it matter?</button>
+              <button type="button">What’s the background?</button>
+              <button type="button">What are the different sides?</button>
+            </div>
+            <div class="news-ask-input">
+              <input id="news-ask-input" type="text" placeholder="Ask anything about this story…" autocomplete="off" maxlength="500" />
+              <button class="news-ask-send" type="submit" aria-label="Ask Luna">
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 19V5m0 0l-6 6m6-6l6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+          </form>
         </div>
       </div>
 

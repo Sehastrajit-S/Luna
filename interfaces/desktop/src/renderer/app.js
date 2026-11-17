@@ -1084,6 +1084,14 @@ function showView(target) {
 // Library rows link back to the chat a file was shared in.
 window.lunaOpenConversation = id => openConversation(id)
 
+// Other views (e.g. News "Ask Luna") start a fresh chat with a ready message.
+window.lunaAskInNewChat = text => {
+  if (!text?.trim()) return
+  startNewChat()
+  // Passed directly (not through the one-line message box) so line breaks survive.
+  return sendMessage({ spoken: text }).catch(() => {})   // errors show in the reply bubble
+}
+
 function showDashboard() {
   showView(viewDashboard)
   renderCalendar()

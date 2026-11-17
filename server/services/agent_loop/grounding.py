@@ -33,6 +33,23 @@ _FILE_RE = re.compile(r"(?<![\w/\\.-])((?:[A-Za-z]:)?[\w./\\-]*[\w-]\.(?:md|txt|
 _READ_RE = re.compile(r"\b(?:read|open|show|look\s+at|what(?:'s|\s+is)\s+in|contents?|says?|summari[sz]e|"
                       r"first\s+(?:line|heading)|heading|title)\b", re.IGNORECASE)
 
+# "Summarize this: https://…" / "Why does this matter? <article link>" — the
+# answer comes from the page, so read it first instead of guessing from the
+# URL or treating words in the pasted blurb ("daily news") as a news request.
+_LINK_RE = re.compile(r"https?://[^\s<>\"')\]]+", re.IGNORECASE)
+_ABOUT_LINK_RE = re.compile(
+    r"\?|\b(?:summari[sz]e|summary|explain|tl;?dr|key\s+points|background|context|sides|matter|mean|"
+    r"what|why|how|who|when|where|tell\s+me|read|about)\b", re.IGNORECASE)
+
+
+def linked_page(text: str) -> str | None:
+    """The page a message asks about (its first link), or None."""
+    match = _LINK_RE.search(text or "")
+    if not match or not _ABOUT_LINK_RE.search(_LINK_RE.sub(" ", text)):
+        return None
+    return match.group(0).rstrip(".,;:!?")
+
+
 _NUM = r"(-?\d+(?:\.\d+)?)"
 _OPS = {
     "times": "*", "x": "*", "×": "*", "*": "*", "multiplied by": "*",
@@ -111,6 +128,9 @@ def required_calls(message: str) -> list[tuple[str, dict]]:
         for pattern, tool in _STATE_RULES:
             if pattern.search(text) and (tool, {}) not in calls:
                 calls.append((tool, {}))
+    page = linked_page(text)
+    if page and not calls:
+        return [("web_fetch", {"url": page})]      # "page.html" in a URL is not a workspace file
     if _READ_RE.search(text):
         for path in _FILE_RE.findall(text)[:2]:
             calls.append(("workspace_read", {"path": path.replace("\\", "/")}))
