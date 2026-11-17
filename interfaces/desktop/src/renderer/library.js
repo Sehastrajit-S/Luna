@@ -177,6 +177,11 @@
       return [img]
     }
     if (kind === 'pdf') {
+      // Phone browsers (Android Chrome, many WebViews) can't show a PDF inside
+      // a page and leave a blank box: send them to Open / Download instead.
+      if (navigator.pdfViewerEnabled === false) {
+        return [note('PDFs can’t be shown inside the page on this device. Tap Open to view it, or Download to save it.')]
+      }
       return [Object.assign(document.createElement('iframe'), { className: 'library-preview-pdf', src, title: name })]
     }
     const media = document.createElement(kind)
