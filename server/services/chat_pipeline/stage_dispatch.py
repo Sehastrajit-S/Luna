@@ -127,7 +127,11 @@ async def dispatch_direct_commands(ctx: ChatContext) -> None:
     # ── "What's the news?" / "tech news" → headlines straight from the feeds ──
     # Left to the model, this turned into vague summaries of news-site homepages.
     # News *about* something ("news about Tesla") still goes to the news-search skill.
-    if forced is None and not has_files:
+    # A question about a linked page goes to the agent loop, which reads it
+    # (grounding.linked_page) — never to a headlines shortcut or search skill.
+    from server.services.agent_loop.grounding import linked_page
+    asks_about_page = forced is None and not has_files and linked_page(request) is not None
+    if forced is None and not has_files and not asks_about_page:
         from server.services import news_feed
         news_category = news_feed.news_category_request(request)
         if news_category:
@@ -144,6 +148,8 @@ async def dispatch_direct_commands(ctx: ChatContext) -> None:
     # A shortcut would answer the first step and silently drop the rest.
     from server.services.agent_loop.routing import is_multi_step
     from server.services.llm.tool_calling import native_tools_supported
+    if asks_about_page and native_tools_supported():
+        return
     if forced is None and native_tools_supported() and is_multi_step(request):
         return
 
