@@ -4,10 +4,10 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 
+from server.core.file_response import file_response
 from server.models.database import Attachment, Conversation, get_db
 from server.models.schemas import AttachmentOut
 from server.services.files import (
@@ -81,12 +81,12 @@ def get_file(attachment_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{attachment_id}/raw")
-def download_file(attachment_id: str, db: Session = Depends(get_db)):
+def download_file(attachment_id: str, download: bool = Query(False), db: Session = Depends(get_db)):
     row = _get_or_404(db, attachment_id)
     path = original_path(row)
     if not path.exists():
         raise HTTPException(status_code=404, detail="File data is missing")
-    return FileResponse(path, media_type=row.mime_type, filename=row.filename)
+    return file_response(path, row.filename, row.mime_type, download)
 
 
 @router.delete("/{attachment_id}")
