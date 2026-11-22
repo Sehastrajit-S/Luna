@@ -43,6 +43,10 @@ mac:
   # Signed when a Developer ID certificate is provided (CSC_LINK); the release workflow
   # passes -c.mac.identity=null otherwise, and Gatekeeper asks once (right-click, Open).
   hardenedRuntime: true
+  # macOS ends the app if it opens the camera or microphone without saying why.
+  extendInfo:
+    NSCameraUsageDescription: Luna uses the camera to scan product barcodes when you ask it to.
+    NSMicrophoneUsageDescription: Luna uses the microphone for voice chat and meeting recording when you turn them on.
   target:
     - target: dmg
       arch: [arm64, x64]

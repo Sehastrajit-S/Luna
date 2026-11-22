@@ -25,6 +25,8 @@ data/*.sqlite3
 data/shared_context.json
 data/local_api_token
 data/*.log
+data/logs/
+data/screenshots/
 data/*.pid
 data/models/
 data/desktop-app/

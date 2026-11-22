@@ -30,6 +30,10 @@ SCHEMA: list[dict] = [
     {"key": "weather_timezone", "label": "Time zone", "section": "General", "type": "text",
      "help": "IANA name, e.g. America/Phoenix."},
 
+    {"key": "browser_profile", "label": "Browser profile", "section": "General", "type": "text",
+     "help": "Chrome profile Luna opens websites in, so it skips Chrome's “Who's using Chrome?” screen. A profile name, "
+             "account name or email domain (e.g. Work, acme). Empty: the profile you used last."},
+
     {"key": "show_personality_panel", "label": "Personality panel", "section": "Appearance", "type": "toggle",
      "help": "Show Luna's mood, energy and learned conversation style in the sidebar."},
 
@@ -54,6 +58,10 @@ SCHEMA: list[dict] = [
      "options": ["edge", "elevenlabs", "pyttsx3"]},
     {"key": "elevenlabs_api_key", "label": "ElevenLabs API key", "section": "Voice", "type": "secret"},
     {"key": "elevenlabs_voice_id", "label": "ElevenLabs voice ID", "section": "Voice", "type": "text"},
+
+    {"key": "project_roots", "label": "Project folders", "section": "Coding", "type": "text",
+     "help": "Folders holding your code projects, separated by ; (e.g. E:\\Projects). Luna can read files in them, "
+             "never change them, and open Claude Code there after you say yes."},
 
     {"key": "github_token", "label": "GitHub token", "section": "Integrations", "type": "secret",
      "help": "Repository read access (and PR write access for PR features)."},

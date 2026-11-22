@@ -351,6 +351,7 @@
 
   function setPhase(v, phase) {
     v.phase = phase
+    try { v.opts?.onPhase?.(phase) } catch { /* the view's problem, not the conversation's */ }
     composerBar?.setAttribute('data-voice-phase', phase)
     if (waveTime) waveTime.textContent = PHASE_LABELS[phase] || ''
     wave?.classList.toggle('is-transcribing', phase === 'thinking')
@@ -358,8 +359,10 @@
     if (waveFrozen) restingBars()
   }
 
-  async function enterVoiceMode() {
-    if (voiceMode || state !== 'idle') return
+  // opts (voice-only mode): onPhase(phase), onHeard(text), onReplyPart(text), onExit(),
+  // beforeSend(text) → { text, files } to send, or null to skip this turn (e.g. a scan was cancelled).
+  async function enterVoiceMode(opts = {}) {
+    if (voiceMode || state !== 'idle') return false
     voiceBtn.classList.add('is-busy')
     let micStream
     try {
@@ -374,7 +377,7 @@
       stream: micStream, phase: '', turn: 0, samples: null, timer: null,
       recording: null, heard: false, speechMs: 0, silenceMs: 0, turnStart: 0, noise: 0.01, loudMs: 0,
       queue: [], synthChain: Promise.resolve(), playing: false, current: null,
-      replyDone: true, pendingReply: Promise.resolve(),
+      replyDone: true, pendingReply: Promise.resolve(), opts,
     }
     voiceMode = v
     startWaveform(micStream)
@@ -391,6 +394,7 @@
     voiceBtn.title = 'End voice mode (Esc)'
     v.timer = setInterval(monitor, TICK_MS)
     listen(v)
+    return true
   }
 
   function exitVoiceMode() {
@@ -410,6 +414,7 @@
     voiceBtn.classList.remove('is-active')
     voiceBtn.setAttribute('aria-pressed', 'false')
     voiceBtn.title = 'Voice mode — talk with Luna hands-free'
+    try { v.opts?.onExit?.() } catch { /* ignore */ }
   }
 
   // ── Listening ──
@@ -491,6 +496,7 @@
       listen(v)
       return
     }
+    try { v.opts?.onHeard?.(text) } catch { /* ignore */ }
     reply(v, text)
   }
 
@@ -503,10 +509,28 @@
       listen(v)
       return
     }
+    let files = []
+    if (v.opts?.beforeSend) {
+      // Voice-only mode: "scan this …" takes a photo first, and it goes with the message.
+      let prepared = null
+      try { prepared = await v.opts.beforeSend(text) } catch (error) { console.error('Voice-only step failed', error) }
+      if (voiceMode !== v || v.turn !== turn) return
+      if (prepared === null) {
+        listen(v)
+        return
+      }
+      text = prepared.text ?? text
+      files = prepared.files || []
+    }
     v.replyDone = false
     v.synthChain = Promise.resolve()
     const pending = window.lunaChat.send(text, {
-      onPart: part => { if (voiceMode === v && v.turn === turn) enqueueSpeech(v, turn, part) },
+      files,
+      onPart: part => {
+        if (voiceMode !== v || v.turn !== turn) return
+        try { v.opts?.onReplyPart?.(part) } catch { /* ignore */ }
+        enqueueSpeech(v, turn, part)
+      },
     })
     v.pendingReply = pending.then(() => {}, () => {})
     await v.pendingReply              // errors are shown in the reply bubble
@@ -565,8 +589,11 @@
       // Synthesize in order, one at a time, while earlier chunks play.
       const audio = v.synthChain.then(() => synthesize(chunk)).catch(error => {
         if (voiceMode === v && v.turn === turn) {
-          exitVoiceMode()
-          notice(describeError(error))
+          if (v.opts?.onSpeechError) v.opts.onSpeechError(error)   // voice-only: keep going, show the text
+          else {
+            exitVoiceMode()
+            notice(describeError(error))
+          }
         }
         console.error('Voice mode speech failed', error)
         return null
@@ -639,6 +666,14 @@
     v.loudMs = 0
     stopPlayback(v)
     listen(v)
+  }
+
+  // For voice-only mode (voice-only.js): the same conversation engine, its own screen.
+  window.lunaVoice = {
+    start: opts => enterVoiceMode(opts),
+    stop: () => exitVoiceMode(),
+    active: () => Boolean(voiceMode),
+    phase: () => voiceMode?.phase || '',
   }
 
   voiceBtn?.addEventListener('click', () => {

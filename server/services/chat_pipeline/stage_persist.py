@@ -17,22 +17,25 @@ logger = logging.getLogger(__name__)
 async def persist(ctx: ChatContext) -> None:
     """Create/resolve conversation, save user message to DB."""
     db = ctx.db
-    conversation_id = ctx.conversation_id or get_active_conversation_id()
+    # A temporary or standalone chat never falls back to (or becomes) the shared
+    # active conversation — that one is for chats every Luna surface can continue.
+    detached = ctx.temporary or ctx.standalone
+    conversation_id = ctx.conversation_id or (None if detached else get_active_conversation_id())
 
-    if conversation_id:
-        conv = db.query(Conversation).filter_by(id=conversation_id).first()
-        if not conv:
-            conv = Conversation(started_at=datetime.utcnow(), message_count=0)
-            db.add(conv)
-            db.commit()
-            db.refresh(conv)
-    else:
-        conv = Conversation(started_at=datetime.utcnow(), message_count=0)
+    conv = db.query(Conversation).filter_by(id=conversation_id).first() if conversation_id else None
+    if conv is None:
+        if ctx.temporary:
+            # Starting a new one is a good moment to clear temporary chats left open and idle.
+            from server.services.conversations import TEMPORARY_IDLE, purge_temporary
+            purge_temporary(db, idle_for=TEMPORARY_IDLE)
+        conv = Conversation(started_at=datetime.utcnow(), message_count=0, temporary=ctx.temporary)
         db.add(conv)
         db.commit()
         db.refresh(conv)
+    ctx.temporary = bool(conv.temporary)
 
-    set_active_conversation_id(conv.id)
+    if not ctx.temporary and not ctx.standalone:
+        set_active_conversation_id(conv.id)
     ctx.conv = conv
     ctx.conversation_id = conv.id
 

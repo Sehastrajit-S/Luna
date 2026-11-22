@@ -72,6 +72,8 @@ def _parse_arguments(raw) -> dict:
 
 
 _TAGGED_RE = re.compile(r"<tool_call>\s*(\{.*?\})\s*</tool_call>", re.DOTALL)
+_BRACKET_RE = re.compile(r"\[([a-z][a-z0-9_]{2,40})((?:\s+[a-z_]+\s*=\s*(?:\"[^\"]*\"|'[^']*'))+)\s*\]")
+_BRACKET_ARG_RE = re.compile(r"([a-z_]+)\s*=\s*(?:\"([^\"]*)\"|'([^']*)')")
 
 
 def calls_from_text(content: str, known_tools: set[str]) -> tuple[str, list[ToolCall]]:
@@ -94,6 +96,15 @@ def calls_from_text(content: str, known_tools: set[str]) -> tuple[str, list[Tool
     legacy = parse_tool_call_json(text)          # {"tool_call": {"tool": …, "args": …}}
     if legacy and legacy.get("tool") in known_tools:
         return strip_tool_call_json(text).strip(), [ToolCall(_new_id(), legacy["tool"], _parse_arguments(legacy.get("args")))]
+
+    # [message_contact app="whatsapp" text="Hi" to="Arjun"]: seen live from the local model.
+    for match in _BRACKET_RE.finditer(text):
+        name = match.group(1)
+        args = {k: v1 or v2 for k, v1, v2 in _BRACKET_ARG_RE.findall(match.group(2))}
+        if name in known_tools and args:
+            calls.append(ToolCall(_new_id(), name, args))
+    if calls:
+        return _BRACKET_RE.sub("", text).strip(), calls
 
     stripped = text.strip()
     if stripped.startswith("{") and stripped.endswith("}"):

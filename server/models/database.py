@@ -78,6 +78,8 @@ class Conversation(Base):
     started_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     ended_at = Column(DateTime, nullable=True)
     message_count = Column(Integer, default=0)
+    # Temporary chat: hidden from Recent, never mined for memory, deleted when the user leaves it.
+    temporary = Column(Boolean, nullable=False, default=False, server_default="0")
     messages = relationship("Message", back_populates="conversation", cascade="all, delete")
 
 
@@ -169,6 +171,7 @@ class Task(Base):
     completed = Column(Boolean, default=False)
     completed_at = Column(DateTime, nullable=True)
     priority = Column(String, default="medium")  # low|medium|high
+    list_name = Column(String, nullable=True)    # Tasks app list ("Work", "Personal"); None = no list
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
@@ -332,6 +335,41 @@ class HealthSync(Base):
     updated_at      = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
+class Note(Base):
+    """A note in the Notes app."""
+    __tablename__ = "notes"
+    id         = Column(Integer, primary_key=True, index=True)
+    title      = Column(String, nullable=False, default="")
+    body       = Column(Text, nullable=False, default="")
+    pinned     = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+
+
+class BudgetCategory(Base):
+    """A spending category with an optional monthly limit (0 = no limit)."""
+    __tablename__ = "budget_categories"
+    id          = Column(Integer, primary_key=True, index=True)
+    name        = Column(String, nullable=False, unique=True)
+    icon        = Column(String, nullable=False, default="")
+    limit_cents = Column(Integer, nullable=False, default=0)
+    sort        = Column(Integer, nullable=False, default=0)
+    created_at  = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class BudgetTransaction(Base):
+    """One expense or income entry. Amounts are whole cents, always positive."""
+    __tablename__ = "budget_transactions"
+    id           = Column(Integer, primary_key=True, index=True)
+    kind         = Column(String, nullable=False, default="expense")   # expense | income
+    amount_cents = Column(Integer, nullable=False)
+    description  = Column(String, nullable=False, default="")
+    category_id  = Column(Integer, ForeignKey("budget_categories.id", ondelete="SET NULL"), nullable=True, index=True)
+    date_str     = Column(String, nullable=False, index=True)          # YYYY-MM-DD
+    source       = Column(String, nullable=False, default="manual")    # manual | receipt
+    created_at   = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
 def init_db():
     Base.metadata.create_all(bind=engine)
 
@@ -349,6 +387,15 @@ def init_db():
             ]:
                 try:
                     conn.execute(text(f"ALTER TABLE facts ADD COLUMN {col} {definition}"))
+                    conn.commit()
+                except Exception:
+                    pass  # column already exists
+            for table, column, definition in [
+                ("tasks", "list_name", "VARCHAR"),
+                ("conversations", "temporary", "BOOLEAN NOT NULL DEFAULT 0"),
+            ]:
+                try:
+                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {definition}"))
                     conn.commit()
                 except Exception:
                     pass  # column already exists

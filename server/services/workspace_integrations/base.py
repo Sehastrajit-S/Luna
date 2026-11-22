@@ -71,10 +71,14 @@ async def _refresh_google_token() -> str:
             },
         )
     if response.is_error:
+        if "invalid_grant" in response.text:
+            raise WorkspaceIntegrationError(
+                "Google sign-in has expired or was revoked. Reconnect Google: open "
+                f"http://127.0.0.1:{settings.port}/api/integrations/workspace/google/oauth/start on this computer.")
         raise WorkspaceIntegrationError(
             f"google OAuth refresh failed {response.status_code}: {response.text[:300]}"
         )
-    return response.json().get("access_token", "")
+    return _remember("google", response.json())
 
 
 async def _refresh_microsoft_token() -> str:
@@ -99,24 +103,41 @@ async def _refresh_microsoft_token() -> str:
         raise WorkspaceIntegrationError(
             f"microsoft OAuth refresh failed {response.status_code}: {response.text[:300]}"
         )
-    return response.json().get("access_token", "")
+    return _remember("microsoft", response.json())
 
 
-async def _resolved_token(provider: str, token: str = "") -> str:
-    access_token = (token or _configured_token(provider)).strip()
+# provider → (access token, monotonic time it stops being used). Access tokens last about an hour;
+# the one saved in .env expires too, so it is only the fallback when no refresh token is set.
+_TOKEN_CACHE: dict[str, tuple[str, float]] = {}
+
+
+def _remember(provider: str, payload: dict) -> str:
+    import time
+    access_token = str(payload.get("access_token") or "")
     if access_token:
-        return access_token
-    if provider == "google":
-        access_token = await _refresh_google_token()
-    elif provider == "microsoft":
-        access_token = await _refresh_microsoft_token()
+        lifetime = float(payload.get("expires_in") or 3600)
+        _TOKEN_CACHE[provider] = (access_token, time.monotonic() + max(60.0, lifetime - 120))
+    return access_token
+
+
+async def _resolved_token(provider: str, token: str = "", *, force_refresh: bool = False) -> str:
+    import time
+    if token.strip():
+        return token.strip()   # passed in explicitly by the caller
+    cached = _TOKEN_CACHE.get(provider)
+    if cached and not force_refresh and time.monotonic() < cached[1]:
+        return cached[0]
+    refresh = {"google": _refresh_google_token, "microsoft": _refresh_microsoft_token}.get(provider)
+    access_token = await refresh() if refresh else ""
+    if not access_token and not force_refresh:
+        access_token = _configured_token(provider)   # no refresh token: the saved one, while it lasts
     if not access_token:
         raise WorkspaceIntegrationError(f"{provider} workspace access token is not configured")
     return access_token
 
 
-async def _headers(provider: str, token: str = "") -> dict[str, str]:
-    access_token = await _resolved_token(provider, token)
+async def _headers(provider: str, token: str = "", *, force_refresh: bool = False) -> dict[str, str]:
+    access_token = await _resolved_token(provider, token, force_refresh=force_refresh)
     return {
         "Authorization": f"Bearer {access_token}",
         "Accept": "application/json",
@@ -141,6 +162,19 @@ async def _request(
             params=clean_params or None,
             json=json_body,
         )
+        if response.status_code == 401 and not token:
+            # Expired access token: get a fresh one with the refresh token and try once more.
+            _TOKEN_CACHE.pop(provider, None)
+            try:
+                headers = await _headers(provider, force_refresh=True)
+            except WorkspaceIntegrationError:
+                headers = None
+            if headers:
+                response = await client.request(method.upper(), url, headers=headers,
+                                                params=clean_params or None, json=json_body)
+    if response.status_code == 401:
+        raise WorkspaceIntegrationError(
+            f"{provider} sign-in has expired and couldn't be renewed. Reconnect {provider.title()} in Settings.")
     if response.status_code == 204:
         return {"status": "ok"}
     try:

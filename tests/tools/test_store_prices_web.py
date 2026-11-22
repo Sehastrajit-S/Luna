@@ -74,8 +74,8 @@ class FreeWebSearchTests(unittest.TestCase):
     def test_markdown_links_stores_whose_page_hides_the_price(self) -> None:
         md = compare_mod.render_markdown(self._run())
         self.assertIn("cheapest at **Walmart** ($21.97)", md)
-        self.assertIn("[See price](https://www.costco.com/tide-pods-81.product.100.html)", md)
-        self.assertIn("Not priced: Sam's Club", md)
+        self.assertIn("- **Costco**: [see price](https://www.costco.com/tide-pods-81.product.100.html)", md)
+        self.assertNotIn("Sam's Club", md, "stores without a match aren't shown")
         self.assertIn("free web search", md)
 
     def test_compare_uses_web_when_no_key(self) -> None:

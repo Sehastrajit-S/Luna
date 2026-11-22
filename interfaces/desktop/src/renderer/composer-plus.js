@@ -159,6 +159,10 @@
     close()
     window.lunaOpenMeeting?.()
   })
+  document.getElementById('plus-scan')?.addEventListener('click', () => {
+    close()
+    window.lunaOpenScanner?.()
+  })
 
   document.addEventListener('click', event => {
     if (!menu.hidden && !menu.contains(event.target) && event.target !== plusBtn) close()

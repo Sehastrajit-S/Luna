@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Luna Memory</title>
+<style>
+:root {
+  --bg: #f6f6f8; --panel: #ffffff; --ink: #17181c; --soft: #50535c; --faint: #8b8e97; --line: #e4e4ea;
+  --chip: #efeff3; --accent: #4f7cff; --good: #1f9d63; --bad: #d64545; --warn: #c98a12;
+  --edge: rgba(23,24,28,.22); --label: rgba(23,24,28,.78); --halo: rgba(246,246,248,.85);
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #111216; --panel: #191a1f; --ink: #ecedf0; --soft: #b3b5bd; --faint: #7d808a; --line: #2a2b32;
+    --chip: #24252c; --edge: rgba(236,237,240,.24); --label: rgba(236,237,240,.82); --halo: rgba(17,18,22,.85); }
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; display: flex; flex-direction: column; overflow: hidden; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 12px 18px; border-bottom: 1px solid var(--line); background: var(--panel); }
+h1 { margin: 0; font-size: 17px; font-weight: 750; letter-spacing: -.01em; }
+.live { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--soft); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
+.live.on .dot { background: var(--good); box-shadow: 0 0 0 0 rgba(31,157,99,.6); animation: beat 2s infinite; }
+.live.off .dot { background: var(--bad); }
+@keyframes beat { 0% { box-shadow: 0 0 0 0 rgba(31,157,99,.5); } 70% { box-shadow: 0 0 0 7px rgba(31,157,99,0); } 100% { box-shadow: 0 0 0 0 rgba(31,157,99,0); } }
+.stats { display: flex; gap: 14px; font-size: 12.5px; color: var(--soft); }
+.stats b { color: var(--ink); font-weight: 700; }
+.grow { flex: 1; }
+.search { width: 220px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--bg); color: var(--ink); font: inherit; }
+.toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--soft); cursor: pointer; user-select: none; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 18px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: var(--chip); font-size: 12px; color: var(--soft); }
+.chip i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.chip.off { opacity: .4; }
+.chip b { color: var(--ink); font-weight: 650; }
+main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 380px; }
+.stage { position: relative; min-width: 0; min-height: 0; }
+canvas { position: absolute; inset: 0; width: 100%; height: 100%; cursor: grab; touch-action: none; }
+canvas.dragging { cursor: grabbing; }
+.stage-tools { position: absolute; left: 12px; bottom: 12px; display: flex; gap: 6px; }
+.stage-tools button { padding: 6px 10px; border-radius: 8px; background: var(--panel); border: 1px solid var(--line); font-size: 12px; color: var(--soft); }
+.legend { position: absolute; right: 12px; bottom: 12px; padding: 8px 10px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line); font-size: 11.5px; color: var(--soft); display: grid; gap: 3px; }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.legend s { display: inline-block; width: 22px; height: 0; border-top: 2px solid; text-decoration: none; }
+.tip { position: absolute; pointer-events: none; max-width: 300px; padding: 7px 9px; border-radius: 8px; background: var(--ink); color: var(--bg); font-size: 12px; display: none; z-index: 2; }
+.notice { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); padding: 6px 12px; border-radius: 8px; background: var(--bad); color: #fff; font-size: 12.5px; display: none; }
+aside { min-height: 0; display: flex; flex-direction: column; border-left: 1px solid var(--line); background: var(--panel); }
+.detail { padding: 14px 16px; border-bottom: 1px solid var(--line); display: none; max-height: 52%; overflow-y: auto; }
+.detail.show { display: block; }
+.detail-head { display: flex; align-items: flex-start; gap: 8px; }
+.detail-head p { flex: 1; margin: 0; font-size: 15px; font-weight: 650; }
+.detail-head button { color: var(--faint); font-size: 18px; line-height: 1; padding: 0 4px; }
+.tags { display: flex; flex-wrap: wrap; gap: 5px; margin: 9px 0; }
+.tag { padding: 2px 8px; border-radius: 6px; background: var(--chip); font-size: 11.5px; color: var(--soft); }
+.tag.bad { background: rgba(214,69,69,.14); color: var(--bad); }
+.bars { display: grid; grid-template-columns: 84px 1fr 34px; gap: 5px 8px; align-items: center; font-size: 12px; color: var(--soft); margin: 8px 0; }
+.bar { height: 6px; border-radius: 3px; background: var(--chip); overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--accent); }
+.kv { display: grid; grid-template-columns: 96px 1fr; gap: 3px 8px; font-size: 12px; margin: 6px 0; }
+.kv dt { color: var(--faint); } .kv dd { margin: 0; color: var(--soft); }
+.ref { color: var(--accent); cursor: pointer; text-decoration: underline; text-decoration-color: transparent; }
+.ref:hover { text-decoration-color: currentColor; }
+.subhead { margin: 12px 0 4px; font-size: 11px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
+.tabs { display: flex; gap: 4px; padding: 10px 12px 0; }
+.tabs button { padding: 6px 12px; border-radius: 8px 8px 0 0; font-size: 13px; font-weight: 650; color: var(--faint); }
+.tabs button.on { color: var(--ink); background: var(--bg); }
+.list { flex: 1; min-height: 0; overflow-y: auto; background: var(--bg); padding: 6px 8px 16px; }
+.item { display: flex; gap: 10px; width: 100%; text-align: left; padding: 8px 9px; border-radius: 9px; }
+.item:hover { background: var(--panel); }
+.item.sel { background: var(--panel); box-shadow: inset 3px 0 0 var(--accent); }
+.item.fresh { animation: fresh 2.4s ease-out; }
+@keyframes fresh { from { background: rgba(79,124,255,.22); } to { background: transparent; } }
+.badge { flex: 0 0 auto; width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center; font-size: 12px; font-weight: 800; color: #fff; }
+.item-body { min-width: 0; flex: 1; }
+.item-title { font-size: 13px; overflow-wrap: anywhere; }
+.item-meta { font-size: 11.5px; color: var(--faint); margin-top: 1px; }
+.item.retired .item-title { color: var(--faint); text-decoration: line-through; }
+.divider { margin: 10px 9px 4px; font-size: 11px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
+.empty { padding: 20px 12px; color: var(--faint); font-size: 13px; }
+@media (max-width: 860px) {
+  body { overflow: auto; }
+  main { grid-template-columns: 1fr; grid-template-rows: 60vh auto; }
+  aside { border-left: 0; border-top: 1px solid var(--line); min-height: 60vh; }
+  .search { width: 100%; }
+  header { padding: 10px 16px; } .chips { padding: 8px 16px; }
+  .legend { display: none; }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>Luna memory</h1>
+  <span class="live" id="live"><span class="dot"></span><span id="live-text">Connecting…</span></span>
+  <div class="stats" id="stats"></div>
+  <span class="grow"></span>
+  <label class="toggle"><input type="checkbox" id="show-retired"> Retired</label>
+  <label class="toggle"><input type="checkbox" id="show-similar" checked> Similarity</label>
+  <input class="search" id="search" type="search" placeholder="Search memories…" autocomplete="off">
+</header>
+<div class="chips" id="chips"></div>
+<main>
+  <div class="stage" id="stage">
+    <canvas id="graph"></canvas>
+    <div class="tip" id="tip"></div>
+    <div class="notice" id="notice"></div>
+    <div class="stage-tools"><button id="fit" type="button">Fit</button><button id="shake" type="button">Re-layout</button></div>
+    <div class="legend">
+      <span><s style="border-color: var(--bad); border-top-style: dashed"></s> replaced by</span>
+      <span><s style="border-color: var(--good)"></s> merged into</span>
+      <span><s style="border-color: var(--edge)"></s> similar meaning</span>
+      <span>size = importance · fill = confidence</span>
+    </div>
+  </div>
+  <aside>
+    <div class="detail" id="detail"></div>
+    <div class="tabs"><button class="on" data-tab="changes" type="button">Changes</button><button data-tab="facts" type="button">All memories</button></div>
+    <div class="list" id="list"></div>
+  </aside>
+</main>
+<script>
+'use strict'
+const COLORS = { personal: '#4f7cff', relationship: '#e0559b', preference: '#f0a020', goal: '#22a06b', health: '#e5484d',
+  event: '#8e6cf0', behavior: '#0ea5b7', context: '#8a8f98' }
+const colorOf = c => COLORS[c] || '#9a7b5f'
+const KINDS = {
+  learned: ['+', '#1f9d63', 'Learned'], reinforced: ['↑', '#4f7cff', 'Reinforced'], confirmed: ['✓', '#4f7cff', 'Confirmed again'], weakened: ['↓', '#8a8f98', 'Less sure'],
+  refined: ['✎', '#8e6cf0', 'Refined'], updated: ['✎', '#8e6cf0', 'Updated'], replaced: ['⇄', '#d64545', 'Replaced'],
+  merged: ['≡', '#1f9d63', 'Merged'], forgotten: ['✕', '#d64545', 'Forgotten'], expired: ['⌛', '#c98a12', 'Expired'],
+  restored: ['↺', '#1f9d63', 'Restored'], importance: ['★', '#c98a12', 'Importance'], recategorised: ['⇢', '#8a8f98', 'Moved'],
+  private: ['◐', '#8a8f98', 'Made private'], unprivate: ['◑', '#8a8f98', 'No longer private'], kept: ['⟳', '#0ea5b7', 'Kept'],
+  deleted: ['✕', '#d64545', 'Deleted'],
+}
+
+const $ = id => document.getElementById(id)
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag)
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue
+    if (k === 'class') el.className = v
+    else if (k === 'style') el.style.cssText = v
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v)
+    else el.setAttribute(k, v === true ? '' : v)
+  }
+  for (const kid of kids.flat()) if (kid != null && kid !== false) el.append(kid.nodeType ? kid : String(kid))
+  return el
+}
+function ago(iso) {
+  if (!iso) return '—'
+  const s = (Date.now() - Date.parse(iso)) / 1000
+  if (s < 0) { const f = -s; return f < 3600 ? `in ${Math.round(f / 60)} min` : f < 86400 ? `in ${Math.round(f / 3600)} h` : `in ${Math.round(f / 86400)} d` }
+  if (s < 10) return 'just now'
+  if (s < 60) return `${Math.round(s)}s ago`
+  if (s < 3600) return `${Math.round(s / 60)} min ago`
+  if (s < 86400) return `${Math.round(s / 3600)} h ago`
+  if (s < 86400 * 60) return `${Math.round(s / 86400)} d ago`
+  return new Date(iso).toLocaleDateString()
+}
+const when = iso => iso ? `${new Date(iso).toLocaleString()} (${ago(iso)})` : '—'
+const store = { get(k, d) { try { const v = localStorage.getItem('lunamem.' + k); return v == null ? d : JSON.parse(v) } catch { return d } },
+  set(k, v) { try { localStorage.setItem('lunamem.' + k, JSON.stringify(v)) } catch {} } }
+
+// ── State ──────────────────────────────────────────────────────────────────
+const S = {
+  data: null, facts: new Map(), nodes: new Map(), edges: [], selected: null, hover: null,
+  showRetired: store.get('retired', false), showSimilar: store.get('similar', true), hiddenCats: new Set(store.get('hidden', [])),
+  search: '', tab: 'changes', seenChanges: new Set(), firstLoad: true, alpha: 1, view: { x: 0, y: 0, k: 1 }, fitted: false,
+}
+$('show-retired').checked = S.showRetired
+$('show-similar').checked = S.showSimilar
+
+function visible(n) {
+  return n && (S.showRetired || n.f.is_active) && !S.hiddenCats.has(n.f.category)
+}
+function matches(f) {
+  return !S.search || f.content.toLowerCase().includes(S.search) || (f.category || '').includes(S.search)
+}
+
+function anchorFor(cat) {
+  const cats = Object.keys(COLORS)
+  let i = cats.indexOf(cat); if (i < 0) i = cats.length
+  const a = (i / (cats.length + 1)) * Math.PI * 2 - Math.PI / 2
+  return { x: Math.cos(a) * 260, y: Math.sin(a) * 200 }
+}
+
+function apply(data) {
+  const now = performance.now()
+  S.data = data
+  const prev = S.facts
+  S.facts = new Map(data.facts.map(f => [f.id, f]))
+  for (const f of data.facts) {
+    let n = S.nodes.get(f.id)
+    if (!n) {
+      // Start near something it's linked to, else near its category's area.
+      const link = data.links.find(l => l.fact_id_a === f.id || l.fact_id_b === f.id)
+      const near = link && S.nodes.get(link.fact_id_a === f.id ? link.fact_id_b : link.fact_id_a)
+      const base = near || anchorFor(f.category)
+      n = { id: f.id, f, x: base.x + (Math.random() - .5) * 60, y: base.y + (Math.random() - .5) * 60, vx: 0, vy: 0, pulse: S.firstLoad ? 0 : now }
+      S.nodes.set(f.id, n)
+    } else {
+      const o = prev.get(f.id)
+      if (o && (o.content !== f.content || o.confidence !== f.confidence || o.importance !== f.importance
+          || o.is_active !== f.is_active || o.category !== f.category)) n.pulse = now
+      n.f = f
+    }
+  }
+  for (const id of [...S.nodes.keys()]) if (!S.facts.has(id)) S.nodes.delete(id)
+
+  const edges = []
+  const seen = new Set()
+  for (const l of data.links) {
+    const kind = l.relationship === 'confirms' ? 'merged' : l.relationship === 'contradicts' ? 'replaced' : 'other'
+    // contradicts: a (new) replaced b (old) → draw old → new; confirms: a (repeat) merged into b
+    const [from, to] = kind === 'replaced' ? [l.fact_id_b, l.fact_id_a] : [l.fact_id_a, l.fact_id_b]
+    edges.push({ a: from, b: to, kind, note: l.note }); seen.add(`${from}>${to}`)
+  }
+  for (const f of data.facts) {
+    if (f.superseded_by && !seen.has(`${f.id}>${f.superseded_by}`)) edges.push({ a: f.id, b: f.superseded_by, kind: 'replaced' })
+  }
+  for (const [a, b, d] of data.similar) edges.push({ a, b, kind: 'similar', d })
+  S.edges = edges
+
+  S.alpha = Math.max(S.alpha, S.firstLoad ? 1 : 0.35)
+  renderHeader(); renderChips(); renderList(); renderDetail()
+  if (S.firstLoad) { S.firstLoad = false; setTimeout(fit, 900) }
+  dirty = true
+}
+
+// ── Header, chips, lists ───────────────────────────────────────────────────
+function renderHeader() {
+  const d = S.data
+  const active = d.facts.filter(f => f.is_active).length
+  const retired = d.facts.length - active
+  const rel = S.edges.filter(e => e.kind !== 'similar').length
+  const sim = d.similarity === 'on' ? `${d.similar.length} similar pairs` : `similarity ${d.similarity}`
+  $('stats').replaceChildren(
+    h('span', null, h('b', null, active), ' active'), h('span', null, h('b', null, retired), ' retired'),
+    h('span', null, h('b', null, rel), ' links'), h('span', null, sim))
+  const ok = d.status === 'live'
+  $('notice').style.display = ok ? 'none' : 'block'
+  $('notice').textContent = ok ? '' : d.status
+}
+function setLive(on, text) {
+  $('live').className = 'live ' + (on ? 'on' : 'off')
+  $('live-text').textContent = text
+}
+
+function renderChips() {
+  const counts = {}
+  for (const f of S.data.facts) if (f.is_active || S.showRetired) counts[f.category] = (counts[f.category] || 0) + 1
+  const cats = [...new Set([...Object.keys(COLORS).filter(c => counts[c]), ...Object.keys(counts)])]
+  $('chips').replaceChildren(...cats.map(c => h('button', {
+    class: 'chip' + (S.hiddenCats.has(c) ? ' off' : ''), type: 'button', title: 'Show or hide ' + c,
+    onclick: () => { S.hiddenCats.has(c) ? S.hiddenCats.delete(c) : S.hiddenCats.add(c); store.set('hidden', [...S.hiddenCats]); renderChips(); renderList(); S.alpha = Math.max(S.alpha, .3); dirty = true },
+  }, h('i', { style: `background:${colorOf(c)}` }), c, ' ', h('b', null, counts[c] || 0))))
+}
+
+function factLabel(id) {
+  const f = S.facts.get(id)
+  return f ? f.content : `#${id} (deleted)`
+}
+function ref(id, text) {
+  return h('span', { class: 'ref', onclick: () => select(id, true) }, text || `“${factLabel(id)}”`)
+}
+
+function changeItem(c) {
+  const [icon, color, label] = KINDS[c.kind] || ['•', '#8a8f98', c.kind]
+  const key = `${c.at}|${c.kind}|${c.fact_id}`
+  const fresh = !c.earlier && !S.seenChanges.has(key) && S.seenChanges.size > 0
+  S.seenChanges.add(key)
+  const f = S.facts.get(c.fact_id)
+  const meta = [label, ago(c.at)]
+  if (c.detail) meta.push(c.detail)
+  const body = [h('div', { class: 'item-title' }, f ? f.content : c.text)]
+  if (c.kind === 'refined' && c.before) body.push(h('div', { class: 'item-meta' }, 'was: ', c.before))
+  if ((c.kind === 'replaced' || c.kind === 'merged') && c.other_id) body.push(h('div', { class: 'item-meta' }, c.kind === 'replaced' ? 'by ' : 'into ', ref(c.other_id)))
+  if (c.note) body.push(h('div', { class: 'item-meta' }, c.note))
+  body.push(h('div', { class: 'item-meta' }, meta.join(' · ')))
+  return h('button', { class: 'item' + (fresh ? ' fresh' : '') + (S.selected === c.fact_id ? ' sel' : ''), type: 'button',
+    onclick: () => select(c.fact_id, true) }, h('span', { class: 'badge', style: `background:${color}` }, icon), h('div', { class: 'item-body' }, body))
+}
+
+function factItem(f) {
+  return h('button', { class: 'item' + (f.is_active ? '' : ' retired') + (S.selected === f.id ? ' sel' : ''), type: 'button', onclick: () => select(f.id, true) },
+    h('span', { class: 'badge', style: `background:${colorOf(f.category)}` }, Math.round((f.importance ?? .5) * 10)),
+    h('div', { class: 'item-body' }, h('div', { class: 'item-title' }, f.content),
+      h('div', { class: 'item-meta' }, [f.category, `conf ${(f.confidence ?? 0).toFixed(2)}`, `seen ${ago(f.updated_at || f.created_at)}`,
+        f.is_private ? 'private' : null, f.expires_at ? `expires ${ago(f.expires_at)}` : null].filter(Boolean).join(' · '))))
+}
+
+function renderList() {
+  const list = $('list')
+  const top = list.scrollTop
+  let items = []
+  if (S.tab === 'changes') {
+    const changes = S.data.changes.filter(c => { const f = S.facts.get(c.fact_id); return !f || (!S.hiddenCats.has(f.category) && matches(f)) })
+    const live = changes.filter(c => !c.earlier), earlier = changes.filter(c => c.earlier)
+    if (live.length) items.push(h('div', { class: 'divider' }, 'Since you opened this'), ...live.map(changeItem))
+    else items.push(h('div', { class: 'empty' }, 'Watching for changes… anything Luna learns, confirms, refines, replaces or forgets shows up here instantly.'))
+    if (earlier.length) items.push(h('div', { class: 'divider' }, 'Earlier'), ...earlier.map(changeItem))
+  } else {
+    const facts = S.data.facts.filter(f => (S.showRetired || f.is_active) && !S.hiddenCats.has(f.category) && matches(f))
+      .sort((a, b) => (b.is_active - a.is_active) || ((b.importance ?? .5) - (a.importance ?? .5)) || String(b.updated_at).localeCompare(String(a.updated_at)))
+    items = facts.length ? facts.map(factItem) : [h('div', { class: 'empty' }, 'No memories match.')]
+  }
+  list.replaceChildren(...items)
+  list.scrollTop = top
+}
+
+function bar(label, v, color) {
+  return [h('span', null, label), h('div', { class: 'bar' }, h('i', { style: `width:${Math.round((v ?? 0) * 100)}%;background:${color}` })), h('span', null, (v ?? 0).toFixed(2))]
+}
+function renderDetail() {
+  const box = $('detail')
+  const f = S.selected != null && S.facts.get(S.selected)
+  if (!f) { box.classList.remove('show'); box.replaceChildren(); return }
+  const conv = f.source_conversation_id ? (S.data.conversations[f.source_conversation_id] || '') : ''
+  const replaces = S.data.facts.filter(o => o.superseded_by === f.id)
+  const rels = S.edges.filter(e => e.kind !== 'similar' && (e.a === f.id || e.b === f.id))
+  const similar = S.data.similar.filter(([a, b]) => a === f.id || b === f.id).sort((x, y) => x[2] - y[2])
+  const history = S.data.changes.filter(c => c.fact_id === f.id || c.other_id === f.id)
+  box.replaceChildren(...[
+    h('div', { class: 'detail-head' }, h('p', null, f.content), h('button', { type: 'button', title: 'Close', onclick: () => select(null) }, '×')),
+    h('div', { class: 'tags' },
+      h('span', { class: 'tag', style: `background:${colorOf(f.category)}22;color:${colorOf(f.category)}` }, f.category),
+      h('span', { class: 'tag' }, f.memory_type || 'long'), h('span', { class: 'tag' }, f.source || 'inferred'),
+      f.is_active ? null : h('span', { class: 'tag bad' }, f.superseded_by ? 'replaced' : 'inactive'),
+      f.is_private ? h('span', { class: 'tag' }, 'private') : null, h('span', { class: 'tag' }, '#' + f.id)),
+    h('div', { class: 'bars' }, bar('Importance', f.importance, '#c98a12'), bar('Confidence', f.confidence, colorOf(f.category))),
+    h('dl', { class: 'kv' },
+      h('dt', null, 'Learned'), h('dd', null, when(f.created_at)),
+      h('dt', null, 'Last confirmed'), h('dd', null, when(f.updated_at)),
+      h('dt', null, 'Expires'), h('dd', null, f.expires_at ? when(f.expires_at) : 'never'),
+      h('dt', null, 'From chat'), h('dd', null, f.source_conversation_id ? `${conv || 'Untitled'} (#${f.source_conversation_id})` : '—'),
+      f.superseded_by ? [h('dt', null, 'Replaced by'), h('dd', null, ref(f.superseded_by))] : null),
+    replaces.length ? [h('div', { class: 'subhead' }, 'Replaced / absorbed'), ...replaces.map(o => h('div', { class: 'item-meta' }, ref(o.id)))] : null,
+    rels.length ? [h('div', { class: 'subhead' }, 'Links'), ...rels.map(e => h('div', { class: 'item-meta' },
+      e.kind === 'replaced' ? (e.a === f.id ? 'replaced by ' : 'replaces ') : e.kind === 'merged' ? (e.a === f.id ? 'merged into ' : 'absorbed ') : 'related to ',
+      ref(e.a === f.id ? e.b : e.a), e.note ? ` — ${e.note}` : ''))] : null,
+    similar.length ? [h('div', { class: 'subhead' }, 'Similar meaning'), ...similar.map(([a, b, d]) => h('div', { class: 'item-meta' },
+      ref(a === f.id ? b : a), ` · ${Math.round((1 - d) * 100)}% similar`))] : null,
+    history.length ? [h('div', { class: 'subhead' }, 'History'), ...history.map(c => h('div', { class: 'item-meta' },
+      `${(KINDS[c.kind] || [, , c.kind])[2]} · ${ago(c.at)}${c.detail ? ' · ' + c.detail : ''}`))] : null,
+  ].flat().filter(Boolean))
+  box.classList.add('show')
+}
+
+function select(id, focus) {
+  S.selected = id
+  const n = id != null && S.nodes.get(id)
+  if (n && !n.f.is_active && !S.showRetired) { S.showRetired = true; $('show-retired').checked = true; store.set('retired', true); renderChips() }
+  if (n && S.hiddenCats.has(n.f.category)) { S.hiddenCats.delete(n.f.category); store.set('hidden', [...S.hiddenCats]); renderChips() }
+  if (n && focus) centerOn(n)
+  renderDetail(); renderList(); dirty = true
+}
+
+// ── Layout (small force simulation) ────────────────────────────────────────
+function radius(n) { return 5 + (n.f.importance ?? .5) * 12 }
+function step() {
+  const nodes = [...S.nodes.values()].filter(visible)
+  const a = S.alpha
+  for (let i = 0; i < nodes.length; i++) {
+    const p = nodes[i]
+    for (let j = i + 1; j < nodes.length; j++) {
+      const q = nodes[j]
+      let dx = q.x - p.x, dy = q.y - p.y, d2 = dx * dx + dy * dy
+      if (d2 < 1) { dx = Math.random() - .5; dy = Math.random() - .5; d2 = 1 }
+      const min = radius(p) + radius(q) + 6
+      const f = (1400 / d2 + (d2 < min * min ? 2 : 0)) * a
+      const d = Math.sqrt(d2), fx = dx / d * f, fy = dy / d * f
+      p.vx -= fx; p.vy -= fy; q.vx += fx; q.vy += fy
+    }
+  }
+  for (const e of S.edges) {
+    if (e.kind === 'similar' && !S.showSimilar) continue
+    const p = S.nodes.get(e.a), q = S.nodes.get(e.b)
+    if (!visible(p) || !visible(q)) continue
+    const rest = e.kind === 'similar' ? 50 + e.d * 240 : 70
+    const k = e.kind === 'similar' ? .03 * (1 - e.d) : .05
+    const dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy) || 1
+    const f = (d - rest) * k * a, fx = dx / d * f, fy = dy / d * f
+    p.vx += fx; p.vy += fy; q.vx -= fx; q.vy -= fy
+  }
+  for (const n of nodes) {
+    const t = anchorFor(n.f.category)
+    n.vx += (t.x - n.x) * .012 * a; n.vy += (t.y - n.y) * .012 * a
+    if (n === drag.node) { n.vx = n.vy = 0; continue }
+    n.vx *= .6; n.vy *= .6
+    n.x += Math.max(-30, Math.min(30, n.vx)); n.y += Math.max(-30, Math.min(30, n.vy))
+  }
+  S.alpha *= .985
+}
+
+// ── Drawing ────────────────────────────────────────────────────────────────
+const canvas = $('graph'), ctx = canvas.getContext('2d')
+let dirty = true, W = 0, H = 0, DPR = 1
+const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+function resize() {
+  const r = canvas.getBoundingClientRect()
+  DPR = window.devicePixelRatio || 1; W = r.width; H = r.height
+  canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR); dirty = true
+}
+new ResizeObserver(resize).observe(canvas)
+const toScreen = (x, y) => [(x - S.view.x) * S.view.k + W / 2, (y - S.view.y) * S.view.k + H / 2]
+const toWorld = (sx, sy) => [(sx - W / 2) / S.view.k + S.view.x, (sy - H / 2) / S.view.k + S.view.y]
+
+function arrow(x1, y1, x2, y2, r) {
+  const ang = Math.atan2(y2 - y1, x2 - x1), ex = x2 - Math.cos(ang) * (r + 2), ey = y2 - Math.sin(ang) * (r + 2)
+  ctx.beginPath(); ctx.moveTo(ex, ey)
+  ctx.lineTo(ex - Math.cos(ang - .45) * 8, ey - Math.sin(ang - .45) * 8)
+  ctx.lineTo(ex - Math.cos(ang + .45) * 8, ey - Math.sin(ang + .45) * 8); ctx.closePath(); ctx.fill()
+}
+
+function draw(now) {
+  const edgeC = css('--edge'), labelC = css('--label'), haloC = css('--halo'), faint = css('--faint'), ink = css('--ink')
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0)
+  ctx.clearRect(0, 0, W, H)
+  const k = S.view.k
+  const focus = S.selected ?? S.hover
+  const near = new Set()
+  if (focus != null) { near.add(focus); for (const e of S.edges) { if (e.a === focus) near.add(e.b); if (e.b === focus) near.add(e.a) } }
+
+  // category names, faint, behind everything
+  ctx.font = `700 ${Math.max(11, 15 * k)}px system-ui, sans-serif`; ctx.textAlign = 'center'
+  const present = new Set([...S.nodes.values()].filter(visible).map(n => n.f.category))
+  for (const c of present) {                    // just outside the cluster, so dots don't sit on it
+    const t = anchorFor(c), [sx, sy] = toScreen(t.x * 1.55, t.y * 1.6)
+    ctx.fillStyle = colorOf(c) + '55'; ctx.fillText(c.toUpperCase(), sx, sy)
+  }
+
+  for (const e of S.edges) {
+    if (e.kind === 'similar' && !S.showSimilar) continue
+    const p = S.nodes.get(e.a), q = S.nodes.get(e.b)
+    if (!visible(p) || !visible(q)) continue
+    const [x1, y1] = toScreen(p.x, p.y), [x2, y2] = toScreen(q.x, q.y)
+    const lit = focus != null && (e.a === focus || e.b === focus)
+    ctx.save()
+    if (e.kind === 'similar') { ctx.strokeStyle = lit ? faint : edgeC; ctx.lineWidth = lit ? 1.6 : 1; ctx.globalAlpha = lit ? 1 : Math.max(.35, 1 - e.d * 2) }
+    else if (e.kind === 'replaced') { ctx.strokeStyle = ctx.fillStyle = '#d64545'; ctx.setLineDash([5, 4]); ctx.lineWidth = lit ? 2.2 : 1.5 }
+    else if (e.kind === 'merged') { ctx.strokeStyle = ctx.fillStyle = '#1f9d63'; ctx.lineWidth = lit ? 2.2 : 1.5 }
+    else { ctx.strokeStyle = ctx.fillStyle = faint; ctx.lineWidth = 1.2 }
+    if (focus != null && !lit) ctx.globalAlpha *= .35
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke()
+    if (e.kind !== 'similar') { ctx.setLineDash([]); arrow(x1, y1, x2, y2, radius(q) * Math.sqrt(k)) }
+    ctx.restore()
+  }
+
+  const nodes = [...S.nodes.values()].filter(visible).sort((a, b) => (a.f.importance ?? .5) - (b.f.importance ?? .5))
+  let animating = false
+  for (const n of nodes) {
+    const f = n.f, [x, y] = toScreen(n.x, n.y), r = radius(n) * Math.sqrt(k)
+    const dim = (focus != null && !near.has(n.id)) || (S.search && !matches(f))
+    ctx.save(); ctx.globalAlpha = dim ? .3 : 1
+    const col = colorOf(f.category)
+    if (n.pulse) {
+      const t = (now - n.pulse) / 2400
+      if (t < 1) { animating = true; ctx.beginPath(); ctx.arc(x, y, r + 4 + t * 26, 0, Math.PI * 2); ctx.strokeStyle = col; ctx.globalAlpha = (1 - t) * (dim ? .2 : .9); ctx.lineWidth = 3; ctx.stroke(); ctx.globalAlpha = dim ? .3 : 1 }
+      else n.pulse = 0
+    }
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2)
+    if (f.is_active) {
+      ctx.fillStyle = col; ctx.globalAlpha *= .3 + .7 * (f.confidence ?? .5); ctx.fill(); ctx.globalAlpha = dim ? .3 : 1
+      ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.stroke()
+    } else {
+      ctx.setLineDash([3, 3]); ctx.strokeStyle = faint; ctx.lineWidth = 1.4; ctx.stroke(); ctx.setLineDash([])
+    }
+    if (f.is_private) { ctx.beginPath(); ctx.arc(x, y, r + 3.5, 0, Math.PI * 2); ctx.setLineDash([2, 3]); ctx.strokeStyle = ink; ctx.lineWidth = 1; ctx.stroke(); ctx.setLineDash([]) }
+    if (f.expires_at && f.is_active) {          // a thin arc that empties as expiry approaches (30-day window)
+      const left = Math.max(0, Math.min(1, (Date.parse(f.expires_at) - Date.now()) / (30 * 864e5)))
+      ctx.beginPath(); ctx.arc(x, y, r + 2, -Math.PI / 2, -Math.PI / 2 + left * Math.PI * 2); ctx.strokeStyle = '#c98a12'; ctx.lineWidth = 2; ctx.stroke()
+    }
+    if (S.selected === n.id) { ctx.beginPath(); ctx.arc(x, y, r + 5, 0, Math.PI * 2); ctx.strokeStyle = ink; ctx.lineWidth = 2.2; ctx.stroke() }
+    const showLabel = !dim && (S.selected === n.id || S.hover === n.id || (focus != null && near.has(n.id)) || k > 1.5 || (f.importance ?? .5) >= .75 || (S.search && matches(f)))
+    if (showLabel) {
+      const text = f.content.length > 42 && S.selected !== n.id && S.hover !== n.id ? f.content.slice(0, 40) + '…' : f.content
+      ctx.font = `${S.selected === n.id ? 650 : 500} 11.5px system-ui, sans-serif`; ctx.textAlign = 'center'
+      ctx.lineWidth = 4; ctx.strokeStyle = haloC; ctx.strokeText(text, x, y + r + 14)
+      ctx.fillStyle = f.is_active ? labelC : faint; ctx.fillText(text, x, y + r + 14)
+    }
+    ctx.restore()
+  }
+  return animating
+}
+
+function frame(now) {
+  let moving = false
+  if (S.alpha > .004) { step(); moving = true }
+  if (S.data && (dirty || moving || drag.node)) { const anim = draw(now); dirty = anim }
+  requestAnimationFrame(frame)
+}
+requestAnimationFrame(frame)
+
+// ── View controls ──────────────────────────────────────────────────────────
+function fit() {
+  const nodes = [...S.nodes.values()].filter(visible)
+  if (!nodes.length || !W) return
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity
+  for (const n of nodes) { x0 = Math.min(x0, n.x); y0 = Math.min(y0, n.y); x1 = Math.max(x1, n.x); y1 = Math.max(y1, n.y) }
+  S.view.x = (x0 + x1) / 2; S.view.y = (y0 + y1) / 2
+  S.view.k = Math.max(.25, Math.min(2.5, Math.min((W - 80) / (x1 - x0 + 1), (H - 80) / (y1 - y0 + 1))))
+  dirty = true
+}
+function centerOn(n) { S.view.x = n.x; S.view.y = n.y; if (S.view.k < 1) S.view.k = 1.1; dirty = true }
+
+function hit(sx, sy) {
+  const [wx, wy] = toWorld(sx, sy)
+  let best = null, bestD = Infinity
+  for (const n of S.nodes.values()) {
+    if (!visible(n)) continue
+    const d = Math.hypot(n.x - wx, n.y - wy), r = radius(n) * Math.sqrt(S.view.k) / S.view.k + 4 / S.view.k
+    if (d < r && d < bestD) { best = n; bestD = d }
+  }
+  return best
+}
+const drag = { node: null, pan: false, x: 0, y: 0, moved: false }
+canvas.addEventListener('pointerdown', e => {
+  const r = canvas.getBoundingClientRect(), sx = e.clientX - r.left, sy = e.clientY - r.top
+  drag.node = hit(sx, sy); drag.pan = !drag.node; drag.x = sx; drag.y = sy; drag.moved = false
+  canvas.setPointerCapture(e.pointerId); canvas.classList.add('dragging')
+})
+canvas.addEventListener('pointermove', e => {
+  const r = canvas.getBoundingClientRect(), sx = e.clientX - r.left, sy = e.clientY - r.top
+  if (drag.node || drag.pan) {
+    if (Math.hypot(sx - drag.x, sy - drag.y) > 3) drag.moved = true
+    if (drag.node && drag.moved) { const [wx, wy] = toWorld(sx, sy); drag.node.x = wx; drag.node.y = wy; S.alpha = Math.max(S.alpha, .15) }
+    if (drag.pan) { S.view.x -= (sx - drag.x) / S.view.k; S.view.y -= (sy - drag.y) / S.view.k; drag.x = sx; drag.y = sy }
+    dirty = true; return
+  }
+  const n = hit(sx, sy), id = n ? n.id : null
+  if (id !== S.hover) { S.hover = id; dirty = true }
+  const tip = $('tip')
+  if (n) {
+    tip.style.display = 'block'
+    tip.textContent = `${n.f.content}\n${n.f.category} · importance ${(n.f.importance ?? .5).toFixed(2)} · confidence ${(n.f.confidence ?? 0).toFixed(2)}`
+    tip.style.whiteSpace = 'pre-line'
+    tip.style.left = Math.min(sx + 14, W - 310) + 'px'; tip.style.top = (sy + 14) + 'px'
+  } else tip.style.display = 'none'
+})
+canvas.addEventListener('pointerup', e => {
+  const r = canvas.getBoundingClientRect(), sx = e.clientX - r.left, sy = e.clientY - r.top
+  if (!drag.moved) { const n = hit(sx, sy); select(n ? n.id : null) }
+  drag.node = null; drag.pan = false; canvas.classList.remove('dragging')
+})
+canvas.addEventListener('pointerleave', () => { if (S.hover != null) { S.hover = null; dirty = true } $('tip').style.display = 'none' })
+canvas.addEventListener('wheel', e => {
+  e.preventDefault()
+  const r = canvas.getBoundingClientRect(), sx = e.clientX - r.left, sy = e.clientY - r.top
+  const [wx, wy] = toWorld(sx, sy)
+  S.view.k = Math.max(.2, Math.min(4, S.view.k * Math.exp(-e.deltaY * .0015)))
+  S.view.x = wx - (sx - W / 2) / S.view.k; S.view.y = wy - (sy - H / 2) / S.view.k; dirty = true
+}, { passive: false })
+canvas.addEventListener('dblclick', fit)
+$('fit').onclick = fit
+$('shake').onclick = () => { for (const n of S.nodes.values()) { const t = anchorFor(n.f.category); n.x = t.x + (Math.random() - .5) * 120; n.y = t.y + (Math.random() - .5) * 120 } S.alpha = 1; setTimeout(fit, 1200) }
+$('show-retired').onchange = e => { S.showRetired = e.target.checked; store.set('retired', S.showRetired); S.alpha = Math.max(S.alpha, .3); renderChips(); renderList(); dirty = true }
+$('show-similar').onchange = e => { S.showSimilar = e.target.checked; store.set('similar', S.showSimilar); S.alpha = Math.max(S.alpha, .3); dirty = true }
+$('search').oninput = e => { S.search = e.target.value.trim().toLowerCase(); renderList(); dirty = true }
+for (const b of document.querySelectorAll('.tabs button')) b.onclick = () => {
+  S.tab = b.dataset.tab; for (const o of document.querySelectorAll('.tabs button')) o.classList.toggle('on', o === b); $('list').scrollTop = 0; renderList()
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') select(null); if (e.key === '/' && document.activeElement !== $('search')) { e.preventDefault(); $('search').focus() } })
+setInterval(() => { if (S.data) { renderList(); if (S.selected != null) renderDetail() } }, 15000)   // keep "x min ago" fresh
+
+// ── Live connection ────────────────────────────────────────────────────────
+function connect() {
+  const es = new EventSource('events')
+  es.onopen = () => setLive(true, 'Live')
+  es.onmessage = e => { setLive(true, 'Live'); apply(JSON.parse(e.data)) }
+  es.onerror = () => setLive(false, 'Reconnecting…')     // EventSource retries by itself
+}
+connect()
+</script>
+</body>
+</html>

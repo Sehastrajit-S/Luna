@@ -11,6 +11,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from sqlalchemy.orm import Session
 
 from server.models.database import Conversation, Message
+from server.services.conversations import saved_conversation_ids
 
 # messages/day → level 0–4 (same scale GitHub-style heatmaps use)
 LEVEL_THRESHOLDS = (1, 3, 8, 16)
@@ -44,6 +45,7 @@ def month_activity(db: Session, year: int, month: int) -> dict:
     rows = (
         db.query(Message.conversation_id, Message.created_at, Message.content)
         .filter(Message.role == "user", Message.created_at >= start, Message.created_at < end)
+        .filter(Message.conversation_id.in_(saved_conversation_ids(db)))   # not temporary chats
         .all()
     )
     counts: Counter = Counter()
@@ -103,6 +105,7 @@ def current_streak(db: Session, today: date | None = None) -> int:
     active = {
         _local_date(created)
         for (created,) in db.query(Message.created_at).filter(Message.role == "user", Message.created_at >= start)
+        .filter(Message.conversation_id.in_(saved_conversation_ids(db)))
     }
     day = today if today in active else today - timedelta(days=1)
     streak = 0

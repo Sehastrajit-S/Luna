@@ -1,10 +1,24 @@
 """Tool call execution dispatcher."""
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 from datetime import datetime
 from sqlalchemy.orm import Session
+
+
+def _read_project_file(args: dict) -> str:
+    """A project file for the model, or a clear reason it couldn't be read."""
+    from server.services.projects import ProjectError, read_project_file
+    try:
+        found = read_project_file(args.get("file") or args.get("path") or "", args.get("project") or None)
+    except ProjectError as e:
+        return f"failed: {e.message}"
+    except OSError as e:
+        return f"failed: couldn't read it ({e.strerror or e})."
+    note = " (first 20,000 characters)" if found["truncated"] else ""
+    return f"File {found['path']} in project {found['project']}{note}:\n\n{found['content'][:6000]}"
 
 
 async def execute_tool_call(tc: dict, db: Session, conversation_id: int) -> str:
@@ -12,7 +26,7 @@ async def execute_tool_call(tc: dict, db: Session, conversation_id: int) -> str:
     tool_name = tc.get("tool", "")
     args = tc.get("args", {})
 
-    from server.services.app_launcher import launch_app, close_app, list_known_apps
+    from server.services.app_launcher import launch_app, close_app, list_known_apps, list_open_apps
     from server.services.spotify import spotify_service
     from server.services.screen_perception import execute_screen_tool
     from server.models.database import Task, CalendarEvent
@@ -20,11 +34,101 @@ async def execute_tool_call(tc: dict, db: Session, conversation_id: int) -> str:
     try:
         if tool_name == "launch_app":
             success, msg = launch_app(args.get("app", ""))
-            return "opened successfully" if success else f"failed: {msg}"
+            if not success:
+                return f"failed: {msg}"
+            # Starting isn't proof: look for its window before saying it's open.
+            from server.services.app_launcher import find_app
+            from server.services.verification import verify_app_window
+            _found, target = find_app(args.get("app", ""))
+            evidence = await asyncio.to_thread(verify_app_window, args.get("app", ""), target)
+            if evidence.verified:
+                return f"opened successfully. Verified: a '{evidence.window['title']}' window is open."
+            return ("asked Windows to open it, but no window for it appeared within 6 seconds. "
+                    "It may still be starting, or it failed silently. Don't say it's open; say it was started "
+                    "and may need a moment, or ask the user to check.")
 
         elif tool_name == "close_app":
             success, msg = close_app(args.get("app", ""))
             return "closed successfully" if success else f"failed: {msg}"
+
+        elif tool_name == "open_website":
+            from server.services.audit_log import record_audit
+            from server.services.browser_open import describe, open_website, remember_question, request_for
+            request = request_for(args.get("site", ""), args.get("browser", ""), args.get("profile", ""))
+            if request is None:
+                return "failed: say which site or URL to open."
+            result = await asyncio.to_thread(open_website, request)
+            record_audit("tool_call", tool=tool_name, args=args, result=describe(result)[:300],
+                         status="error" if result["error"] else "ok", conversation_id=conversation_id)
+            if result.get("question"):
+                remember_question(conversation_id, request, result)
+                return ("Nothing opened yet: ask the user this, word for word, and wait for their answer "
+                        "(their reply opens it):\n" + describe(result))
+            return ("failed: " if result["error"] else "") + describe(result)
+
+        elif tool_name == "message_contact":
+            from server.services.audit_log import record_audit
+            from server.services.messaging import MessageError, describe as describe_send, send_whatsapp
+            app = (args.get("app") or "whatsapp").lower().replace(" ", "")
+            if app != "whatsapp":
+                return f"failed: I can only send WhatsApp messages from this computer so far, not {app}."
+            audit_args = {"to": args.get("to", ""), "text": str(args.get("text", ""))[:200], "app": "whatsapp"}
+            try:
+                sent = await asyncio.to_thread(send_whatsapp, args.get("to", ""), args.get("text", ""))
+            except MessageError as e:
+                record_audit("message_contact", tool=tool_name, args=audit_args, result=e.message, risk="risky",
+                             status=f"stopped:{e.kind}", conversation_id=conversation_id)
+                shot = f" Screenshot: {e.screenshot}" if e.screenshot else ""
+                return f"failed: {e.message}{shot} Tell the user exactly this; don't say it was sent."
+            record_audit("message_contact", tool=tool_name, args=audit_args, result=describe_send(sent)[:300],
+                         risk="risky", conversation_id=conversation_id)
+            from server.services.messaging import remember_contact
+            remember_contact(conversation_id, args.get("to", ""))   # "send him …" next means this person
+            return describe_send(sent)
+
+        elif tool_name == "open_chat":
+            from server.services.audit_log import record_audit
+            from server.services.messaging import MessageError, describe_open, open_whatsapp_chat
+            audit_args = {"to": args.get("to", ""), "app": "whatsapp"}
+            try:
+                opened = await asyncio.to_thread(open_whatsapp_chat, args.get("to", ""))
+            except MessageError as e:
+                record_audit("open_chat", tool=tool_name, args=audit_args, result=e.message,
+                             status=f"stopped:{e.kind}", conversation_id=conversation_id)
+                return f"failed: {e.message} Tell the user exactly this; don't say it opened."
+            record_audit("open_chat", tool=tool_name, args=audit_args, result=describe_open(opened)[:300],
+                         conversation_id=conversation_id)
+            return describe_open(opened)
+
+        elif tool_name == "read_website":
+            from server.services.audit_log import record_audit
+            from server.services.site_reader import plan_read, read_site
+            plan = plan_read(args)
+            if "error" in plan:
+                return f"failed: {plan['error']}"
+            read = await asyncio.to_thread(read_site, **plan["read"])
+            data = read.as_tool_result(plan.get("limit"), plan.get("max_age"))
+            record_audit("tool_call", tool=tool_name, args=args,
+                         result=f"{len(read.posts)} posts, {read.screens} screens, {read.stopped_because or read.error}"[:300],
+                         status="error" if read.error else "ok", conversation_id=conversation_id)
+            return json.dumps(data, ensure_ascii=False)[:9000]
+
+        elif tool_name == "brief_messages":
+            from server.services.audit_log import record_audit
+            from server.services import messages_brief
+            wanted = [s for s in (args.get("sources") or []) if s in ("whatsapp", "gmail", "outlook")]
+            briefs = await messages_brief.brief(wanted or ["whatsapp", "gmail", "outlook"])
+            text = messages_brief.describe(briefs)
+            record_audit("tool_call", tool=tool_name, args=args,
+                         result="; ".join(f"{b.source}: {'ok' if b.ok else b.note[:60]} ({len(b.items)})" for b in briefs),
+                         conversation_id=conversation_id)
+            return text
+
+        elif tool_name == "list_open_apps":
+            apps = list_open_apps()
+            if not apps:
+                return "No apps have an open window right now."
+            return json.dumps({"open_apps": apps[:40], "count": len(apps)})
 
         elif tool_name == "list_apps":
             apps = list_known_apps()
@@ -186,9 +290,56 @@ async def execute_tool_call(tc: dict, db: Session, conversation_id: int) -> str:
         elif tool_name == "workspace_read":
             from server.services.audit_log import record_audit
             from server.services.workspace import read_workspace_file
-            content = read_workspace_file(args.get("path", ""))
+            path = args.get("path", "")
+            try:
+                content = read_workspace_file(path)
+            except FileNotFoundError:
+                # Not in Luna's own workspace: it may be a file in one of the user's projects.
+                result = _read_project_file({"file": path})
+                record_audit("tool_call", tool=tool_name, args=args, result=result[:200], conversation_id=conversation_id)
+                return result
             record_audit("tool_call", tool=tool_name, args=args, result=f"{len(content)} chars", conversation_id=conversation_id)
             return content[:4000]
+
+        elif tool_name == "project_read_file":
+            from server.services.audit_log import record_audit
+            result = _read_project_file(args)
+            record_audit("tool_call", tool=tool_name, args=args, result=result[:200], conversation_id=conversation_id)
+            return result
+
+        elif tool_name == "claude_code":
+            from server.services.audit_log import record_audit
+            from server.services.projects import ProjectError, open_claude_code
+            try:
+                opened = await asyncio.to_thread(open_claude_code, args.get("task", ""), args.get("project") or None)
+            except ProjectError as e:
+                record_audit("claude_code", tool=tool_name, args=args, result=e.message, risk="risky", status="error",
+                             conversation_id=conversation_id)
+                return f"failed: {e.message}"
+            evidence = opened["evidence"]
+            record_audit("claude_code", tool=tool_name, args={**args, "project": opened["project"]},
+                         result=f"{opened['path']} | {evidence.summary()[:300]}", risk="risky",
+                         status="ok" if evidence.verified else "unverified", conversation_id=conversation_id)
+            if not evidence.verified:
+                return (f"Asked to open Claude Code in {opened['project']} ({opened['path']}), but couldn't confirm it "
+                        f"started. Checks: {evidence.summary()} Tell the user it may not have opened.")
+            return (f"Opened Claude Code in a new terminal window in {opened['project']} ({opened['path']}) with the task. "
+                    f"Verified — {evidence.summary()}\n"
+                    "It will ask the user in that window before changing files. Report only what the checks show; "
+                    "for later progress use check_claude_code.")
+
+        elif tool_name == "check_claude_code":
+            from server.services.audit_log import record_audit
+            from server.services.projects import ProjectError, check_claude_code
+            try:
+                status = await asyncio.to_thread(check_claude_code, args.get("project") or None)
+            except ProjectError as e:
+                return f"failed: {e.message}"
+            evidence = status["evidence"]
+            record_audit("tool_call", tool=tool_name, args=args, result=evidence.summary()[:300], conversation_id=conversation_id)
+            if not status["running"]:
+                return f"No Claude Code session is running in {status['project']} ({status['path']}). It finished or was closed."
+            return f"Claude Code is running in {status['project']}. {evidence.summary()}"
 
         elif tool_name == "workspace_read_base64":
             from server.services.audit_log import record_audit

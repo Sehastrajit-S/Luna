@@ -25,6 +25,12 @@ class RegistryToolTests(unittest.TestCase):
 
         covered = {
             "launch_app", "close_app", "list_apps",
+            "list_open_apps",  # test_app_resolution.py
+            "open_website",  # test_browser_open.py
+            "message_contact", "open_chat",  # test_messaging.py
+            "read_website",  # test_site_reader.py
+            "brief_messages",  # test_messages_brief.py
+            "project_read_file", "claude_code", "check_claude_code",  # test_projects.py
             "spotify_play", "spotify_pause", "spotify_next", "spotify_prev", "spotify_queue",
             "switch_audio",
             "create_task", "create_event",

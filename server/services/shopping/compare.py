@@ -242,30 +242,70 @@ def _cards(result: dict) -> list[dict]:
         if r.get("url") and r.get("image")]
 
 
-def render_markdown(result: dict) -> str:
-    """A complete answer built only from the listings: used when the user picks
-    Compare store prices from the + menu, so no model can misquote a price."""
-    from server.services.skill_runtime.runner import embed_cards
+PRICES_MARKER = "luna-prices"
+_SAFE_IMAGE = re.compile(r"^https://[^\s\"'<>]+$", re.I)
 
+
+def price_block(result: dict, image: str = "") -> dict:
+    """The comparison as data for rich clients: product photo, then one row per
+    store (icon, price, link), cheapest first, stores without a price last."""
+    order = {"found": 0, "price_hidden": 1}
+    # Stores with nothing to show (no match, not checked) are left out.
+    rows = sorted((r for r in result["stores"] if r["status"] in order),
+                  key=lambda r: (order[r["status"]], r.get("price") or 0))
+    cheapest = (result.get("cheapest") or {}).get("store")
+    if not _SAFE_IMAGE.match(image or ""):         # no (usable) photo from the scan: the cheapest listing's
+        image = next((r["image"] for r in rows if r["status"] == "found" and _SAFE_IMAGE.match(r.get("image") or "")), "")
+    return {
+        "product": result["product"],
+        "image": image,
+        "cheapest": cheapest,
+        "rows": [{
+            "store": r["store"], "status": r["status"],
+            "icon": r.get("icon") if ICON_HOSTS.match(r.get("icon") or "") else "",
+            "price": r.get("price"), "price_text": r.get("price_text") or "",
+            "title": r.get("title") or "", "url": r.get("url") or "",
+            "same_size": r.get("same_size", True),
+            "why": "" if r["status"] == "found" else _SHORT_STATUS.get(r["status"], "Not checked"),
+        } for r in rows],
+        "location": result.get("location", ""),
+        "note": result["note"],
+    }
+
+
+_SHORT_STATUS = {
+    "not_found": "Not found",
+    "price_hidden": "See price on site",
+    "not_searched": "Not checked",
+}
+
+
+def embed_prices(answer: str, block: dict) -> str:
+    payload = json.dumps(block, ensure_ascii=True, separators=(",", ":")).replace("--", "-\\u002d")
+    return f"{answer}\n\n<!--{PRICES_MARKER}:{payload}-->"
+
+
+def render_markdown(result: dict, image: str = "") -> str:
+    """A complete answer built only from the listings: used when the user picks
+    Compare store prices from the + menu (or scans a barcode), so no model can
+    misquote a price. The text is a short list for plain clients; the app draws
+    the embedded block instead: product photo, store icons and prices."""
     priced = sorted((r for r in result["stores"] if r["status"] == "found"), key=lambda r: r["price"])
     hidden = [r for r in result["stores"] if r["status"] == "price_hidden"]
-    missing = [r for r in result["stores"] if r["status"] not in ("found", "price_hidden")]
     if not priced and not hidden:
-        lines = [f"I couldn't find **{_cell(result['product'])}** at any of these stores on Google Shopping."]
+        lines = [f"I couldn't find **{_cell(result['product'])}** at any of these stores."]
     else:
         if priced:
             best = next((r for r in priced if r["store"] == (result.get("cheapest") or {}).get("store")), priced[0])
             lead = f"**{_cell(result['product'])}** is cheapest at **{best['store']}** ({best['price_text']})."
         else:
             lead = f"I found **{_cell(result['product'])}** at these stores, but their pages don't show a price here."
-        lines = [lead, "", "| Store | Item | Price |", "|---|---|---|"]
-        lines += [f"| {_store_cell(r)} | {_cell(r['title'])}{'' if r.get('same_size', True) else ' (different size)'} | {_cell(r['price_text'])} |"
-                  for r in priced]
-        lines += [f"| {_store_cell(r)} | {_cell(r['title'])} | [See price]({r['url']}) |" for r in hidden]
-    if missing:
-        lines += ["", "Not priced: " + "; ".join(f"{r['store']} ({_STATUS_TEXT.get(r['status'], r['status'])})" for r in missing) + "."]
+        lines = [lead, ""]
+        lines += [f"- **{r['store']}**: {r['price_text']} ({_cell(r['title'])}"
+                  f"{'' if r.get('same_size', True) else ', different size'})" for r in priced]
+        lines += [f"- **{r['store']}**: [see price]({r['url']})" for r in hidden]
     lines += ["", f"_{result['note']}_"]
-    return embed_cards("\n".join(lines), _cards(result))
+    return embed_prices("\n".join(lines), price_block(result, image))
 
 
 def format_for_chat(result: dict) -> str:

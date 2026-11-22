@@ -59,6 +59,17 @@ def _quote_is_grounded(quote: str, conversation_text: str, min_ratio: float = 0.
     return (match.size / len(quote)) >= min_ratio
 
 
+def _importance(value) -> Optional[float]:
+    """The model's importance score, clamped to 0–1; None (category default) when missing or junk."""
+    try:
+        score = float(value)
+    except (TypeError, ValueError):
+        return None
+    if score != score:                              # NaN
+        return None
+    return min(1.0, max(0.0, score))
+
+
 def _should_trigger_extraction(message: str) -> bool:
     """Return True when the message likely contains new/corrected personal info."""
     return (
@@ -139,12 +150,18 @@ NEVER extract:
 For "persistent" and "short" facts, include "expires_in_days": <number>.
 For "long" facts, omit expires_in_days.
 
+Importance — how much it would matter if Luna forgot it, from 0.0 to 1.0:
+- 0.9–1.0: identity and safety — name, partner, children, allergies, medical conditions
+- 0.7–0.8: core life facts — job, home city, close family and friends, pets, major goals
+- 0.4–0.6: preferences, hobbies, habits, ongoing projects
+- 0.1–0.3: minor or passing details — a show they're watching, a one-off opinion
+
 Every fact MUST include a "quote" field: the exact substring from the conversation
 below that directly supports it. If you cannot point to actual words that support
 a fact, do not include that fact — this is how you avoid inventing things that
 were never said.
 
-Fact format: {"category": "personal", "content": "User's name is Alex", "quote": "my name is Alex", "confidence": 0.95, "memory_type": "long"}
+Fact format: {"category": "personal", "content": "User's name is Alex", "quote": "my name is Alex", "confidence": 0.95, "importance": 0.95, "memory_type": "long"}
 
 --- CALENDAR & TASK ACTIONS ---
 If the user mentions a SPECIFIC upcoming appointment or meeting with an explicit date AND time,
@@ -270,6 +287,7 @@ async def extract_facts_from_conversation(
             if len(content) > 10:
                 await memory.store_fact(
                     content, category, conversation_id, confidence,
+                    importance=_importance(item.get("importance")),
                     memory_type=memory_type,
                     expires_in_days=expires_in_days,
                 )

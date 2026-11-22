@@ -5,6 +5,7 @@ If a direct command is detected (Spotify, app launch, Gmail, research,
 dataset), it is executed immediately and ctx.dispatched is set to True, skipping
 the LLM generation stage.
 """
+import asyncio
 import json
 import logging
 import re
@@ -81,6 +82,47 @@ async def dispatch_direct_commands(ctx: ChatContext) -> None:
     history = getattr(ctx, "history", None) or []
     has_files = bool(ctx.attachment_ids)
 
+    # ── "Scan this and …" with a photo (voice-only mode) / "submit it" after a fill ──
+    # Before the multi-step check: "scan this then fill the form" is one scan task.
+    from server.services import scan_tasks
+    conv_id = getattr(ctx.conv, "id", None)
+    submit_title = scan_tasks.wants_submit(conv_id, msg)
+    if submit_title:
+        ctx.dispatched = True
+        ctx.direct_command_type = "submit_form"
+        ctx.had_tool_call = True
+        from server.services import form_filler
+        from server.services.audit_log import record_audit
+        try:
+            ctx.full_response = await asyncio.to_thread(form_filler.submit_form, submit_title)
+            ctx.tool_succeeded = True
+        except form_filler.FormError as e:
+            ctx.full_response, ctx.tool_succeeded = e.message, False
+        record_audit("submit_form", tool="submit_form", args={"form": submit_title}, result=ctx.full_response[:300],
+                     risk="risky", status="ok" if ctx.tool_succeeded else "error", conversation_id=conv_id)
+        ctx.full_response_parts = [ctx.full_response]
+        return
+    if has_files and scan_tasks.is_scan_request(msg):
+        data = scan_tasks.image_bytes(ctx.db, ctx.attachment_ids)
+        if data:
+            outcome = await scan_tasks.handle(ctx.db, conv_id, msg, data)
+            if outcome.reply:
+                ctx.dispatched = True
+                ctx.direct_command_type = "scan"
+                ctx.had_tool_call = True
+                ctx.full_response = outcome.reply
+                ctx.tool_succeeded = True
+                ctx.full_response_parts = [ctx.full_response]
+                return
+            if outcome.rewrite:
+                # The photo has done its job (it named the product); carry on as a typed request.
+                msg = outcome.rewrite
+                ctx.user_message = msg
+                if getattr(ctx, "messages", None):
+                    ctx.messages[-1] = {**ctx.messages[-1], "content": msg}
+                ctx.attachment_ids = []
+                has_files = False
+
     # ── "I'll upload it, then …" — the file isn't here yet ────────────────────
     # Answering now would mean answering about a file that doesn't exist.
     if _UPLOAD_LATER_RE.search(msg) and not has_files:
@@ -110,10 +152,16 @@ async def dispatch_direct_commands(ctx: ChatContext) -> None:
         ctx.dispatched = True
         ctx.direct_command_type = "skill:store-prices"
         ctx.had_tool_call = True
+        from server.services.shopping.barcode import BarcodeError, product_for_query, recent_image
         try:
-            ctx.full_response = render_markdown(await compare_store_prices(request))
+            # A bare UPC/EAN ("049000028911") is looked up and compared by name.
+            product, scanned = await product_for_query(request)
+            image = scanned.image if scanned else recent_image(product)   # the scanned product's photo
+            ctx.full_response = render_markdown(await compare_store_prices(product), image)
+            if scanned:
+                ctx.full_response = f"Barcode {scanned.code}: **{scanned.name}**\n\n{ctx.full_response}"
             ctx.tool_succeeded = True
-        except ShoppingError as e:
+        except (ShoppingError, BarcodeError) as e:
             ctx.full_response = e.message
             ctx.tool_succeeded = False
         ctx.full_response_parts = [ctx.full_response]
@@ -141,6 +189,90 @@ async def dispatch_direct_commands(ctx: ChatContext) -> None:
             stories = await news_feed.get_category(news_category, limit=12)
             ctx.tool_succeeded = bool(stories)
             ctx.full_response = news_feed.render_answer(news_category, stories)
+            ctx.full_response_parts = [ctx.full_response]
+            return
+
+    # ── Website in a browser ("open my gmail in chrome", "search OpenAI in it") ──
+    # Before app launch: plain chrome.exe stops at Chrome's profile picker. Before
+    # web search: "search X on LinkedIn" means LinkedIn's own search, not the web's.
+    if not ctx.is_business and forced is None:
+        from server.services import browser_open
+        from server.services.news_feed import embed_suggestions
+        conv_id = getattr(ctx.conv, "id", None)
+        # "any new messages?", "who emailed me?": who wrote, per platform, without opening anything.
+        from server.services import messages_brief
+        sources = messages_brief.parse_brief_request(msg)
+        if sources:
+            ctx.dispatched = True
+            ctx.direct_command_type = "brief_messages"
+            ctx.had_tool_call = True
+            briefs = await messages_brief.brief(sources)
+            ctx.full_response = messages_brief.describe(briefs)
+            ctx.tool_succeeded = any(b.ok for b in briefs)
+            ctx.full_response_parts = [ctx.full_response]
+            return
+        from server.services import messaging
+        # "send Arjun hi on WhatsApp": ask for approval straight away (the model sometimes
+        # didn't call the tool, or took half a minute to), then send with the on-screen checks.
+        wanted = messaging.parse_send_request(msg) or messaging.parse_follow_up_send(conv_id, msg)
+        if wanted:
+            ctx.dispatched = True
+            ctx.direct_command_type = "message_contact"
+            ctx.had_tool_call = True
+            ctx.full_response = await _send_with_approval(ctx, *wanted)
+            ctx.tool_succeeded = ctx.full_response.startswith("Sent")
+            ctx.full_response_parts = [ctx.full_response]
+            return
+        # "open Meera's chat": open that WhatsApp chat (typing nothing into it).
+        contact = messaging.parse_open_chat(msg)
+        if contact:
+            ctx.dispatched = True
+            ctx.direct_command_type = "open_chat"
+            ctx.had_tool_call = True
+            try:
+                opened = await asyncio.to_thread(messaging.open_whatsapp_chat, contact)
+                ctx.full_response = messaging.describe_open(opened)
+                ctx.tool_succeeded = True
+            except messaging.MessageError as e:
+                ctx.full_response = e.message
+                ctx.tool_succeeded = False
+            ctx.full_response_parts = [ctx.full_response]
+            return
+        # "find 10 internship posts on linkedin from the last 20 mins": read the site in the user's browser.
+        from server.services import site_reader
+        ask = site_reader.parse_read_request(msg)
+        if ask and not browser_open.answer_pending(conv_id, msg):
+            ctx.dispatched = True
+            ctx.direct_command_type = "read_website"
+            ctx.had_tool_call = True
+            plan = site_reader.plan_read(ask)
+            if "error" in plan:
+                ctx.full_response = plan["error"]
+            else:
+                read = await asyncio.to_thread(site_reader.read_site, **plan["read"])
+                ctx.full_response = site_reader.describe_read(read, ask)
+                ctx.tool_succeeded = not read.error
+                key = browser_open.resolve_site(ask["site"])
+                if key and not read.error:
+                    browser_open.remember_site(conv_id, browser_open.WebRequest(
+                        url=read.url, site=ask["site"], title_hint=key, browser="", profile="", key=key, query=ask["query"]))
+            ctx.full_response_parts = [ctx.full_response]
+            return
+        # An answer to "which profile?" ("2", "the games one", a button) reopens the waiting request.
+        web = (browser_open.answer_pending(conv_id, msg) or browser_open.parse_site_search(msg, conv_id)
+               or browser_open.parse_web_open(msg))
+        if web:
+            ctx.dispatched = True
+            ctx.direct_command_type = "open_website"
+            ctx.had_tool_call = True
+            result = await asyncio.to_thread(browser_open.open_website, web)
+            ctx.full_response = browser_open.describe(result)
+            if result.get("question"):
+                browser_open.remember_question(conv_id, web, result)
+                ctx.full_response = embed_suggestions(ctx.full_response, browser_open.choice_buttons(result))
+            elif not result["error"]:
+                browser_open.remember_site(conv_id, web, result.get("profile_key"))
+            ctx.tool_succeeded = not result["error"]
             ctx.full_response_parts = [ctx.full_response]
             return
 
@@ -245,9 +377,18 @@ async def dispatch_direct_commands(ctx: ChatContext) -> None:
         if direct_launch_app:
             ctx.dispatched = True
             ctx.direct_command_type = "launch"
-            from server.services.app_launcher import launch_app
+            from server.services.app_launcher import find_app, launch_app
+            from server.services.verification import verify_app_window
             success, launch_message = launch_app(direct_launch_app)
-            ctx.full_response = f"Opening {direct_launch_app}." if success else launch_message
+            if success:
+                # Say it's open only once its window shows up.
+                _found, target = find_app(direct_launch_app)
+                evidence = await asyncio.to_thread(verify_app_window, direct_launch_app, target)
+                ctx.full_response = (f"Opened {direct_launch_app}. Checked: “{evidence.window['title']}” is open."
+                                     if evidence.verified else
+                                     f"Started {direct_launch_app}, but no window has appeared yet. It may still be loading.")
+            else:
+                ctx.full_response = launch_message
             ctx.tool_succeeded = success
             ctx.full_response_parts = [ctx.full_response]
             return
@@ -300,6 +441,28 @@ _OWN_REQUEST_RE = re.compile(
     r"what\s+(?:is|does|are)|how\s+(?:do|does|can))\b",
     re.IGNORECASE,
 )
+
+
+async def _send_with_approval(ctx: ChatContext, to: str, text: str) -> str:
+    """Ask the user to approve the exact WhatsApp message, then send it (message_contact)."""
+    from server.services.chat_pipeline.stage_tools import _wait_for_confirmation
+    from server.services.permission_manager import permission_manager
+
+    args = {"to": to, "text": text, "app": "whatsapp"}
+    decision, message, confirm_id = permission_manager.check("message_contact", args)
+    if decision == "block":
+        return message or "Sending messages is turned off."
+    if decision == "confirm":
+        ctx.emit_sse({"type": "confirmation_required", "confirm_id": confirm_id, "message": message,
+                      "tool": "message_contact", "args": args})
+        approved = await _wait_for_confirmation(confirm_id, timeout_seconds=settings.agent_confirm_timeout_s)
+        ctx.emit_sse({"type": "confirmation_resolved", "confirm_id": confirm_id, "approved": approved})
+        if not approved:
+            return f"Okay, I didn't send anything to {to}."
+    result = await execute_tool_call({"tool": "message_contact", "args": args}, ctx.db, ctx.conv.id)
+    if result.startswith("failed: "):
+        return result[len("failed: "):].split(" Tell the user exactly this")[0]
+    return result
 
 
 def wait_for_upload_reply(msg: str) -> str:

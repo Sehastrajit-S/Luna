@@ -80,6 +80,31 @@ def ocr_image(image) -> OcrResult:
     return _to_text(result)
 
 
+@dataclass
+class OcrBox:
+    text: str
+    left: float
+    top: float
+    right: float
+    bottom: float
+    score: float
+
+
+def ocr_boxes(image) -> list[OcrBox]:
+    """Each piece of text found, with where it is (pixels). For checking a region of a window."""
+    engine = _get_engine()
+    if hasattr(image, "convert"):
+        import numpy as np
+        image = np.asarray(image.convert("RGB"))
+    result, _ = engine(image)
+    boxes = []
+    for box, text, score in result or []:
+        if text and float(score) >= MIN_CONFIDENCE:
+            xs, ys = [p[0] for p in box], [p[1] for p in box]
+            boxes.append(OcrBox(text.strip(), min(xs), min(ys), max(xs), max(ys), float(score)))
+    return boxes
+
+
 def render_pdf_page(data: bytes, page_index: int, dpi: int = RENDER_DPI):
     """Render one PDF page to a PIL image."""
     try:

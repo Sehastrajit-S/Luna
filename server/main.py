@@ -22,6 +22,10 @@ from server.routers.remote import router as remote_router
 from server.routers.library import router as library_router
 from server.routers.meetings import router as meetings_router
 from server.routers.news import router as news_router
+from server.routers.shopping import router as shopping_router
+from server.routers.budget import router as budget_router
+from server.routers.tasks import router as tasks_router
+from server.routers.notes import router as notes_router
 from server.middleware.rate_limit import RateLimitMiddleware
 from server.middleware.logging_middleware import RequestIDMiddleware
 from server.core.logging import configure_logging
@@ -39,6 +43,10 @@ async def lifespan(app: FastAPI):
     # Init DB (creates all tables including Activity)
     Base.metadata.create_all(bind=engine)
     init_db()
+    # Temporary chats don't survive a restart.
+    from server.services.conversations import purge_temporary
+    with SessionLocal() as _db:
+        purge_temporary(_db)
     # Local access token for settings writes (read by the desktop app's main process).
     from server.services.settings_store import local_api_token
     local_api_token()
@@ -143,6 +151,10 @@ app.include_router(remote_router)
 app.include_router(library_router)
 app.include_router(meetings_router)
 app.include_router(news_router)
+app.include_router(shopping_router)
+app.include_router(budget_router)
+app.include_router(tasks_router)
+app.include_router(notes_router)
 
 # Serve Office Add-in static files at /addin/office/
 office_addin_dir = Path(__file__).parent.parent / "interfaces" / "office"

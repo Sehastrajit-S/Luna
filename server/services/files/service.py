@@ -145,7 +145,7 @@ async def _vision_describe(model: str, png: bytes) -> str:
         return r.json().get("response", "").strip()
 
 
-async def _describe_image(data: bytes, ext: str) -> ExtractedFile:
+async def _describe_image(data: bytes, ext: str, describe: bool = True) -> ExtractedFile:
     """Image → exact text via OCR + a description from the vision model."""
     from server.services.files.ocr import OcrUnavailable, ocr_image
 
@@ -168,8 +168,10 @@ async def _describe_image(data: bytes, ext: str) -> ExtractedFile:
     except Exception as e:
         logger.warning("Image OCR failed: %s", e)
 
-    model = await pick_vision_model()
-    if model is None:
+    model = await pick_vision_model() if describe else None
+    if not describe:
+        pass
+    elif model is None:
         out.warnings.append("No vision model is installed, so only the text in the image could be read. "
                             f"Run `ollama pull {settings.vision_model}` for full image understanding.")
     else:
@@ -189,7 +191,8 @@ async def _describe_image(data: bytes, ext: str) -> ExtractedFile:
 
 # ── Upload ───────────────────────────────────────────────────────────────────
 
-async def save_upload(db: Session, filename: str, data: bytes, conversation_id: int | None = None) -> Attachment:
+async def save_upload(db: Session, filename: str, data: bytes, conversation_id: int | None = None,
+                      describe: bool = True) -> Attachment:
     """Store and extract an upload. Raises UnsupportedFile with a user-facing reason."""
     filename = Path(filename or "file").name[:200] or "file"
     ext = check_supported(filename)
@@ -199,7 +202,7 @@ async def save_upload(db: Session, filename: str, data: bytes, conversation_id: 
         raise UnsupportedFile(f"Files can be up to {MAX_UPLOAD_BYTES // (1024 * 1024)} MB.")
 
     if ext in IMAGE_EXT:
-        doc = await _describe_image(data, ext)
+        doc = await _describe_image(data, ext, describe)
     else:
         doc = await asyncio.to_thread(extract_file, data, filename)
 

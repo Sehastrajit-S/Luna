@@ -50,7 +50,9 @@ async def run_pipeline(ctx: ChatContext, background_tasks: BackgroundTasks) -> A
             yield _sse({"type": "proactive", "message": ctx.proactive_message})
 
         # ── Stage 3: Dispatch direct commands ─────────────────────────────────
-        await dispatch_direct_commands(ctx)
+        # Streamed live: a shortcut can ask for approval and wait for the answer.
+        async for event in _live(ctx, dispatch_direct_commands(ctx)):
+            yield event
 
         # ── Stage 4: Agent loop (native tool calling, many steps) ─────────────
         if ctx.dispatched:
@@ -77,12 +79,10 @@ async def run_pipeline(ctx: ChatContext, background_tasks: BackgroundTasks) -> A
             ctx.sse_events.clear()
 
             # ── Stage 5: Process the one tool call in the reply ───────────────
-            await process_tools(ctx)
-
-            # Flush any SSE events from tools (confirmation_required, etc.)
-            for event in ctx.sse_events:
-                yield _sse(event)
-            ctx.sse_events.clear()
+            # Streamed live: confirmation_required must reach the client while the
+            # stage waits for the answer, not after the wait has timed out.
+            async for event in _live(ctx, process_tools(ctx)):
+                yield event
 
     # ── Stage 6: Stream visible response to client ────────────────────────────
     # (Only if not already streamed by generate stage for voice/coding)
@@ -99,6 +99,22 @@ async def run_pipeline(ctx: ChatContext, background_tasks: BackgroundTasks) -> A
     for event in ctx.sse_events:
         yield _sse(event)
     ctx.sse_events.clear()
+
+
+async def _live(ctx: ChatContext, work) -> AsyncGenerator[str, None]:
+    """Run a stage, sending the events it queues as they appear instead of after it ends."""
+    task = asyncio.ensure_future(work)
+    try:
+        while True:
+            done, _ = await asyncio.wait({task}, timeout=0.2)
+            while ctx.sse_events:
+                yield _sse(ctx.sse_events.pop(0))
+            if done:
+                task.result()   # re-raise a stage error
+                return
+    finally:
+        if not task.done():
+            task.cancel()
 
 
 def _sse(data: dict) -> str:
