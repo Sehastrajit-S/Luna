@@ -68,12 +68,8 @@ document.querySelectorAll('.nav-item').forEach(btn => {
     if (btn.dataset.nav === 'capabilities') {
       showView(viewCapabilities)
       loadCapabilities()
-    } else if (btn.dataset.nav === 'news') {
-      showView(viewNews)
-      window.loadNewsView?.()
-    } else if (btn.dataset.nav === 'library') {
-      showView(viewLibrary)
-      window.loadLibraryView?.()
+    } else if (btn.dataset.nav === 'apps') {
+      showView(viewApps)
     } else if (btn.dataset.nav === 'settings') {
       openSettingsView()
     }
@@ -88,16 +84,64 @@ function openSettingsView() {
 // "Settings…" from the app menu or tray.
 window.electronAPI?.onShowSettings?.(openSettingsView)
 
+// Capabilities: a type filter (All / Apps / Skills / Integrations) plus a
+// text search over each card's name and description. Sections with nothing
+// left to show are hidden.
+let capabilityFilter = 'all'
+const capabilitySearch = document.getElementById('capability-search')
+
+function applyCapabilityFilter() {
+  const words = (capabilitySearch?.value || '').trim().toLowerCase().split(/\s+/).filter(Boolean)
+  let shown = 0
+  document.querySelectorAll('.capability-card[data-capability-category]').forEach(card => {
+    const text = card.textContent.toLowerCase()
+    const visible = (capabilityFilter === 'all' || card.dataset.capabilityCategory === capabilityFilter)
+      && words.every(word => text.includes(word))
+    card.classList.toggle('is-filtered-out', !visible)
+    if (visible) shown++
+  })
+  document.querySelectorAll('[data-capability-section]').forEach(section => {
+    const typeMatches = capabilityFilter === 'all' || section.dataset.capabilitySection === capabilityFilter
+    // A section still loading (or empty) keeps its message unless a search is on.
+    section.hidden = section.querySelector('.capability-card')
+      ? !section.querySelector('.capability-card:not(.is-filtered-out)')
+      : !typeMatches || words.length > 0
+  })
+  const none = document.getElementById('capability-no-match')
+  if (none) {
+    none.hidden = shown > 0 || !words.length
+    none.textContent = words.length ? `Nothing matches “${capabilitySearch.value.trim()}”.` : ''
+  }
+}
+
 document.querySelectorAll('[data-capability-filter]').forEach(button => {
   button.addEventListener('click', () => {
-    const filter = button.dataset.capabilityFilter
+    capabilityFilter = button.dataset.capabilityFilter
     document.querySelectorAll('[data-capability-filter]').forEach(item => item.classList.toggle('is-active', item === button))
-    document.querySelectorAll('[data-capability-category]').forEach(card => {
-      card.classList.toggle('is-filtered-out', filter !== 'all' && card.dataset.capabilityCategory !== filter)
-    })
-    document.querySelectorAll('#skills-grid .capability-card').forEach(card => {
-      card.classList.toggle('is-filtered-out', filter !== 'all' && filter !== 'skill')
-    })
+    applyCapabilityFilter()
+  })
+})
+capabilitySearch?.addEventListener('input', applyCapabilityFilter)
+capabilitySearch?.addEventListener('keydown', event => {
+  if (event.key === 'Escape') { capabilitySearch.value = ''; applyCapabilityFilter() }
+})
+
+// App cards open their page (or sheet) right inside Luna.
+const openApp = {
+  budget: () => window.lunaOpenBudget?.(),
+  tasks: () => window.lunaOpenTasks?.(),
+  notes: () => window.lunaOpenNotes?.(),
+  remote: () => window.lunaOpenRemote?.(),
+  voice: () => window.lunaOpenVoiceOnly?.(),
+  scanner: () => window.lunaOpenScanner?.(),
+  news: () => window.lunaOpenNews?.(),
+  library: () => window.lunaOpenLibrary?.(),
+}
+document.querySelectorAll('[data-open-app]').forEach(card => {
+  const open = () => openApp[card.dataset.openApp]?.()
+  card.addEventListener('click', open)
+  card.addEventListener('keydown', event => {
+    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open() }
   })
 })
 
@@ -127,6 +171,7 @@ async function loadCapabilities() {
     grid.innerHTML = ''
     if (!skills.length) {
       grid.innerHTML = '<p class="capability-empty">No local skills installed.</p>'
+      applyCapabilityFilter()
       return
     }
     skills.forEach(skill => {
@@ -138,6 +183,7 @@ async function loadCapabilities() {
       card.querySelector('p').textContent = skill.description || 'Installed Luna skill.'
       grid.append(card)
     })
+    applyCapabilityFilter()
   } catch (error) {
     grid.innerHTML = '<p class="capability-empty">Could not load skills.</p>'
     console.error('Could not load skills', error)
@@ -298,7 +344,60 @@ function setEmptyState(isEmpty) {
   quickActions?.classList.toggle('is-hidden', !isEmpty)
 }
 
+// ── Temporary chat ──────────────────────────────────────────────────────────
+// Not saved to Recent or memory; the server deletes it when we leave it (or
+// when it restarts). It never becomes the shared active conversation.
+let temporaryChat = false
+const tempButton = document.getElementById('temp-chat-btn')
+const tempBanner = document.getElementById('temp-banner')
+
+function setTemporaryMode(on) {
+  temporaryChat = on
+  document.body.classList.toggle('is-temp-chat', on)
+  if (tempBanner) tempBanner.hidden = !on
+  tempButton?.setAttribute('aria-pressed', String(on))
+  emptyConversation?.querySelectorAll('[data-normal]').forEach(node => {
+    node.textContent = on ? node.dataset.temporary : node.dataset.normal
+  })
+}
+
+function deleteConversationQuietly(id) {
+  if (!id) return
+  // keepalive: still sent when the page is closing.
+  fetch(`${API_BASE}/api/chat/conversations/${id}`, { method: 'DELETE', keepalive: true })
+    .catch(error => console.error('Could not delete temporary chat', error))
+}
+
+// Leaving a temporary chat deletes it — after its reply finishes, if one is still streaming.
+function discardTemporaryChat() {
+  if (!temporaryChat) return
+  let waiting = false
+  for (const stream of liveStreams) {
+    if (stream.temporary && stream.conversationId === activeConversationId) { stream.discard = true; waiting = true }
+  }
+  if (!waiting) deleteConversationQuietly(activeConversationId)
+  setTemporaryMode(false)
+}
+
+function startTemporaryChat() {
+  discardTemporaryChat()
+  document.querySelectorAll('.recent-item').forEach(item => item.classList.remove('is-active'))
+  conversation?.querySelectorAll('.msg-row, .msg-time').forEach(message => message.remove())
+  setEmptyState(true)
+  activeConversationId = null
+  viewToken += 1
+  setTemporaryMode(true)
+  updateSendState()
+  showChat()
+  composerInput?.focus()
+}
+
+tempButton?.addEventListener('click', () => (temporaryChat ? startNewChat() : startTemporaryChat()))
+document.getElementById('temp-end-btn')?.addEventListener('click', () => startNewChat())
+window.addEventListener('pagehide', discardTemporaryChat)
+
 function startNewChat() {
+  discardTemporaryChat()
   document.querySelectorAll('.recent-item').forEach(item => item.classList.remove('is-active'))
   conversation?.querySelectorAll('.msg-row, .msg-time').forEach(message => message.remove())
   setEmptyState(true)
@@ -369,6 +468,7 @@ function appendConversationMessage(message) {
 }
 
 async function openConversation(id) {
+  discardTemporaryChat()
   try {
     const response = await fetch(`${API_BASE}/api/chat/conversations/${id}`)
     if (!response.ok) throw new Error(`Conversation returned ${response.status}`)
@@ -791,6 +891,10 @@ const COMMAND_TAG_RE = /\s*\[(?:LAUNCH|TASK|EVENT|SPOTIFY|BROWSE|MAP|WIDGET|FACE
 // Result cards (product photos etc.) ride along as <!--luna-cards:[...]-->.
 const CARDS_RE = /<!--luna-cards:([\s\S]*?)-->/
 
+// A store price comparison rides along as <!--luna-prices:{...}-->; when present it
+// replaces the plain-text list (kept for clients that can't draw it).
+const PRICES_RE = /<!--luna-prices:([\s\S]*?)-->/
+
 // Follow-up buttons (e.g. news categories) ride along as <!--luna-suggest:[{label, message}]-->.
 const SUGGEST_RE = /<!--luna-suggest:([\s\S]*?)-->/
 
@@ -825,6 +929,17 @@ function setAssistantContent(element, markdown) {
   if (suggest) {
     try { suggestions = JSON.parse(suggest[1]) } catch { suggestions = [] }
     text = text.replace(SUGGEST_RE, '').trim()
+  }
+  const prices = text.match(PRICES_RE)
+  if (prices) {
+    text = text.replace(PRICES_RE, '').trim()
+    let block = null
+    try { block = JSON.parse(prices[1]) } catch { block = null }
+    const html = block && typeof window.renderPriceCompare === 'function' ? window.renderPriceCompare(block) : ''
+    if (html) {
+      element.innerHTML = html
+      return
+    }
   }
   if (typeof window.renderMarkdown !== 'function') {
     element.textContent = text
@@ -884,23 +999,25 @@ function nearBottom() {
   return conversation.scrollHeight - conversation.scrollTop - conversation.clientHeight < 160
 }
 
-async function sendMessage({ spoken, onPart } = {}) {
+async function sendMessage({ spoken, onPart, skillId, files = [] } = {}) {
   let text = (spoken ?? composerInput.value).trim()
-  if (streamFor(activeConversationId) || (!text && !pendingAttachments.length)) return
+  if (streamFor(activeConversationId) || (!text && !pendingAttachments.length && !files.length)) return
   if (pendingAttachments.some(a => a.status === 'uploading')) {
     // Like hosted chat apps: the message goes out once its files are ready.
     sendBtn.classList.add('is-waiting')
     await Promise.allSettled(pendingAttachments.map(a => a.promise))
     sendBtn.classList.remove('is-waiting')
   }
-  const ready = pendingAttachments.filter(a => a.status === 'ready').map(a => a.data)
+  // `files`: already-uploaded attachments from another view (voice-only mode's scan photo).
+  const ready = [...pendingAttachments.filter(a => a.status === 'ready').map(a => a.data), ...files.filter(f => f?.id)]
   if (!text && !ready.length) return
   if (!text) text = ready.length === 1 ? 'Take a look at this file.' : 'Take a look at these files.'
 
-  // A skill picked from the + menu applies to this one message.
-  const skill = window.lunaComposerSkill?.take?.() || null
+  // A skill picked from the + menu (or passed by another view, e.g. the
+  // barcode scanner) applies to this one message.
+  const skill = skillId ? { id: skillId } : (window.lunaComposerSkill?.take?.() || null)
   const origin = { conversationId: activeConversationId, view: viewToken }
-  const stream = { conversationId: activeConversationId, row: null }
+  const stream = { conversationId: activeConversationId, row: null, temporary: temporaryChat, discard: false }
   liveStreams.add(stream)
   updateSendState()
   if (spoken === undefined) composerInput.value = ''
@@ -925,6 +1042,7 @@ async function sendMessage({ spoken, onPart } = {}) {
         conversation_id: activeConversationId,
         attachment_ids: ready.map(a => a.id),
         ...(skill ? { skill: skill.id } : {}),
+        ...(stream.temporary ? { temporary: true } : {}),
       }),
     })
     if (!response.ok || !response.body) throw new Error(`Backend returned ${response.status}`)
@@ -1016,6 +1134,8 @@ async function sendMessage({ spoken, onPart } = {}) {
     throw error
   } finally {
     liveStreams.delete(stream)
+    // The user left this temporary chat while it was replying.
+    if (stream.discard) deleteConversationQuietly(stream.conversationId)
     updateSendState()
     if (stream.row?.isConnected) composerInput.focus()
   }
@@ -1032,8 +1152,8 @@ function flashSend() {
 // and hears each reply paragraph as it streams in.
 window.lunaChat = {
   isBusy: () => !!streamFor(activeConversationId),
-  send(text, { onPart } = {}) {
-    return sendMessage({ spoken: text, onPart })
+  send(text, { onPart, files } = {}) {
+    return sendMessage({ spoken: text, onPart, files })
   },
 }
 sendBtn?.addEventListener('click', flashSend)
@@ -1068,28 +1188,63 @@ const viewSettings = document.getElementById('view-settings')
 const viewLibrary = document.getElementById('view-library')
 const viewMeeting = document.getElementById('view-meeting')
 const viewNews = document.getElementById('view-news')
+const viewBudget = document.getElementById('view-budget')
+const viewApps = document.getElementById('view-apps')
+const viewTasks = document.getElementById('view-tasks')
+const viewNotes = document.getElementById('view-notes')
+const viewRemote = document.getElementById('view-remote')
 
 // Exactly one view is visible at a time — hiding only some of them left the
 // previous view stacked under the new one.
 function showView(target) {
-  ;[viewChat, viewDashboard, viewCapabilities, viewSettings, viewLibrary, viewMeeting, viewNews].forEach(view => {
+  ;[viewChat, viewDashboard, viewCapabilities, viewSettings, viewLibrary, viewMeeting, viewNews, viewBudget, viewApps, viewTasks, viewNotes, viewRemote].forEach(view => {
     view?.classList.toggle('is-hidden', view !== target)
   })
-  const navFor = { [viewCapabilities?.id]: 'capabilities', [viewSettings?.id]: 'settings', [viewLibrary?.id]: 'library', [viewNews?.id]: 'news' }
-  document.querySelectorAll('.nav-item[data-nav="capabilities"], .nav-item[data-nav="settings"], .nav-item[data-nav="library"], .nav-item[data-nav="news"]').forEach(item => {
+  // Every app page lights up "Apps" in the sidebar.
+  const navFor = {
+    [viewCapabilities?.id]: 'capabilities', [viewSettings?.id]: 'settings',
+    [viewApps?.id]: 'apps', [viewBudget?.id]: 'apps', [viewTasks?.id]: 'apps', [viewNotes?.id]: 'apps', [viewRemote?.id]: 'apps', [viewLibrary?.id]: 'apps', [viewNews?.id]: 'apps',
+  }
+  document.querySelectorAll('.nav-item[data-nav="capabilities"], .nav-item[data-nav="settings"], .nav-item[data-nav="apps"]').forEach(item => {
     item.classList.toggle('is-active', navFor[target?.id] === item.dataset.nav)
   })
+}
+
+// App pages, opened from the Apps screen (or Capabilities → Apps).
+window.lunaOpenBudget = () => {
+  showView(viewBudget)
+  window.loadBudgetView?.()
+}
+window.lunaOpenTasks = () => {
+  showView(viewTasks)
+  window.loadTasksView?.()
+}
+window.lunaOpenNotes = () => {
+  showView(viewNotes)
+  window.loadNotesView?.()
+}
+window.lunaOpenRemote = () => {
+  showView(viewRemote)
+  window.loadRemoteView?.()
+}
+window.lunaOpenNews = () => {
+  showView(viewNews)
+  window.loadNewsView?.()
+}
+window.lunaOpenLibrary = () => {
+  showView(viewLibrary)
+  window.loadLibraryView?.()
 }
 
 // Library rows link back to the chat a file was shared in.
 window.lunaOpenConversation = id => openConversation(id)
 
 // Other views (e.g. News "Ask Luna") start a fresh chat with a ready message.
-window.lunaAskInNewChat = text => {
+window.lunaAskInNewChat = (text, { skill } = {}) => {
   if (!text?.trim()) return
   startNewChat()
   // Passed directly (not through the one-line message box) so line breaks survive.
-  return sendMessage({ spoken: text }).catch(() => {})   // errors show in the reply bubble
+  return sendMessage({ spoken: text, skillId: skill }).catch(() => {})   // errors show in the reply bubble
 }
 
 function showDashboard() {

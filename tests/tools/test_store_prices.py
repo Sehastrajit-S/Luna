@@ -50,6 +50,12 @@ def transport(responses):
     return httpx.MockTransport(handler), seen
 
 
+
+def prices_block(answer: str) -> dict:
+    """The <!--luna-prices:{...}--> block embedded in a store-prices answer."""
+    return json.loads(answer.split("<!--luna-prices:")[1].rsplit("-->", 1)[0])
+
+
 class CompareTests(unittest.TestCase):
     def setUp(self) -> None:
         patcher = mock.patch.multiple(settings, serpapi_api_key=KEY, shopping_location="", shopping_max_searches=3)
@@ -204,14 +210,24 @@ class DirectAnswerTests(unittest.TestCase):
         "note": compare_mod.NOTE,
     }
 
-    def test_markdown_table_cheapest_first_with_missing_stores(self) -> None:
+    def test_answer_lists_cheapest_first_with_missing_stores(self) -> None:
         text = compare_mod.render_markdown(self.RESULT)
         self.assertIn("cheapest at **Sam's Club** ($19.98)", text)
-        rows = [l for l in text.splitlines() if l.startswith("| ") and "Store" not in l]
-        self.assertEqual([r.split("|")[1].strip() for r in rows], ["Sam's Club", "Walmart"])
-        self.assertIn("Tide PODS / Original 81 ct", text, "pipes in titles must not break the table")
-        self.assertIn("Not priced: Safeway (no listing from this store matched)", text)
-        self.assertIn("<!--luna-cards:", text)
+        rows = [l for l in text.splitlines() if l.startswith("- **")]
+        self.assertEqual([r.split("**")[1] for r in rows], ["Sam's Club", "Walmart"])
+        self.assertIn("Tide PODS / Original 81 ct", text)
+        self.assertNotIn("Safeway", text, "stores without a match aren't shown")
+
+    def test_price_block_for_the_app(self) -> None:
+        """The app draws photo → store icons → prices from the embedded block."""
+        block = prices_block(compare_mod.render_markdown(self.RESULT, "https://images.example/coke.jpg"))
+        self.assertEqual(block["image"], "https://images.example/coke.jpg")
+        self.assertEqual(block["cheapest"], "Sam's Club")
+        self.assertEqual([(r["store"], r["status"]) for r in block["rows"]],
+                         [("Sam's Club", "found"), ("Walmart", "found")])          # Safeway: not found, hidden
+        # No scanned photo: the cheapest listing's image; never a non-https one.
+        self.assertEqual(prices_block(compare_mod.render_markdown(self.RESULT))["image"], "https://i/2")
+        self.assertEqual(prices_block(compare_mod.render_markdown(self.RESULT, "http://insecure/x.jpg"))["image"], "https://i/2")
 
     def test_nothing_found(self) -> None:
         result = {**self.RESULT, "stores": [{"store": "Walmart", "status": "not_found"}], "cheapest": None}
@@ -232,7 +248,8 @@ class DirectAnswerTests(unittest.TestCase):
         compare.assert_awaited_once_with("Tide Pods 81 count")
         self.assertTrue(ctx.dispatched)
         self.assertEqual(ctx.direct_command_type, "skill:store-prices")
-        self.assertIn("| Sam's Club |", ctx.full_response)
+        self.assertIn("- **Sam's Club**: $19.98", ctx.full_response)
+        self.assertEqual(prices_block(ctx.full_response)["cheapest"], "Sam's Club")
 
     def test_dispatch_relays_setup_errors(self) -> None:
         from server.services.chat_pipeline import stage_dispatch
@@ -315,7 +332,9 @@ class SizeAndIconTests(unittest.TestCase):
         self.assertTrue(by_store["Walmart"]["same_size"])
         self.assertFalse(by_store["Target"]["same_size"])
         self.assertEqual(result["cheapest"]["store"], "Walmart")
-        self.assertIn("(different size)", compare_mod.render_markdown(result))
+        md = compare_mod.render_markdown(result)
+        self.assertIn("different size)", md)
+        self.assertFalse(next(r for r in prices_block(md)["rows"] if r["store"] == "Target")["same_size"])
 
     def test_same_size_listing_wins_within_a_store(self) -> None:
         result = self._compare([
@@ -335,9 +354,10 @@ class SizeAndIconTests(unittest.TestCase):
         self.assertEqual(icons["Target"], "https://www.google.com/s2/favicons?domain=target.com&sz=64")
         self.assertTrue(icons["Costco"].endswith("domain=costco.com&sz=64"), "unpriced stores keep their logo")
         md = compare_mod.render_markdown(result)
-        self.assertIn("| ![](https://www.google.com/s2/favicons?domain=target.com&sz=64) Target |", md)
-        cards = json.loads(md.split("<!--luna-cards:")[1].rsplit("-->", 1)[0])
-        self.assertTrue(all(c["icon"] for c in cards))
+        rows = {r["store"]: r for r in prices_block(md)["rows"]}
+        self.assertEqual(rows["Target"]["icon"], "https://www.google.com/s2/favicons?domain=target.com&sz=64")
+        self.assertTrue(rows["Walmart"]["icon"].startswith("https://encrypted-tbn2.gstatic.com/"))
+        self.assertTrue(all(r["icon"] for r in rows.values()), "every store row has a logo")
 
 
 @unittest.skipUnless(__import__("shutil").which("node"), "node is required")

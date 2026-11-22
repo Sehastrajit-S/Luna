@@ -41,6 +41,7 @@
     "docker:pull": "node scripts/docker.mjs --pull",
     "chat": "node interfaces/cli/luna.mjs chat",
     "health": "node interfaces/cli/luna.mjs health",
+    "memory:view": "python scripts/memory_viewer.py",
     "test:tools": "python -W ignore -m unittest discover -s tests/tools -p \"test_*.py\" -v",
     "test:smoke": "npm run luna -- check && node --check interfaces/cli/luna.mjs && npm run test:tools",
     "postinstall": "node scripts/ensure-global-path.mjs"

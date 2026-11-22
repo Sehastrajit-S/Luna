@@ -233,6 +233,48 @@
     return `<div class="md-cards">${html}</div>`
   }
 
+  // Store price comparison (server: shopping/compare.py price_block): the
+  // product photo, then a row per store with its icon and price, cheapest
+  // first. Every field is escaped; only https images, Google favicons and
+  // http(s) links are used.
+  function renderPriceCompare(block) {
+    if (!block || !Array.isArray(block.rows)) return ''
+    const esc = value => escapeHtml(String(value ?? ''))
+    const image = block.image && SAFE_IMAGE.test(String(block.image))
+      ? `<img class="pc-photo" src="${esc(block.image)}" alt="" loading="lazy" referrerpolicy="no-referrer">`
+      : '<span class="pc-photo is-empty" aria-hidden="true"></span>'
+    const best = block.rows.find(r => r.status === 'found' && r.store === block.cheapest)
+    const summary = best
+      ? `Cheapest at <strong>${esc(best.store)}</strong> · ${esc(best.price_text)}`
+      : (block.rows.length ? 'No store showed a price here. Tap a store to check its site.' : 'None of the stores had this product.')
+    const rows = block.rows.slice(0, 12).map(r => {
+      const found = r.status === 'found'
+      const url = SAFE_URL.test(String(r.url || '')) ? String(r.url) : ''
+      const icon = r.icon && ICON_URL.test(String(r.icon))
+        ? `<img class="pc-icon" src="${esc(r.icon)}" alt="" width="28" height="28" loading="lazy" referrerpolicy="no-referrer">`
+        : `<span class="pc-icon is-letter" aria-hidden="true">${esc(String(r.store || '?').charAt(0))}</span>`
+      const detail = found ? esc(r.title) : esc(r.why || '')
+      const sizeTag = found && r.same_size === false ? ' <span class="pc-tag">Different size</span>' : ''
+      const price = found
+        ? `<span class="pc-price">${esc(r.price_text)}</span>`
+        : (r.status === 'price_hidden' && url ? '<span class="pc-price is-link">See price ›</span>' : '<span class="pc-price is-none">—</span>')
+      const cheapest = found && r.store === block.cheapest
+      const inner = `${icon}<span class="pc-store"><span class="pc-name">${esc(r.store)}${cheapest ? ' <span class="pc-badge">Cheapest</span>' : ''}${sizeTag}</span>` +
+        `<span class="pc-detail">${detail}</span></span>${price}`
+      const cls = `pc-row${cheapest ? ' is-cheapest' : ''}${found || r.status === 'price_hidden' ? '' : ' is-missing'}`
+      return url
+        ? `<a class="md-link ${cls}" href="${esc(url)}" title="${esc(r.title || r.store)}">${inner}</a>`
+        : `<div class="${cls}">${inner}</div>`
+    }).join('')
+    return `<div class="pc">` +
+      `<div class="pc-head">${image}<div class="pc-head-text"><span class="pc-product">${esc(block.product)}</span>` +
+      `<span class="pc-summary">${summary}</span></div></div>` +
+      (rows ? `<div class="pc-rows">${rows}</div>` : '') +
+      (block.note ? `<p class="pc-note">${esc(block.note)}</p>` : '') +
+      `</div>`
+  }
+
   window.renderMarkdown = renderMarkdown
   window.renderCards = renderCards
+  window.renderPriceCompare = renderPriceCompare
 })()

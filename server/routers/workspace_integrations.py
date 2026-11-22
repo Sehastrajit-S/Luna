@@ -82,6 +82,11 @@ async def google_oauth_callback(code: str = "", error: str = ""):
         _patch_env("google_workspace_refresh_token", refresh)
     if access:
         _patch_env("google_workspace_access_token", access)
+    # Use the new sign-in now, not after a restart.
+    from server.config import reload_settings
+    from server.services.workspace_integrations import base as integration_base
+    reload_settings()
+    integration_base._TOKEN_CACHE.pop("google", None)
     return HTMLResponse("""
         <html><body style="font-family:sans-serif;padding:40px;background:#09090f;color:#eef2ff">
         <h2 style="color:#a78bfa">Google Workspace connected!</h2>

@@ -40,6 +40,7 @@ async def upload_file(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     conversation_id: Optional[int] = Form(None),
+    for_request: Optional[str] = Form(None),
     db: Session = Depends(get_db),
 ):
     # Read in chunks so an oversized upload is rejected without buffering it all.
@@ -52,7 +53,11 @@ async def upload_file(
     if conversation_id is not None and not db.query(Conversation).filter_by(id=conversation_id).first():
         conversation_id = None
     try:
-        attachment = await save_upload(db, file.filename or "file", bytes(data), conversation_id)
+        # A voice-mode scan whose task Luna handles itself (fill a form, prices, "scan this")
+        # reads the photo its own way, so the slow full vision description is skipped.
+        from server.services.scan_tasks import reads_photo_itself
+        quick = bool(for_request) and reads_photo_itself(for_request)
+        attachment = await save_upload(db, file.filename or "file", bytes(data), conversation_id, describe=not quick)
     except UnsupportedFile as e:
         raise HTTPException(status_code=415, detail=str(e)) from e
     except Exception as e:

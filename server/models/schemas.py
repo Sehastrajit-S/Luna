@@ -56,6 +56,11 @@ class ChatRequest(BaseModel):
     attachment_ids: List[str] = Field(default_factory=list, max_length=10)
     # A skill the user picked from the composer's + menu: "store-prices" or a lookup skill id.
     skill: Optional[str] = Field(default=None, max_length=64)
+    # Temporary chat: not kept in Recent or used for memory; deleted when the user leaves it.
+    temporary: bool = False
+    # Its own conversation: doesn't continue or replace the chat open on this
+    # device (remote-control tasks).
+    standalone: bool = False
 
 
 class FactOut(BaseSchema):

@@ -3,7 +3,7 @@ import asyncio
 import json as _json
 import logging
 import re as _re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import chromadb
@@ -24,6 +24,91 @@ _FORGET_STOPWORDS = frozenset({
     "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "january", "february",
     "march", "april", "may", "june", "july", "august", "september", "october", "november", "december",
 })
+
+
+# ── Memory quality rules ──────────────────────────────────────────────────────
+
+# Default importance by category, used when nothing better is known. Facts saved
+# before importance was extracted all carry the old flat default (0.5).
+_CATEGORY_IMPORTANCE = {"personal": 0.8, "relationship": 0.8, "health": 0.75, "goal": 0.6}
+_LEGACY_IMPORTANCE = 0.5
+
+# How fast a memory's recency score fades, per day. Who you are and who is in
+# your life don't go stale; what happened last week does.
+_RECENCY_DECAY = {"personal": 0.0, "relationship": 0.0, "health": 0.005,
+                  "preference": 0.01, "behavior": 0.01, "goal": 0.05}
+_DEFAULT_DECAY = 0.15
+
+# Near neighbours worth comparing for duplicates. Embedding distance alone can't
+# tell a duplicate from a change ("lives in Porto" vs "lives in Lisbon" sit as close
+# as two paraphrases), so a close neighbour is only merged by the word rule below;
+# paraphrases are left to the background LLM check.
+DUPLICATE_DISTANCE = 0.2
+
+_FILLER = frozenset({
+    "user", "a", "an", "the", "is", "are", "was", "were", "be", "been", "has", "have", "had", "of", "to",
+    "in", "on", "at", "and", "for", "with", "named", "called", "their", "they", "them", "who", "which",
+    "that", "as", "by", "s",
+})
+_NEGATION = frozenset({
+    "not", "no", "never", "dont", "doesnt", "didnt", "isnt", "wasnt", "arent", "cant", "cannot", "wont",
+    "longer", "anymore", "stopped", "quit", "former", "formerly", "ex", "used", "without", "but", "hate",
+    "hates", "dislike", "dislikes",
+})
+
+
+def effective_importance(category: str | None, importance: float | None) -> float:
+    """A fact's importance, with untouched legacy defaults raised for core categories."""
+    if importance is None or importance == _LEGACY_IMPORTANCE:
+        return max(_LEGACY_IMPORTANCE, _CATEGORY_IMPORTANCE.get(category or "", _LEGACY_IMPORTANCE))
+    return float(importance)
+
+
+def recency_score(category: str | None, age_days: float) -> float:
+    rate = _RECENCY_DECAY.get(category or "", _DEFAULT_DECAY)
+    return 1.0 / (1.0 + max(0.0, age_days) * rate)
+
+
+def _fact_words(text: str) -> list[str]:
+    """The words that carry a fact's meaning, in order, lightly normalised."""
+    text = (text or "").lower().replace("’", "'").replace("'s ", " ").replace("'", "")
+    words = []
+    for w in _re.findall(r"[a-z0-9]+", text):
+        if w in _FILLER:
+            continue
+        if len(w) > 3 and w.endswith("s") and not w.endswith("ss"):
+            w = w[:-1]
+        words.append(w)
+    return words
+
+
+def fact_relation(new: str, old: str) -> str | None:
+    """How a new fact relates to an existing one, judged only on safe cases:
+
+    "same"    — the new fact says nothing the old one doesn't (equal, or the old is
+                the new one with more detail added at the end)
+    "refines" — the new fact is the old one with more detail added at the end
+    None      — anything else, including any added negation ("no longer", "not"),
+                which may be a change of fact and needs the contradiction check.
+    """
+    a, b = _fact_words(new), _fact_words(old)
+    if not a or not b:
+        return None
+    if a == b or (set(a) == set(b) and len(a) == len(b)):
+        return "same"
+    shorter, longer = (a, b) if len(a) < len(b) else (b, a)
+    # A one-word stem ("dog") is too thin to tell "has a dog" from "dog walker is Sam".
+    if len(shorter) < 2 or longer[:len(shorter)] != shorter or set(longer[len(shorter):]) & _NEGATION:
+        return None
+    return "same" if shorter is a else "refines"
+
+
+def _as_timestamp(value: datetime | None) -> float | None:
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.timestamp()
 
 
 class MemoryManager:
@@ -59,13 +144,17 @@ class MemoryManager:
         category: str,
         conversation_id: Optional[int] = None,
         confidence: float = 1.0,
-        importance: float = 0.5,
+        importance: Optional[float] = None,
         source: str = "inferred",
         expires_at=None,
         is_private: bool = False,
         memory_type: str = "long",
         expires_in_days: Optional[float] = None,
     ) -> int:
+        content = " ".join((content or "").split())
+        if importance is None:
+            importance = _CATEGORY_IMPORTANCE.get(category, _LEGACY_IMPORTANCE)
+        importance = min(1.0, max(0.0, float(importance)))
         if expires_at is None:
             if expires_in_days is not None:
                 expires_at = datetime.utcnow() + timedelta(days=expires_in_days)
@@ -76,22 +165,23 @@ class MemoryManager:
 
         self._expire_stale_facts()
 
-        existing = (
-            self.db.query(Fact)
-            .filter(Fact.content.ilike(f"%{content[:40]}%"), Fact.is_active == True)
-            .first()
-        )
-        if existing:
-            existing.confidence = min(1.0, existing.confidence + 0.1)
-            existing.importance = max(existing.importance, importance)
-            existing.updated_at = datetime.utcnow()
-            if (existing.memory_type == "persistent" and existing.confidence >= 0.9
-                    and existing.created_at
-                    and (datetime.utcnow() - existing.created_at).days >= 2):
-                existing.memory_type = "long"
-                existing.expires_at  = None
-            self.db.commit()
-            return existing.id
+        embedding: list[float] = []
+        try:
+            embedding = await self._embed(content) or []
+        except Exception as e:                      # still save the fact; recall falls back to SQL
+            logger.warning("Could not embed new fact: %s", e)
+
+        match, relation = self._find_duplicate(content, category, embedding)
+        if match is not None:
+            self._reinforce(match, importance)
+            if relation == "refines":
+                # Same fact with more detail: keep one row, holding the fuller wording.
+                match.content = content
+                self.db.commit()
+                self._index_fact(match, embedding)
+            else:
+                self.db.commit()
+            return match.id
 
         fact = Fact(
             category=category,
@@ -107,36 +197,82 @@ class MemoryManager:
         self.db.add(fact)
         self.db.commit()
         self.db.refresh(fact)
+        self._index_fact(fact, embedding)
 
-        try:
-            embedding = await self._embed(content)
-            if embedding:
-                col = self._get_collection()
-                col.add(
-                    ids=[f"fact_{fact.id}"],
-                    embeddings=[embedding],
-                    documents=[content],
-                    metadatas=[{
-                        "type": "fact",
-                        "category": category,
-                        "fact_id": fact.id,
-                        "importance": importance,
-                        "created_at": datetime.utcnow().timestamp(),
-                    }],
+        if embedding:
+            try:
+                asyncio.create_task(
+                    self._bg_llm_contradiction_check(fact.id, content, category, conversation_id, embedding)
                 )
+            except RuntimeError as e:
+                logger.debug("Could not schedule contradiction check: %s", e)
+
+        return fact.id
+
+    def _reinforce(self, fact: Fact, importance: float) -> None:
+        """The user said it again: trust it more, and keep it fresh."""
+        fact.confidence = min(1.0, (fact.confidence or 0.0) + 0.1)
+        fact.importance = max(effective_importance(fact.category, fact.importance), importance)
+        fact.updated_at = datetime.utcnow()
+        if (fact.memory_type == "persistent" and fact.confidence >= 0.9
+                and fact.created_at
+                and (datetime.utcnow() - fact.created_at).days >= 2):
+            fact.memory_type = "long"
+            fact.expires_at  = None
+
+    def _find_duplicate(self, content: str, category: str, embedding: list[float]) -> tuple[Optional[Fact], Optional[str]]:
+        """An active fact in the same category that this one repeats or refines."""
+        # A word-for-word repeat, even of a fact whose embedding never got saved.
+        words = _fact_words(content)
+        for fact in self.db.query(Fact).filter(Fact.is_active == True, Fact.category == category):
+            if _fact_words(fact.content) == words:
+                return fact, "same"
+        candidates: list[Fact] = []
+        if embedding:
+            try:
+                col = self._get_collection()
+                count = col.count()
+                if count:
+                    res = col.query(
+                        query_embeddings=[embedding],
+                        n_results=min(5, count),
+                        where={"$and": [{"type": "fact"}, {"category": category}]},
+                        include=["metadatas", "distances"],
+                    )
+                    ids = [int(m["fact_id"]) for m, d in zip(res.get("metadatas", [[]])[0], res.get("distances", [[]])[0])
+                           if m and m.get("fact_id") and d <= DUPLICATE_DISTANCE]
+                    if ids:
+                        by_id = {f.id: f for f in self.db.query(Fact).filter(
+                            Fact.id.in_(ids), Fact.is_active == True, Fact.category == category)}
+                        candidates = [by_id[i] for i in ids if i in by_id]
+            except Exception as e:
+                logger.warning("Duplicate check against the vector store failed: %s", e)
+        for fact in candidates:
+            relation = fact_relation(content, fact.content)
+            if relation:
+                return fact, relation
+        return None, None
+
+    def _index_fact(self, fact: Fact, embedding: list[float]) -> None:
+        if not embedding:
+            return
+        try:
+            self._get_collection().upsert(
+                ids=[f"fact_{fact.id}"],
+                embeddings=[embedding],
+                documents=[fact.content],
+                metadatas=[{
+                    "type": "fact",
+                    "category": fact.category,
+                    "fact_id": fact.id,
+                    "importance": effective_importance(fact.category, fact.importance),
+                    "created_at": datetime.utcnow().timestamp(),
+                }],
+            )
         except (chromadb.errors.ChromaError, OSError, ValueError) as e:
             logger.warning("Failed to store fact embedding (fact_id=%d): %s", fact.id, e)
         except Exception as e:
             logger.error("Unexpected error storing fact embedding: %s", e, exc_info=True)
-
-        try:
-            asyncio.create_task(
-                self._bg_llm_contradiction_check(fact.id, content, category, conversation_id)
-            )
-        except RuntimeError as e:
-            logger.debug("Could not schedule contradiction check: %s", e)
-
-        return fact.id
 
     def _expire_stale_facts(self):
         now     = datetime.utcnow()
@@ -156,13 +292,17 @@ class MemoryManager:
         content: str,
         category: str,
         conversation_id,
+        embedding: Optional[list[float]] = None,
     ):
+        """Compare a new fact with its closest neighbours. If it says the same thing
+        in other words, fold it into the existing fact; if it replaces one, retire
+        the old one and leave a note so Luna can mention the change."""
         from server.models.database import FactRelationship, SessionLocal
         from server.services.contradiction_store import add as _store_note
 
         db = SessionLocal()
         try:
-            embedding = await self._embed(content)
+            embedding = embedding or await self._embed(content)
             if not embedding:
                 return
             col = self._get_collection()
@@ -191,36 +331,67 @@ class MemoryManager:
             if not candidates:
                 return
 
-            pairs  = "\n".join(f"{i+1}. [ID:{fid}] {doc}" for i, (fid, doc, _) in enumerate(candidates))
+            # No list numbering: models answer with the position instead of the ID.
+            pairs  = "\n".join(f"- ID {fid}: {doc}" for fid, doc, _ in candidates)
             prompt = (
                 f'New fact: "{content}"\n\n'
                 f"Existing facts:\n{pairs}\n\n"
-                "Does the new fact DIRECTLY CONTRADICT one of the existing facts? "
-                "Contradiction = they cannot both be true simultaneously. "
-                "Updates and refinements count. Additions do not.\n\n"
-                'Reply ONLY with JSON: {"contradicts_id": <number or null>, "note": "<one sentence reason or empty>"}'
+                "Compare the new fact with the existing facts and pick at most one:\n"
+                '- "same": an existing fact already says this, maybe in other words, and the new fact '
+                "adds no new information.\n"
+                '- "contradicts": the new fact replaces an existing one — they cannot both be true now '
+                "(moved city, changed job, stopped liking something).\n"
+                "Otherwise relation is null. Facts that merely add something new are null.\n\n"
+                'Reply ONLY with JSON: {"id": <existing ID or null>, "relation": "same" | "contradicts" | null, '
+                '"note": "<one sentence reason or empty>"}'
             )
             raw = await ollama.complete(
                 prompt,
-                system="You are a fact contradiction detector. Output only valid JSON. No commentary.",
+                system="You compare memories about a user. Output only valid JSON. No commentary.",
                 temperature=0.05,
             )
 
             m = _re.search(r'\{[^{}]*\}', raw, _re.DOTALL)
             if not m:
+                logger.info("Memory check for fact %d gave no JSON; keeping both facts.", new_fact_id)
                 return
-            result        = _json.loads(m.group())
-            contradicts_id = result.get("contradicts_id")
-            note          = str(result.get("note", "")).strip()
+            result   = _json.loads(m.group())
+            relation = result.get("relation")
+            other_id = result.get("id")
+            if other_id is None and result.get("contradicts_id"):          # older reply shape
+                other_id, relation = result.get("contradicts_id"), "contradicts"
+            note     = str(result.get("note", "") or "").strip()
 
-            if not contradicts_id:
+            if not other_id or relation not in ("same", "contradicts"):
+                return
+            other_id = int(other_id)
+            if other_id not in {fid for fid, _, _ in candidates}:
+                logger.info("Memory check named fact %d, which wasn't offered; ignoring.", other_id)
+                return
+            old_fact = db.query(Fact).filter_by(id=other_id, is_active=True).first()
+            new_fact = db.query(Fact).filter_by(id=new_fact_id, is_active=True).first()
+            if not old_fact or not new_fact:
                 return
 
-            contradicts_id = int(contradicts_id)
-            old_fact       = db.query(Fact).filter_by(id=contradicts_id, is_active=True).first()
-            if not old_fact:
+            if relation == "same":
+                if old_fact.category != new_fact.category:
+                    logger.info("Memory check called facts %d and %d the same across categories; keeping both.",
+                                new_fact_id, other_id)
+                    return
+                # Fold the repeat into the fact Luna already had.
+                self._reinforce(old_fact, effective_importance(new_fact.category, new_fact.importance))
+                new_fact.is_active = False
+                new_fact.superseded_by = other_id
+                db.add(FactRelationship(fact_id_a=new_fact_id, fact_id_b=other_id,
+                                        relationship="confirms", confidence=0.8, note=note))
+                db.commit()
+                try:
+                    col.delete(ids=[f"fact_{new_fact_id}"])
+                except (chromadb.errors.ChromaError, OSError) as e:
+                    logger.warning("Failed to delete merged fact from ChromaDB: %s", e)
                 return
 
+            contradicts_id     = other_id
             old_content        = old_fact.content
             old_fact.is_active = False
             old_fact.superseded_by = new_fact_id
@@ -300,24 +471,35 @@ class MemoryManager:
 
             # A deleted or forgotten fact keeps its vector until cleaned up;
             # only facts still active in the database may be recalled.
+            # The database, not the vector metadata, has the current importance and
+            # when the fact was last confirmed.
             fact_ids = [m.get("fact_id") for m in metas if m and m.get("type") == "fact" and m.get("fact_id")]
-            active_ids = {row.id for row in self.db.query(Fact.id).filter(
-                Fact.id.in_(fact_ids), Fact.is_active == True)} if fact_ids else set()
+            active = {f.id: f for f in self.db.query(Fact).filter(
+                Fact.id.in_(fact_ids), Fact.is_active == True)} if fact_ids else {}
 
-            now         = datetime.utcnow().timestamp()
+            now         = datetime.now(timezone.utc).timestamp()
             THIRTY_DAYS = 30 * 86_400
 
             scored: list[tuple[str, float, float]] = []
             for doc, dist, meta in zip(docs, distances, metas):
+                meta = meta or {}
                 if dist >= 0.8:
                     continue
-                if (meta or {}).get("type") == "fact" and meta.get("fact_id") not in active_ids:
-                    continue
+                if meta.get("type") == "fact":
+                    fact = active.get(meta.get("fact_id"))
+                    if fact is None:
+                        continue
+                    category   = fact.category
+                    importance = effective_importance(category, fact.importance)
+                    seen       = _as_timestamp(fact.updated_at or fact.created_at)
+                else:
+                    category   = meta.get("type")
+                    importance = meta.get("importance", _LEGACY_IMPORTANCE)
+                    seen       = None
+                created    = seen or meta.get("created_at", now - THIRTY_DAYS)
                 semantic   = 1.0 - dist
-                created    = meta.get("created_at", now - THIRTY_DAYS)
                 age_days   = max(0.0, (now - created) / 86_400)
-                recency    = 1.0 / (1.0 + age_days * 0.15)
-                importance = meta.get("importance", 0.5)
+                recency    = recency_score(category, age_days)
                 score      = semantic * 0.55 + recency * 0.25 + importance * 0.20
                 scored.append((doc, score, age_days))
 
@@ -405,11 +587,12 @@ class MemoryManager:
                 Fact.is_private == False,
                 (Fact.expires_at == None) | (Fact.expires_at > now),
             )
-            .order_by(Fact.importance.desc(), Fact.confidence.desc())
-            .limit(10)
             .all()
         )
-        return [f.content for f in personal]
+        # Most important first; among equals, the ones confirmed most often.
+        personal.sort(key=lambda f: (effective_importance(f.category, f.importance), f.confidence or 0.0),
+                      reverse=True)
+        return [f.content for f in personal[:10]]
 
     def _promote_routines(self) -> int:
         cutoff     = datetime.utcnow() - timedelta(days=2)

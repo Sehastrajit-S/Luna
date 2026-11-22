@@ -99,6 +99,14 @@ class ToolCallingFormatTests(unittest.TestCase):
         self.assertEqual(calls[0].name, "create_task")
         _, calls = calls_from_text('{"name": "rm_rf", "arguments": {}}', known)
         self.assertEqual(calls, [])
+        # Seen live: the call written as a bracket tag inside the reply.
+        text, calls = calls_from_text('Sure thing. Typing "Hi" now. [message_contact app="whatsapp" text="Hi Arjun" '
+                                      'to="Arjun"]', known | {"message_contact"})
+        self.assertEqual((calls[0].name, calls[0].args),
+                         ("message_contact", {"app": "whatsapp", "text": "Hi Arjun", "to": "Arjun"}))
+        self.assertNotIn("[", text)
+        _, calls = calls_from_text('See [note title="x"] and [link](http://a)', known)
+        self.assertEqual(calls, [])
 
     def test_assistant_and_tool_messages(self) -> None:
         from server.services.llm.tool_calling import tool_result_message
@@ -203,6 +211,27 @@ class AgentLoopTests(unittest.TestCase):
         self.assertEqual(ctx.tools_used[0], "web_search")
         self.assertIn("didn't call a tool", model.requests[1]["messages"][-1]["content"])
         self.assertEqual(ctx.full_response, "It's $1,999.")
+
+    def test_claimed_action_without_a_call_is_nudged(self) -> None:
+        # Seen live: "Closing 'whatsapp'." copied from an earlier result, with no close_app call.
+        ctx = _ctx("Close WhatsApp.")
+        model = ScriptedModel(_turn("Closing 'whatsapp'.\nLet me know if you need anything else!"),
+                              _turn("", [_call("list_open_apps", {})]), _turn("WhatsApp is still open."))
+        with mock.patch("server.services.tool_runner.execute_tool_call", new=mock.AsyncMock(return_value="WhatsApp")):
+            _run(ctx, model)
+        self.assertIn("didn't call a tool this turn", model.requests[1]["messages"][-1]["content"])
+        self.assertEqual(ctx.full_response, "WhatsApp is still open.")
+
+    def test_made_up_send_is_never_shown(self) -> None:
+        # Seen live: a long "Sent to … Checks: … Screenshot: …" copied from an earlier send, twice.
+        fake = ("Sent to Arjun on WhatsApp: “this is from Luna”.\nChecks: WhatsApp is in front; found 'Arjun' in the "
+                "chat search; message typed and checked in the message box; message shows in the chat and the "
+                "message box is empty.\nScreenshot: E:\\Luna\\data\\screenshots\\x-whatsapp-sent.png")
+        ctx = _ctx("Send him this is from Luna")
+        model = ScriptedModel(_turn(fake), _turn(fake))
+        _run(ctx, model)
+        self.assertIn("didn't call a tool this turn", model.requests[1]["messages"][-1]["content"])
+        self.assertTrue(ctx.full_response.startswith("I didn't actually do that"))
 
     def test_empty_answer_is_retried_never_shown(self) -> None:
         ctx = _ctx("design the schema")

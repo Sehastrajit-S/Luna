@@ -4,6 +4,7 @@ import asyncio
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from server.models.database import SessionLocal, CalendarEvent, Task, ProactiveLog, Message
+from server.services.conversations import saved_conversation_ids
 from server.services.scheduler.notifications import send_windows_notification, proactive_queue
 
 _VISION_CHECKIN_SYSTEM = (
@@ -134,6 +135,7 @@ def vision_aware_checkin():
         # ── Conversation ──────────────────────────────────────────────────────
         recent_msgs = (
             db.query(Message)
+            .filter(Message.conversation_id.in_(saved_conversation_ids(db)))   # not temporary chats
             .order_by(Message.created_at.desc())
             .limit(6)
             .all()
@@ -466,6 +468,7 @@ def companion_check_in():
 
         recent_msgs = (
             db.query(Message)
+            .filter(Message.conversation_id.in_(saved_conversation_ids(db)))   # not temporary chats
             .order_by(Message.created_at.desc())
             .limit(6)
             .all()
@@ -629,6 +632,7 @@ def proactive_commitment_followup():
         messages = (
             db.query(Message)
             .filter(Message.role == "user", Message.created_at.between(start, end))
+            .filter(Message.conversation_id.in_(saved_conversation_ids(db)))   # not temporary chats
             .order_by(Message.created_at.desc())
             .limit(40)
             .all()

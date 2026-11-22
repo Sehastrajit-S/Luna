@@ -3,6 +3,12 @@ import re
 
 
 _LAUNCH_TRAILING_FILLERS = re.compile(r"\s+(?:for me|please|now|then|right now|already)$")
+# More than opening an app ("open whatsapp and text priya …", "open my mails from priya"):
+# leave it to the agent, which can open, search and message. Launching here dropped the rest.
+_NOT_JUST_AN_APP = re.compile(
+    r"\b(?:and|then|to|text|message|msg|send|tell|reply|call|email|mails?|emails?|from|about|saying|that\s+i)\b",
+    re.IGNORECASE)
+MAX_APP_NAME_WORDS = 4
 
 
 def parse_user_launch_request(message: str) -> str | None:
@@ -22,7 +28,8 @@ def parse_user_launch_request(message: str) -> str | None:
             if stripped == app_name:
                 break
             app_name = stripped
-        if app_name and len(app_name) <= 80:
+        if (app_name and len(app_name) <= 80 and len(app_name.split()) <= MAX_APP_NAME_WORDS
+                and not _NOT_JUST_AN_APP.search(app_name)):
             return app_name
     return None
 

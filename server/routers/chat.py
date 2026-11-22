@@ -11,14 +11,12 @@ from fastapi.responses import StreamingResponse, JSONResponse
 from sqlalchemy.orm import Session
 
 from server.config import settings
-from server.models.database import (
-    get_db, Attachment, Conversation, ConversationArtifact, Episode, Fact, FeedbackLog, PlanRecord, Trace,
-)
+from server.models.database import get_db, Conversation
 from server.models.schemas import ChatRequest, ConversationOut, ConversationDetail, StatusResponse
 from server.services.permission_manager import permission_manager
 from server.services.shared_context import get_active_conversation_id, set_active_conversation_id
 from server.services.chat_pipeline import ChatContext, run_pipeline
-from server.services.files import delete_attachment_files
+from server.services.conversations import delete_conversation as delete_conversation_data
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +59,8 @@ async def chat_stream(
         speech_duration=_speech_dur,
         attachment_ids=req.attachment_ids,
         skill=(req.skill or "").strip(),
+        temporary=req.temporary,
+        standalone=req.standalone,
     )
 
     # Run the pipeline as an SSE stream
@@ -99,6 +99,7 @@ def chat_activity(year: int | None = None, month: int | None = None, db: Session
 def list_conversations(limit: int = 20, db: Session = Depends(get_db)):
     conversations = (
         db.query(Conversation)
+        .filter(Conversation.temporary == False)  # noqa: E712 — temporary chats never show in Recent
         .order_by(Conversation.started_at.desc())
         .limit(limit)
         .all()
@@ -125,7 +126,7 @@ def get_shared_context(db: Session = Depends(get_db)):
         if conversation_id
         else None
     )
-    if conversation_id and not conv:
+    if conversation_id and (not conv or conv.temporary):
         set_active_conversation_id(None)
         conversation_id = None
     return {"active_conversation_id": conversation_id}
@@ -153,26 +154,6 @@ def get_conversation(conversation_id: int, db: Session = Depends(get_db)):
 def delete_conversation(conversation_id: int, db: Session = Depends(get_db)):
     conv = db.query(Conversation).filter_by(id=conversation_id).first()
     if conv:
-        # Other tables reference the conversation (SQLite enforces the FKs), so
-        # deleting it alone failed with an IntegrityError. Learned facts,
-        # feedback, traces and plans outlive the chat — just unlink them; the
-        # episode summary belongs to this conversation only.
-        db.query(Fact).filter_by(source_conversation_id=conversation_id).update(
-            {Fact.source_conversation_id: None}, synchronize_session=False)
-        for model in (FeedbackLog, Trace, PlanRecord):
-            db.query(model).filter_by(conversation_id=conversation_id).update(
-                {model.conversation_id: None}, synchronize_session=False)
-        db.query(Episode).filter_by(conversation_id=conversation_id).delete(synchronize_session=False)
-        db.query(ConversationArtifact).filter_by(conversation_id=conversation_id).delete(synchronize_session=False)
-        attachment_ids = [a.id for a in db.query(Attachment.id).filter_by(conversation_id=conversation_id)]
-        db.query(Attachment).filter_by(conversation_id=conversation_id).delete(synchronize_session=False)
-        db.delete(conv)
-        db.commit()
-        for attachment_id in attachment_ids:
-            try:
-                delete_attachment_files(attachment_id)
-            except OSError as e:
-                logger.warning("Could not remove files for attachment %s: %s", attachment_id, e)
-        if get_active_conversation_id() == conversation_id:
-            set_active_conversation_id(None)
+        # A temporary chat takes everything it touched with it.
+        delete_conversation_data(db, conv, forget=bool(conv.temporary))
     return StatusResponse(status="ok")

@@ -252,6 +252,12 @@ class Settings(BaseSettings):
 
     # Enterprise workflow defaults
     enterprise_workflow_workspace_root: str = str(BASE_DIR)
+    # Your code project folders (";"-separated). Luna may read files in them (never write),
+    # and start Claude Code there after you confirm. See server/services/projects.py.
+    project_roots: str = ""
+    # Browser profile Luna opens websites in (name, account or email domain, e.g. "Work" or "acme").
+    # Empty: the profile the browser used last. See server/services/browser_open.py.
+    browser_profile: str = ""
     enterprise_workflow_base_branch: str = "main"
     enterprise_workflow_test_command: str = "python -W ignore -m unittest discover -s tests/tools -p \"test_*.py\" -v"
 

@@ -33,6 +33,25 @@ TOOL_SCHEMAS: dict[str, dict] = {
     "launch_app": _obj({"app": _s("App name, e.g. 'spotify', 'vs code', 'chrome'")}, ("app",)),
     "close_app": _obj({"app": _s("Name of the running app to close")}, ("app",)),
     "list_apps": _obj(),
+    "brief_messages": {"type": "object", "properties": {"sources": {"type": "array", "items": {"type": "string", "enum": ["whatsapp", "gmail", "outlook"]}, "description": "Which to check. Omit for all"}}, "required": []},
+    "read_website": {"type": "object", "properties": {
+        "site": _s("linkedin, youtube, github, reddit, amazon, x, gmail, or a URL"),
+        "query": _s("What to search for on the site, e.g. internship. Empty: the site's home page"),
+        "limit": {"type": "integer", "description": "How many posts/items the user wants (default 10)"},
+        "max_age_minutes": {"type": "integer", "description": "Only items at most this old, in minutes: 'within 20 mins' = 20, 'last 2 hours' = 120, 'today' = 1440. Omit if not asked"},
+        "browser": _s("chrome (default), edge, brave"),
+        "profile": _s("Browser profile if the user named one")},
+        "required": ["site"]},
+    "message_contact": _obj({"to": _s("Contact or group name exactly as the user said it, e.g. Priya, Mom, Alexandra Morgan"),
+                             "text": _s("Only the message to send, written as the user would send it (first person). "
+                                        "For 'tell mom I reached' that is 'I reached'"),
+                             "app": _s("Messaging app. Only whatsapp for now")}, ("to", "text")),
+    "open_chat": _obj({"to": _s("Contact or group name exactly as the user said it")}, ("to",)),
+    "open_website": _obj({"site": _s("Site name (gmail, youtube, calendar) or a URL"),
+                          "browser": _s("chrome, edge, firefox or brave. Empty: Chrome"),
+                          "profile": _s("Browser profile: its name, account name or email domain, e.g. Work, acme. "
+                                        "Empty: the user's usual profile")}, ("site",)),
+    "list_open_apps": _obj(),
     "spotify_play": _obj({"query": _s("Song, artist, album or playlist. Empty resumes playback")}),
     "spotify_pause": _obj(),
     "spotify_next": _obj(),
@@ -64,6 +83,11 @@ TOOL_SCHEMAS: dict[str, dict] = {
     "browser_open": _obj({"url": _s("http(s) URL")}, ("url",)),
     "browser_read": _obj({"url": _s("http(s) URL of a public page")}, ("url",)),
     # Workspace files
+    "project_read_file": _obj({"file": _s("File name or path inside the project, e.g. chat.py or src/app.py"),
+                               "project": _s("Project folder name, e.g. mem-lm. Empty: the projects open in VS Code")}, ("file",)),
+    "claude_code": _obj({"task": _s("What Claude Code should do, written as a full instruction"),
+                         "project": _s("Project folder name, e.g. mem-lm. Empty: the project open in VS Code")}, ("task",)),
+    "check_claude_code": _obj({"project": _s("Project folder name. Empty: the project open in VS Code")}),
     "workspace_read": _obj({"path": _s(_PATH)}, ("path",)),
     "workspace_write": _obj({"path": _s(_PATH), "content": _s("Full file content")}, ("path", "content")),
     "workspace_read_base64": _obj({"path": _s(_PATH)}, ("path",)),
@@ -168,7 +192,7 @@ TOOL_SCHEMAS: dict[str, dict] = {
 
 # Tools with no side effects: safe to run concurrently and to repeat.
 READ_ONLY_TOOLS: frozenset[str] = frozenset({
-    "list_apps", "web_search", "use_skill", "web_research", "dataset_search", "web_fetch", "browser_read",
+    "list_apps", "list_open_apps", "project_read_file", "read_website", "brief_messages", "web_search", "use_skill", "web_research", "dataset_search", "web_fetch", "browser_read",
     "workspace_read", "workspace_read_base64", "list_skills", "search_conversation",
     "get_volume", "get_brightness", "get_clipboard", "get_system_info", "calculate", "daily_news", "compare_store_prices",
     "github_list_repos", "github_list_issues", "github_list_prs", "github_get_pr", "github_summarize_user_pr",

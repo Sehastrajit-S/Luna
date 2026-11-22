@@ -30,7 +30,7 @@ def is_store_price_request(text: str) -> bool:
 
 CORE_TOOLS = (
     "web_search", "use_skill", "web_fetch", "browse_url",
-    "launch_app", "close_app", "spotify_play", "spotify_pause", "spotify_next", "spotify_queue",
+    "launch_app", "close_app", "list_open_apps", "open_website", "spotify_play", "spotify_pause", "spotify_next", "spotify_queue",
     "search_conversation",
 )
 
@@ -51,6 +51,14 @@ TOOL_GROUPS: tuple[tuple[re.Pattern, tuple[str, ...]], ...] = tuple(
         (r"\b(?:audio|speakers?|headphones?|headset|realtek|output\s+device|bathroom)\b", ("switch_audio",)),
         (r"\b(?:previous|last)\s+(?:song|track)\b|\bgo\s+back\b", ("spotify_prev",)),
         (r"\bapps?\b|\bapplications?\b|\bprograms?\b", ("list_apps",)),
+        (r"\b(?:whats\s*app|text|texts|message|msg|dm|tell|ping)\b", ("message_contact", "open_chat", "brief_messages")),
+        (r"\bchats?\b", ("open_chat", "message_contact")),
+        (r"\b(?:messages|unread|inbox|mails?|e-?mails?|who\s+(?:messaged|texted|emailed)|catch\s+me\s+up)\b",
+         ("brief_messages",)),
+        (r"\b(?:linked\s*in|posts?|feed|youtube|reddit|github|twitter|on\s+x|amazon|listings?|jobs?|internships?)\b",
+         ("read_website", "open_website")),
+        (r"\bclaude(?:\s+code)?\b|\bvs\s*code\b|\bprojects?\b|\brepo\b|\b[\w-]+\.(?:py|js|ts|tsx|json|md|toml|ya?ml|go|rs|java|cs)\b",
+         ("project_read_file", "claude_code", "check_claude_code")),
         (r"\b(?:github|repos?|repository|pull\s+requests?|prs?|issues?|commits?|branch)\b",
          ("github_list_repos", "github_list_issues", "github_list_prs", "github_get_pr",
           "github_summarize_user_pr", "github_create_issue", "github_comment", "github_create_pr")),

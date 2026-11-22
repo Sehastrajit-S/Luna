@@ -38,14 +38,15 @@ async def finalize(ctx: ChatContext, background_tasks: BackgroundTasks) -> None:
     """
     full_response = ctx.full_response
 
-    # ── Log to chat log ───────────────────────────────────────────────────────
-    _src = "voice" if ctx.voice else "cli" if ctx.cli else "text"
-    _chat_print(f"\n[chat] {settings.user_name} ({_src}): {ctx.user_message}")
+    # ── Log to chat log (never for a temporary chat) ─────────────────────────
+    if not ctx.temporary:
+        _src = "voice" if ctx.voice else "cli" if ctx.cli else "text"
+        _chat_print(f"\n[chat] {settings.user_name} ({_src}): {ctx.user_message}")
 
-    _cli_text = strip_cards(re.sub(STRIP_RE, "", full_response)).strip()
-    _cli_text = re.sub(r"<think>.*?</think>", "", _cli_text, flags=re.DOTALL).strip()
-    if _cli_text:
-        _chat_print(f"[chat] Luna: {_cli_text}")
+        _cli_text = strip_cards(re.sub(STRIP_RE, "", full_response)).strip()
+        _cli_text = re.sub(r"<think>.*?</think>", "", _cli_text, flags=re.DOTALL).strip()
+        if _cli_text:
+            _chat_print(f"[chat] Luna: {_cli_text}")
 
     # ── Persist assistant message ─────────────────────────────────────────────
     luna_msg = Message(conversation_id=ctx.conv.id, role="assistant", content=full_response)
@@ -61,15 +62,16 @@ async def finalize(ctx: ChatContext, background_tasks: BackgroundTasks) -> None:
         except Exception as e:
             logger.warning("Could not record code artifacts: %s", e)
 
-    # ── Routing-decision log (training data for a learned router) ──────────
-    try:
-        from server.services.decision_log import record_turn
-        user_turns = [m.content for m in ctx.db.query(Message.content)
-                      .filter(Message.conversation_id == ctx.conv.id, Message.role == "user")
-                      .order_by(Message.id)]
-        record_turn(ctx, turn=len(user_turns), previous_user_message=user_turns[-2] if len(user_turns) > 1 else None)
-    except Exception as e:
-        logger.warning("Decision log failed: %s", e)
+    # ── Routing-decision log (training data for a learned router; not for temporary chats) ──
+    if not ctx.temporary:
+        try:
+            from server.services.decision_log import record_turn
+            user_turns = [m.content for m in ctx.db.query(Message.content)
+                          .filter(Message.conversation_id == ctx.conv.id, Message.role == "user")
+                          .order_by(Message.id)]
+            record_turn(ctx, turn=len(user_turns), previous_user_message=user_turns[-2] if len(user_turns) > 1 else None)
+        except Exception as e:
+            logger.warning("Decision log failed: %s", e)
 
     # ── Parse UI commands from response ───────────────────────────────────────
     commands = parse_commands(full_response, user_message=ctx.user_message)
@@ -80,6 +82,11 @@ async def finalize(ctx: ChatContext, background_tasks: BackgroundTasks) -> None:
         execute_commands(commands, ctx.db, ctx.conv.id)
 
     # ── Schedule background tasks ─────────────────────────────────────────────
+    # A temporary chat teaches Luna nothing: no fact extraction, summaries,
+    # mood learning or activity tracking.
+    if ctx.temporary:
+        ctx.emit_sse({"type": "done", "conversation_id": ctx.conv.id, "route": ctx.route or "unknown", "temporary": True})
+        return
     background_tasks.add_task(
         post_conversation_processing,
         ctx.db, ctx.conv.id, full_response, ctx.prev_luna or "", ctx.user_message,

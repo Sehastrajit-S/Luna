@@ -36,7 +36,27 @@ _CARDS_RE = re.compile(r"<!--luna-cards:.*?-->", re.DOTALL)
 _ERROR_PREFIXES = ("error", "failed", "unknown tool", "i couldn't", "github error", "event creation failed")
 _ACT_NUDGE = ("You said you would do that but didn't call a tool, so nothing happened. "
               "Call the right tool now, or answer directly if no tool is needed.")
-_EMPTY_NUDGE = "Your last reply was empty. Answer the user's message now, in plain text, outside any <think> tags."
+_CLAUDE_CODE_NUDGE = ("The user asked for Claude Code, but you didn't call claude_code, so it hasn't started and "
+                      "nothing was done. Call claude_code now with the full task (include file names and what to show), "
+                      "and the project if you know it. Don't claim Claude Code did anything before it's called.")
+# "ask Claude Code to …", "have claude code …", "use claude to …"
+_ASKS_CLAUDE_CODE = re.compile(r"\b(?:ask|have|get|tell|use|using|with|via|open|run|start|launch)\b[^.?!\n]{0,20}"
+                               r"\bclaude(?:[\s-]+code)?\b", re.IGNORECASE)
+_FAKE_DONE_NUDGE = ("You wrote that an action happened, but you didn't call a tool this turn, so nothing happened "
+                    "(earlier results in the conversation were for earlier requests). Call the right tool now; if "
+                    "there is no tool for it, tell the user you can't do it.")
+# "Opened whatsapp. Checked: …", "Closing 'whatsapp'.": the model copying an earlier tool result's wording.
+_CLAIMS_DONE = re.compile(
+    r"^(?:ok(?:ay)?[,.!]?\s+|done[,.!]?\s+|sure[,.!]?\s+)?(?:i(?:'ve| have)\s+)?"
+    r"(?:opened|opening|closed|closing|launched|launching|started|quit|sent|sending|messaged|played|playing|"
+    r"paused|stopped|set|turned|muted|unmuted|created|added|deleted|removed|scheduled)\b"
+    r"|^checked:|\bchecked: [“\"]", re.IGNORECASE | re.MULTILINE)
+# Echoes of a tool result ("Checks: ...", "Screenshot: E:/..."): a claim however long the reply is.
+_RESULT_ECHO = re.compile(r"\bChecks?:\s|\bScreenshot:\s*[A-Z]:[\\/]|^Sent to\b|\bSent to .{1,60} on WhatsApp",
+                          re.IGNORECASE | re.MULTILINE)
+_NOT_DONE_REPLY = ("I didn't actually do that — nothing was run or sent. Say it again with who and what "
+                   "(for example “send Priya I'm late on WhatsApp”) and I'll ask you to approve it.")
+_EMPTY_NUDGE ="Your last reply was empty. Answer the user's message now, in plain text, outside any <think> tags."
 _FINAL_NUDGE = "You've used the tool budget for this request. Answer the user now with what you have; no more tools."
 
 
@@ -416,6 +436,21 @@ class AgentLoop:
                     logger.info("Model announced an action without a tool call; nudging it to call the tool")
                     messages += [turn.as_message(), {"role": "user", "content": _ACT_NUDGE}]
                     continue
+                if not turn.tool_calls and not nudged and self._claims_unrun_action(turn.content):
+                    nudged = True
+                    logger.info("Model claimed an action it didn't run; nudging it to call the tool")
+                    messages += [turn.as_message(), {"role": "user", "content": _FAKE_DONE_NUDGE}]
+                    continue
+                if not turn.tool_calls and not nudged and self._skipped_claude_code():
+                    # Asked for Claude Code, got a reply claiming it ran. It only runs through the tool.
+                    nudged = True
+                    logger.info("User asked for Claude Code but the model didn't call it; nudging")
+                    messages += [turn.as_message(), {"role": "user", "content": _CLAUDE_CODE_NUDGE}]
+                    continue
+                if not turn.tool_calls and self._claims_unrun_action(turn.content):
+                    # Nudged once and still claiming it: never show a made-up "Sent …".
+                    logger.warning("Model claimed an action it didn't run, twice; replacing the reply")
+                    turn.content = _NOT_DONE_REPLY
                 if not turn.tool_calls:
                     final = turn
                     break
@@ -515,6 +550,22 @@ class AgentLoop:
             yield event
         for outcome in running.result():
             messages.append(tool_result_message(outcome.call, _clip(outcome.content, settings.agent_tool_result_chars)))
+
+    def _skipped_claude_code(self) -> bool:
+        """The user asked for Claude Code, it's available, and it hasn't been called."""
+        return ("claude_code" in self.active and "claude_code" not in self.tools_used
+                and bool(_ASKS_CLAUDE_CODE.search(self.ctx.user_message or "")))
+
+    def _claims_unrun_action(self, content: str) -> bool:
+        """A short reply saying something was opened/closed/sent when no tool ran this turn."""
+        if self.tools_used or getattr(self.ctx, "attachment_ids", None):
+            return False
+        visible = (content or "").strip()
+        if not visible:
+            return False
+        if _RESULT_ECHO.search(visible):
+            return True
+        return len(visible.split()) <= 30 and bool(_CLAIMS_DONE.search(visible))
 
     def _announces_action(self, content: str) -> bool:
         """A short reply that only promises a lookup/action, with nothing done yet."""

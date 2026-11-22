@@ -13,7 +13,9 @@ from server.services.app_launcher.launcher import (
     launch_sticky_notes,
     list_known_apps,
     list_app_profiles,
+    suggest_apps,
 )
+from server.services.app_launcher.open_apps import list_open_apps
 
 __all__ = [
     "APP_PROFILES",
@@ -27,4 +29,6 @@ __all__ = [
     "launch_sticky_notes",
     "list_known_apps",
     "list_app_profiles",
+    "list_open_apps",
+    "suggest_apps",
 ]

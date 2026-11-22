@@ -43,17 +43,13 @@
           <svg viewBox="0 0 24 24" width="17" height="17"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" fill="none"/><path d="M21 21l-4.3-4.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           <span>Explore</span>
         </button>
-        <button class="nav-item" type="button" data-nav="news">
-          <svg viewBox="0 0 24 24" width="17" height="17"><path d="M5 5h11v14H6.5A1.5 1.5 0 0 1 5 17.5z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/><path d="M16 9h3v8.5a1.5 1.5 0 0 1-3 0M8 9h5M8 12.5h5M8 16h3" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <span>News</span>
-        </button>
-        <button class="nav-item" type="button" data-nav="library">
-          <svg viewBox="0 0 24 24" width="17" height="17"><path d="M6 3h9l3 3v15H6z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/><path d="M14 3v4h4" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/></svg>
-          <span>Library</span>
-        </button>
         <button class="nav-item" type="button" data-nav="capabilities">
           <svg viewBox="0 0 24 24" width="17" height="17"><circle cx="12" cy="8" r="3.4" stroke="currentColor" stroke-width="2" fill="none"/><path d="M5 20c0-4 3.1-6.5 7-6.5S19 16 19 20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
           <span>Capabilities</span>
+        </button>
+        <button class="nav-item" type="button" data-nav="apps">
+          <svg viewBox="0 0 24 24" width="17" height="17"><rect x="4" y="4" width="6.5" height="6.5" rx="1.6" stroke="currentColor" stroke-width="2" fill="none"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.6" stroke="currentColor" stroke-width="2" fill="none"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6" stroke="currentColor" stroke-width="2" fill="none"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.6" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+          <span>Apps</span>
         </button>
         <button class="nav-item" type="button" data-nav="settings">
           <svg viewBox="0 0 24 24" width="17" height="17"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" fill="none"/><path d="M12 3v2.4M12 18.6V21M4.9 4.9l1.7 1.7M17.4 17.4l1.7 1.7M3 12h2.4M18.6 12H21M4.9 19.1l1.7-1.7M17.4 6.6l1.7-1.7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -102,6 +98,10 @@
 
       <header class="topbar">
         <div class="topbar-actions">
+          <button class="temp-chat-btn" id="temp-chat-btn" type="button" aria-pressed="false" title="Temporary chat: not saved to Recent or memory">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 3.5c-4.4 0-7.5 3.2-7.5 7.4v8.6l2.3-1.6 2.3 1.6 2.9-1.6 2.9 1.6 2.3-1.6 2.3 1.6v-8.6c0-4.2-3.1-7.4-7.5-7.4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-dasharray="3 2.2"/><circle cx="9.5" cy="10.5" r="1.2" fill="currentColor"/><circle cx="14.5" cy="10.5" r="1.2" fill="currentColor"/></svg>
+            <span class="temp-chat-label">Temporary</span>
+          </button>
           <label class="search-box">
             <svg viewBox="0 0 24 24" width="15" height="15"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" fill="none"/><path d="M21 21l-4.3-4.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
             <input type="text" placeholder="Search conversations..." />
@@ -115,11 +115,16 @@
       </header>
 
       <div id="view-chat" class="view">
+      <div class="temp-banner" id="temp-banner" role="status" hidden>
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 3.5c-4.4 0-7.5 3.2-7.5 7.4v8.6l2.3-1.6 2.3 1.6 2.9-1.6 2.9 1.6 2.3-1.6 2.3 1.6v-8.6c0-4.2-3.1-7.4-7.5-7.4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-dasharray="3 2.2"/><circle cx="9.5" cy="10.5" r="1.2" fill="currentColor"/><circle cx="14.5" cy="10.5" r="1.2" fill="currentColor"/></svg>
+        <span class="temp-banner-text"><strong>Temporary chat</strong> Not saved to Recent or Luna’s memory, and deleted when you leave.</span>
+        <button class="temp-banner-end" id="temp-end-btn" type="button">End</button>
+      </div>
       <section class="conversation" id="conversation">
         <div class="empty-conversation is-hidden" id="empty-conversation">
           <span class="empty-conversation-mark"><img src="../../resources/logo_icon.png" width="24" height="24" alt="" /></span>
-          <h2>Start a new conversation</h2>
-          <p>Ask Luna anything. Your new chat will appear in Recent once you send a message.</p>
+          <h2 data-normal="Start a new conversation" data-temporary="Temporary chat">Start a new conversation</h2>
+          <p data-normal="Ask Luna anything. Your new chat will appear in Recent once you send a message." data-temporary="This chat won’t appear in Recent, and Luna won’t remember anything from it. It’s deleted as soon as you leave.">Ask Luna anything. Your new chat will appear in Recent once you send a message.</p>
         </div>
         <div class="msg-row msg-row-user">
           <div class="bubble bubble-user">
@@ -176,6 +181,10 @@
                 <button class="plus-item" id="plus-meeting" type="button" role="menuitem">
                   <span class="plus-item-icon"><svg viewBox="0 0 24 24" width="16" height="16"><rect x="9" y="3" width="6" height="11" rx="3" stroke="currentColor" stroke-width="1.8" fill="none"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg></span>
                   <span class="plus-item-text"><span class="plus-item-name">Meeting mode</span><span class="plus-item-desc">Record, transcribe and write minutes</span></span>
+                </button>
+                <button class="plus-item" id="plus-scan" type="button" role="menuitem">
+                  <span class="plus-item-icon"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M8 8v8M11 8v8M13.5 8v8M16 8v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+                  <span class="plus-item-text"><span class="plus-item-name">Scan barcode</span><span class="plus-item-desc">Scan a product and compare store prices</span></span>
                 </button>
               </div>
               <div class="plus-panel" data-panel="skills" hidden>
@@ -446,22 +455,329 @@
         </div>
       </div>
 
+      <div id="view-apps" class="view is-hidden">
+        <div class="apps-home">
+          <div class="dashboard-header">
+            <p class="eyebrow">LUNA</p>
+            <h1>Apps</h1>
+            <p class="sub">Tools that open right inside Luna.</p>
+          </div>
+          <div class="app-grid">
+            <button class="app-tile" type="button" data-open-app="budget">
+              <span class="app-tile-icon"><svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5H12z" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linejoin="round"/><path d="M15 3.9A8.5 8.5 0 0 1 20.1 9H15z" fill="currentColor"/></svg></span>
+              <span class="app-tile-name">Budget</span>
+              <span class="app-tile-desc">Spending, income and monthly limits</span>
+            </button>
+            <button class="app-tile" type="button" data-open-app="tasks">
+              <span class="app-tile-icon"><svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4" stroke="currentColor" stroke-width="1.8" fill="none"/><path d="M8.5 12.2l2.4 2.4 4.8-5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              <span class="app-tile-name">Tasks</span>
+              <span class="app-tile-desc">To-dos, due dates and lists</span>
+            </button>
+            <button class="app-tile" type="button" data-open-app="notes">
+              <span class="app-tile-icon"><svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path d="M6 4h9.5L19 7.5V20H6z" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linejoin="round"/><path d="M9 10h7M9 13.5h7M9 17h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+              <span class="app-tile-name">Notes</span>
+              <span class="app-tile-desc">Write things down, autosaved</span>
+            </button>
+            <button class="app-tile" type="button" data-open-app="voice">
+              <span class="app-tile-icon"><svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" stroke="currentColor" stroke-width="1.8" fill="none"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M3 5V3.5A.5.5 0 0 1 3.5 3H5M19 3h1.5a.5.5 0 0 1 .5.5V5" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg></span>
+              <span class="app-tile-name">Voice</span>
+              <span class="app-tile-desc">Hands-free; “scan this and …”</span>
+            </button>
+            <button class="app-tile" type="button" data-open-app="remote">
+              <span class="app-tile-icon"><svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><rect x="3" y="4.5" width="13" height="9.5" rx="2" stroke="currentColor" stroke-width="1.8" fill="none"/><path d="M7 18h5M9.5 14v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="17.5" y="8" width="4" height="11" rx="1.3" stroke="currentColor" stroke-width="1.6" fill="none"/></svg></span>
+              <span class="app-tile-name">Remote control</span>
+              <span class="app-tile-desc">Have your other devices do tasks</span>
+            </button>
+            <button class="app-tile" type="button" data-open-app="scanner">
+              <span class="app-tile-icon"><svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M8 8.5v7M11 8.5v7M13.5 8.5v7M16 8.5v7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+              <span class="app-tile-name">Scan &amp; compare</span>
+              <span class="app-tile-desc">Scan a barcode, compare store prices</span>
+            </button>
+            <button class="app-tile" type="button" data-open-app="news">
+              <span class="app-tile-icon"><svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path d="M5 5h11v14H6.5A1.5 1.5 0 0 1 5 17.5z" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linejoin="round"/><path d="M16 9h3v8.5a1.5 1.5 0 0 1-3 0M8 9h5M8 12.5h5M8 16h3" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              <span class="app-tile-name">News</span>
+              <span class="app-tile-desc">Today’s headlines by topic</span>
+            </button>
+            <button class="app-tile" type="button" data-open-app="library">
+              <span class="app-tile-icon"><svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path d="M6 3h9l3 3v15H6z" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linejoin="round"/><path d="M14 3v4h4M9 12h6M9 15.5h6" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linejoin="round" stroke-linecap="round"/></svg></span>
+              <span class="app-tile-name">Library</span>
+              <span class="app-tile-desc">Your files and files Luna made</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="view-tasks" class="view is-hidden">
+        <div class="tasks-app">
+          <div class="budget-top">
+            <div class="dashboard-header">
+              <p class="eyebrow">APPS</p>
+              <h1>Tasks</h1>
+              <p class="sub">Everything on your plate, including tasks Luna adds from chat.</p>
+            </div>
+            <button class="bud-action" id="tk-plan" type="button">Plan my day</button>
+          </div>
+          <div class="tk-layout">
+            <nav class="tk-views" id="tk-views" role="tablist" aria-label="Task views"></nav>
+            <section class="tk-main">
+              <div class="tk-main-head">
+                <h2 id="tk-view-title">Today</h2>
+                <label class="search-box tk-search">
+                  <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" fill="none"/><path d="M21 21l-4.3-4.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                  <input type="search" id="tk-search" placeholder="Search tasks…" autocomplete="off" aria-label="Search tasks" />
+                </label>
+              </div>
+              <form class="tk-add" id="tk-add" autocomplete="off">
+                <span class="tk-add-plus" aria-hidden="true">+</span>
+                <input id="tk-add-input" type="text" maxlength="300" placeholder="Add a task…" aria-label="Add a task" enterkeyhint="done" />
+                <button class="bud-action is-primary tk-add-btn" type="submit">Add</button>
+              </form>
+              <div class="tk-add-preview" id="tk-add-preview" hidden></div>
+              <p class="tk-add-hint" id="tk-add-hint">Try “Call mom tomorrow 5pm #family !high”: dates, times, #list and !high are picked up.</p>
+              <p class="bud-status" id="tk-status" role="status" hidden></p>
+              <div id="tk-list" aria-live="polite"></div>
+              <button class="bud-link tk-clear" id="tk-clear" type="button" hidden>Clear completed</button>
+            </section>
+          </div>
+        </div>
+
+        <div class="meeting-sheet bud-sheet" id="tk-sheet" hidden>
+          <form class="meeting-sheet-card bud-sheet-card" id="tk-form" role="dialog" aria-modal="true" aria-labelledby="tk-form-heading" novalidate>
+            <div class="bud-sheet-head">
+              <h2 id="tk-form-heading">Edit task</h2>
+              <button class="meeting-sheet-close" id="tk-form-close" type="button" aria-label="Close">×</button>
+            </div>
+            <div class="bud-fields">
+              <label class="bud-field"><span class="bud-field-label">Task</span><input class="bud-input" name="task_title" type="text" maxlength="300" /></label>
+              <label class="bud-field"><span class="bud-field-label">Notes</span><textarea class="bud-input tk-notes-input" name="notes" rows="3" maxlength="5000" placeholder="Details, links…"></textarea></label>
+              <div class="bud-field-row tk-when">
+                <label class="bud-field"><span class="bud-field-label">Due date</span><input class="bud-input" name="date" type="date" /></label>
+                <label class="bud-field"><span class="bud-field-label">Time</span><input class="bud-input" name="time" type="time" /></label>
+              </div>
+              <div class="bud-field"><span class="bud-field-label">Priority</span>
+                <div class="bud-seg tk-priority" id="tk-priority" role="radiogroup" aria-label="Priority">
+                  <button class="bud-seg-btn" type="button" role="radio" data-priority="low">Low</button>
+                  <button class="bud-seg-btn" type="button" role="radio" data-priority="medium">Normal</button>
+                  <button class="bud-seg-btn" type="button" role="radio" data-priority="high">High</button>
+                </div>
+              </div>
+              <label class="bud-field"><span class="bud-field-label">List</span><input class="bud-input" name="task_list" type="text" maxlength="40" list="tk-list-options" placeholder="None" /></label>
+              <datalist id="tk-list-options"></datalist>
+            </div>
+            <p class="bud-form-error" id="tk-form-error" role="alert" hidden></p>
+            <div class="bud-sheet-foot">
+              <button class="bud-action is-danger" id="tk-form-delete" type="button">Delete</button>
+              <button class="bud-action" id="tk-form-done" type="button">Mark done</button>
+              <button class="bud-action is-primary" id="tk-form-save" type="submit">Save</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div id="view-notes" class="view is-hidden">
+        <div class="notes-app">
+          <aside class="notes-side">
+            <div class="notes-side-head">
+              <div>
+                <p class="eyebrow">APPS</p>
+                <h1>Notes</h1>
+              </div>
+              <button class="notes-new" id="notes-new" type="button" aria-label="New note" title="New note">
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+              </button>
+            </div>
+            <label class="search-box notes-search">
+              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" fill="none"/><path d="M21 21l-4.3-4.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <input type="search" id="notes-search" placeholder="Search notes…" autocomplete="off" aria-label="Search notes" />
+            </label>
+            <ul class="notes-list" id="notes-list" aria-live="polite"></ul>
+          </aside>
+          <section class="notes-main">
+            <div class="note-placeholder" id="note-placeholder">
+              <p>Pick a note, or start a new one.</p>
+              <button class="bud-action is-primary" id="note-placeholder-new" type="button">＋ New note</button>
+            </div>
+            <div class="note-editor" id="note-editor" hidden>
+              <div class="note-toolbar">
+                <button class="note-tool note-back" id="note-back" type="button" aria-label="Back to notes">
+                  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span>Notes</span>
+                </button>
+                <span class="note-date" id="note-date"></span>
+                <span class="note-saved" id="note-saved" role="status"></span>
+                <button class="note-tool" id="note-pin" type="button" aria-pressed="false" title="Pin to top" aria-label="Pin">
+                  <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M9 4h6l-1 5 3 3v2H7v-2l3-3zM12 14v6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round"/></svg>
+                </button>
+                <button class="note-tool" id="note-ask" type="button" title="Ask Luna about this note">Ask Luna</button>
+                <button class="note-tool is-danger" id="note-delete" type="button" title="Delete note" aria-label="Delete note">
+                  <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round"/></svg>
+                </button>
+              </div>
+              <input class="note-title" id="note-title" type="text" maxlength="300" placeholder="Title" aria-label="Note title" />
+              <textarea class="note-body" id="note-body" placeholder="Start writing…" aria-label="Note"></textarea>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div id="view-remote" class="view is-hidden">
+        <header class="rc-header">
+          <div class="rc-picker">
+            <button class="rc-picker-btn" id="rc-picker-btn" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="rc-menu">
+              <span class="rc-picker-icon" id="rc-picker-icon" aria-hidden="true"></span>
+              <span class="rc-picker-text">
+                <span class="rc-picker-eyebrow">Remote control</span>
+                <span class="rc-picker-label" id="rc-picker-label">Pick a device</span>
+              </span>
+              <svg class="rc-picker-chevron" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+            </button>
+            <div class="rc-menu" id="rc-menu" hidden>
+              <p class="rc-menu-head">Devices <span>· pick one or more</span></p>
+              <div class="rc-devices" id="rc-devices" role="listbox" aria-multiselectable="true" aria-label="Devices"></div>
+              <p class="rc-notice" id="rc-notice" hidden></p>
+              <button class="rc-menu-refresh" id="rc-refresh" type="button">
+                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span>Refresh devices</span>
+              </button>
+            </div>
+          </div>
+          <button class="rc-new" id="rc-new-session" type="button" title="Start a fresh conversation on each device">
+            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+            <span>New session</span>
+          </button>
+        </header>
+        <section class="rc-conversation" id="rc-runs" aria-live="polite">
+          <div class="empty-conversation rc-empty" id="rc-empty">
+            <span class="empty-conversation-mark rc-empty-mark"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><rect x="3" y="4.5" width="13" height="9.5" rx="2" stroke="currentColor" stroke-width="1.8" fill="none"/><path d="M7 18h5M9.5 14v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="17.5" y="8" width="4" height="11" rx="1.3" stroke="currentColor" stroke-width="1.6" fill="none"/></svg></span>
+            <h2>Control your devices</h2>
+            <p>Pick a device at the top and tell it what to do. Its own Luna does the work and answers here.</p>
+            <div class="rc-suggestions" id="rc-suggestions">
+              <button type="button" class="rc-suggestion">What apps are open?</button>
+              <button type="button" class="rc-suggestion">Open Chrome</button>
+              <button type="button" class="rc-suggestion">Mute the volume</button>
+              <button type="button" class="rc-suggestion">How much battery is left?</button>
+            </div>
+          </div>
+        </section>
+        <footer class="composer rc-composer">
+          <form class="composer-bar rc-bar" id="rc-form" autocomplete="off">
+            <input type="text" class="composer-input rc-input" id="rc-input" maxlength="4000" placeholder="Pick a device first" aria-label="Task" />
+            <button class="send-btn rc-send" id="rc-send" type="submit" aria-label="Send" disabled>
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+            </button>
+          </form>
+        </footer>
+      </div>
+
+      <div id="view-budget" class="view is-hidden">
+        <div class="budget">
+          <div class="budget-top">
+            <div class="dashboard-header">
+              <p class="eyebrow">APPS</p>
+              <h1>Budget</h1>
+              <p class="sub">Where your money went this month, and what’s left.</p>
+            </div>
+            <div class="bud-month" role="group" aria-label="Month">
+              <button class="bud-month-btn" id="bud-prev" type="button" aria-label="Previous month">‹</button>
+              <span class="bud-month-label" id="bud-month-label"></span>
+              <button class="bud-month-btn" id="bud-next" type="button" aria-label="Next month">›</button>
+            </div>
+          </div>
+
+          <section class="bud-hero" id="bud-hero" aria-live="polite"></section>
+
+          <div class="bud-actions">
+            <button class="bud-action is-primary" id="bud-add-expense" type="button">＋ Expense</button>
+            <button class="bud-action" id="bud-add-income" type="button">＋ Income</button>
+            <div class="bud-action bud-receipt" id="bud-receipt-btn">
+              <span>Scan receipt</span>
+              <input class="bud-receipt-file" id="bud-receipt" type="file" accept="image/*" capture="environment" aria-label="Scan a receipt" />
+            </div>
+            <button class="bud-action" id="bud-ask" type="button">Ask Luna</button>
+            <button class="bud-action" id="bud-export" type="button">Export CSV</button>
+          </div>
+          <p class="bud-status" id="bud-status" role="status" hidden></p>
+
+          <div class="bud-grid">
+            <section class="bud-card">
+              <div class="bud-card-head">
+                <h2>Categories</h2>
+                <button class="bud-link" id="bud-add-category" type="button">＋ Category</button>
+              </div>
+              <ul class="bud-cats" id="bud-cats"></ul>
+            </section>
+            <section class="bud-card">
+              <div class="bud-card-head"><h2>Last 6 months</h2><span class="bud-legend"><i class="is-spent"></i>Spent <i class="is-income"></i>Income</span></div>
+              <div class="bud-trend" id="bud-trend"></div>
+            </section>
+          </div>
+
+          <section class="bud-card bud-txns-card">
+            <div class="bud-card-head">
+              <h2>Transactions</h2>
+              <label class="search-box bud-search">
+                <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" fill="none"/><path d="M21 21l-4.3-4.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                <input type="search" id="bud-search" placeholder="Search…" autocomplete="off" />
+              </label>
+            </div>
+            <div id="bud-txns"></div>
+          </section>
+        </div>
+
+        <div class="meeting-sheet bud-sheet" id="bud-sheet" hidden>
+          <form class="meeting-sheet-card bud-sheet-card" id="bud-form" role="dialog" aria-modal="true" aria-labelledby="bud-form-title" novalidate>
+            <div class="bud-sheet-head">
+              <h2 id="bud-form-title">Add expense</h2>
+              <button class="meeting-sheet-close" id="bud-form-close" type="button" aria-label="Close">×</button>
+            </div>
+            <div class="bud-fields" id="bud-fields"></div>
+            <p class="bud-form-error" id="bud-form-error" role="alert" hidden></p>
+            <div class="bud-sheet-foot">
+              <button class="bud-action is-danger" id="bud-form-delete" type="button" hidden>Delete</button>
+              <button class="bud-action is-primary" id="bud-form-save" type="submit">Save</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
       <div id="view-capabilities" class="view is-hidden">
         <div class="capabilities">
           <div class="dashboard-header">
             <p class="eyebrow">LUNA</p>
             <h1>Capabilities</h1>
-            <p class="sub">Configure Luna’s skills and integrations.</p>
+            <p class="sub">Luna’s apps, skills and integrations.</p>
           </div>
-          <div class="capability-filters" role="tablist" aria-label="Capability filters">
-            <button class="capability-filter is-active" type="button" data-capability-filter="all">All</button>
-            <button class="capability-filter" type="button" data-capability-filter="skill">Skills</button>
-            <button class="capability-filter" type="button" data-capability-filter="integration">Integrations</button>
+          <div class="capability-toolbar">
+            <div class="capability-filters" role="tablist" aria-label="Capability filters">
+              <button class="capability-filter is-active" type="button" data-capability-filter="all">All</button>
+              <button class="capability-filter" type="button" data-capability-filter="app">Apps</button>
+              <button class="capability-filter" type="button" data-capability-filter="skill">Skills</button>
+              <button class="capability-filter" type="button" data-capability-filter="integration">Integrations</button>
+            </div>
+            <label class="search-box capability-search">
+              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" fill="none"/><path d="M21 21l-4.3-4.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <input type="search" id="capability-search" placeholder="Search capabilities…" autocomplete="off" aria-label="Search capabilities" />
+            </label>
           </div>
-          <section class="capability-section">
+          <section class="capability-section" data-capability-section="app">
+            <div class="capability-section-heading"><h2>Apps</h2><span>Open right inside Luna</span></div>
+            <div class="capability-grid" id="apps-grid">
+              <article class="capability-card is-openable" data-capability-category="app" data-open-app="budget" role="button" tabindex="0"><span class="capability-icon">◔</span><div><h3>Budget</h3><p>Track spending and income, set monthly limits per category, and scan receipts.</p><span class="capability-action">Open</span></div></article>
+              <article class="capability-card is-openable" data-capability-category="app" data-open-app="tasks" role="button" tabindex="0"><span class="capability-icon">☑</span><div><h3>Tasks</h3><p>To-dos with due dates, priorities and lists, including tasks Luna adds from chat.</p><span class="capability-action">Open</span></div></article>
+              <article class="capability-card is-openable" data-capability-category="app" data-open-app="notes" role="button" tabindex="0"><span class="capability-icon">✎</span><div><h3>Notes</h3><p>Quick notes that save as you type, with pinning, search and Ask Luna.</p><span class="capability-action">Open</span></div></article>
+              <article class="capability-card is-openable" data-capability-category="app" data-open-app="voice" role="button" tabindex="0"><span class="capability-icon">◉</span><div><h3>Voice</h3><p>Full-screen, hands-free. Say “scan this and find prices”, or “scan this QR and fill the form”, and the camera does the rest.</p><span class="capability-action">Open</span></div></article>
+              <article class="capability-card is-openable" data-capability-category="app" data-open-app="remote" role="button" tabindex="0"><span class="capability-icon">⧉</span><div><h3>Remote control</h3><p>Pick devices on your tailnet that run Luna and tell them what to do, like lock the screen or open an app.</p><span class="capability-action">Open</span></div></article>
+              <article class="capability-card is-openable" data-capability-category="app" data-open-app="scanner" role="button" tabindex="0"><span class="capability-icon">▥</span><div><h3>Scan &amp; compare</h3><p>Scan a product’s barcode and compare its price across stores.</p><span class="capability-action">Open</span></div></article>
+              <article class="capability-card is-openable" data-capability-category="app" data-open-app="news" role="button" tabindex="0"><span class="capability-icon">◫</span><div><h3>News</h3><p>Today’s headlines by topic. Swipe a story to ask Luna about it.</p><span class="capability-action">Open</span></div></article>
+              <article class="capability-card is-openable" data-capability-category="app" data-open-app="library" role="button" tabindex="0"><span class="capability-icon">▤</span><div><h3>Library</h3><p>Files you’ve shared with Luna and files Luna made for you.</p><span class="capability-action">Open</span></div></article>
+            </div>
+          </section>
+          <section class="capability-section" data-capability-section="skill">
+            <div class="capability-section-heading"><h2>Skills</h2><span id="skills-count"></span></div>
             <div class="capability-grid" id="skills-grid"><p class="capability-empty">Loading skills…</p></div>
           </section>
-          <section class="capability-section">
+          <section class="capability-section" data-capability-section="integration">
+            <div class="capability-section-heading"><h2>Integrations</h2></div>
             <div class="capability-grid integration-grid">
               <article class="capability-card" data-capability-category="integration"><span class="capability-icon">◈</span><div><h3>Google Workspace</h3><p>Gmail, Calendar, Drive, and Google Tasks.</p></div></article>
               <article class="capability-card" data-capability-category="integration"><span class="capability-icon">▣</span><div><h3>Microsoft 365</h3><p>Outlook, OneDrive, Teams, and To Do.</p></div></article>
@@ -472,9 +788,60 @@
               <article class="capability-card" data-capability-category="integration"><span class="capability-icon">◌</span><div><h3>Calendar & tasks</h3><p>Create events, manage tasks, and send reminders.</p></div></article>
             </div>
           </section>
+          <p class="capability-empty capability-no-match" id="capability-no-match" hidden></p>
         </div>
       </div>
     </main>
+  </div>
+
+  <div class="meeting-sheet scan-sheet" id="scan-sheet" hidden>
+    <div class="meeting-sheet-card scan-card" role="dialog" aria-modal="true" aria-labelledby="scan-title">
+      <div class="scan-head">
+        <h2 id="scan-title">Scan a barcode</h2>
+        <button class="meeting-sheet-close" id="scan-close" type="button" aria-label="Close scanner">×</button>
+      </div>
+
+      <div class="scan-step" data-step="scan">
+        <div class="scan-viewfinder" id="scan-viewfinder" hidden>
+          <video id="scan-video" playsinline muted></video>
+          <div class="scan-frame" aria-hidden="true"><span class="scan-laser"></span></div>
+        </div>
+        <p class="scan-status" id="scan-status" role="status"></p>
+        <div class="scan-actions">
+          <!-- The file input itself covers the button, invisible, so the tap lands
+               on it directly. iPhone Safari won't open the camera from a label for
+               a hidden input or from a script-triggered click. -->
+          <div class="scan-btn is-primary scan-photo" id="scan-photo-btn">
+            <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1.5-2h6l1.5 2h2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.5" stroke="currentColor" stroke-width="1.8" fill="none"/></svg>
+            <span id="scan-photo-label">Take a photo of the barcode</span>
+            <input type="file" class="scan-file" id="scan-photo" accept="image/*" capture="environment" aria-label="Take a photo of the barcode" />
+          </div>
+        </div>
+        <form class="scan-manual" id="scan-manual">
+          <input id="scan-code" type="text" inputmode="numeric" autocomplete="off" placeholder="Or type the number under the barcode" maxlength="18" />
+          <button class="scan-btn" type="submit">Look up</button>
+        </form>
+      </div>
+
+      <div class="scan-step" data-step="product" hidden>
+        <div class="scan-product">
+          <img class="scan-product-img" id="scan-product-img" alt="" referrerpolicy="no-referrer" />
+          <div class="scan-product-text">
+            <span class="scan-product-meta" id="scan-product-meta"></span>
+            <span class="scan-product-title" id="scan-product-title"></span>
+          </div>
+        </div>
+        <p class="scan-note" id="scan-product-note"></p>
+        <form class="scan-compare" id="scan-compare">
+          <label class="scan-label" for="scan-query">Compare prices for</label>
+          <input id="scan-query" type="text" autocomplete="off" maxlength="160" required />
+          <div class="scan-actions">
+            <button class="scan-btn is-primary" type="submit">Compare prices</button>
+            <button class="scan-btn" id="scan-again" type="button">Scan another</button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 
   <div class="explore-overlay is-hidden" id="explore-overlay" role="dialog" aria-modal="true" aria-labelledby="explore-title">
@@ -506,6 +873,24 @@
   <script src="auth-fetch.js"></script>
   <script src="server-connection.js"></script>
   <script src="mobile-nav.js"></script>
+  <div class="voice-only" id="voice-only" role="dialog" aria-modal="true" aria-label="Voice mode" hidden>
+    <button class="vo-close" id="vo-close" type="button" aria-label="End voice mode">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+    </button>
+    <div class="vo-stage">
+      <div class="vo-orb" id="vo-orb" aria-hidden="true"><span></span></div>
+      <video class="vo-camera" id="vo-camera" playsinline muted hidden></video>
+      <div class="vo-frame" id="vo-frame" hidden><span class="vo-count" id="vo-count"></span></div>
+    </div>
+    <p class="vo-status" id="vo-status" role="status" aria-live="polite"></p>
+    <p class="vo-heard" id="vo-heard"></p>
+    <div class="vo-reply" id="vo-reply" aria-live="polite"></div>
+    <div class="vo-actions">
+      <button class="vo-shot" id="vo-shot" type="button" hidden>Take photo now</button>
+      <label class="vo-shot" id="vo-photo-label" hidden>Take photo<input type="file" id="vo-photo" accept="image/*" capture="environment" hidden /></label>
+    </div>
+    <p class="vo-hint">Try “scan this and find prices at stores”, “scan this QR and fill the form”, or “any new messages?”</p>
+  </div>
   <script src="markdown.js"></script>
   <script src="attachments.js"></script>
   <script src="composer-plus.js"></script>
@@ -516,6 +901,12 @@
   <script src="library.js"></script>
   <script src="news.js"></script>
   <script src="meeting.js"></script>
+  <script src="scanner.js"></script>
+  <script src="budget.js"></script>
+  <script src="tasks.js"></script>
+  <script src="notes.js"></script>
+  <script src="remote.js"></script>
+  <script src="voice-only.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

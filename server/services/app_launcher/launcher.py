@@ -1,6 +1,7 @@
 """App launching logic, target resolution, and public API."""
 import os
 import platform
+import re
 import shutil
 import subprocess
 from difflib import get_close_matches
@@ -35,7 +36,7 @@ def _platform_key() -> str:
 def _profile_targets(query: str) -> list[str]:
     for profile in APP_PROFILES.values():
         aliases = {_normalize(a) for a in profile["aliases"]}
-        if query in aliases or any(query in a or a in query for a in aliases):
+        if query in aliases or any(_names_match(query, a) for a in aliases):
             targets = list(profile.get(_platform_key(), []))
             return [t for t in targets if t]
     return []
@@ -47,13 +48,13 @@ def _first_available_target(targets: list[str]) -> str | None:
     if IS_MAC:
         return targets[0]
     if IS_WINDOWS:
+        # A bare program name only counts when Windows can actually find it;
+        # otherwise find_app goes on to the installed-apps lists.
         for t in targets:
-            if (t == STICKY_NOTES_TARGET or t.endswith(":")
-                    or t.startswith("ms-") or t.startswith("shell:")):
-                return t
-            if shutil.which(t.split()[0]):
-                return t
-        return targets[0]
+            resolved = _resolve_windows_target(t)
+            if resolved:
+                return resolved
+        return None
     for t in targets:
         if t.startswith("xdg-open:"):
             return t
@@ -62,11 +63,55 @@ def _first_available_target(targets: list[str]) -> str | None:
     return targets[0]
 
 
+def _is_windows_uri(target: str) -> bool:
+    return (target == STICKY_NOTES_TARGET or target.endswith(":")
+            or target.startswith("ms-") or target.startswith("shell:"))
+
+
+def _resolve_windows_target(target: str) -> str | None:
+    """The target as something launchable on Windows, or None when it isn't installed."""
+    if not target:
+        return None
+    if _is_windows_uri(target):
+        return target
+    if Path(target).exists():
+        return target
+    exe = target.split()[0]
+    if shutil.which(exe):
+        return target
+    from server.services.app_launcher.discovery import _get_registry_apps
+    registered = _get_registry_apps().get(_normalize(Path(exe).stem))
+    if registered and Path(registered.strip('"')).exists():
+        return registered.strip('"')
+    return None
+
+
+def _contains_words(haystack: str, needle: str) -> bool:
+    """needle appears in haystack as whole words ("run" is not in "running")."""
+    return bool(needle) and re.search(rf"(?<![\w]){re.escape(needle)}(?![\w])", haystack) is not None
+
+
+def _names_match(query: str, name: str) -> bool:
+    """A request and an app name refer to the same app: equal, or one inside the other as whole
+    words, where an app name inside a longer request must be at least 4 characters."""
+    if not query or not name:
+        return False
+    if query == name or _contains_words(name, query):
+        return True
+    return len(name) >= 4 and _contains_words(query, name)
+
+
 def _best_match(query: str, apps: dict[str, str]) -> str | None:
     if query in apps:
         return apps[query]
+    # "chrome" → "google chrome": the query inside a longer app name, as whole words.
     for k, v in apps.items():
-        if query in k or k in query:
+        if _contains_words(k, query):
+            return v
+    # "spotify music" → "spotify": an app name inside the query, as whole words, and not a tiny one
+    # ("run" in "…running late" opened the Run dialog; "ea" in "reached" opened the EA app).
+    for k, v in sorted(apps.items(), key=lambda kv: -len(kv[0])):
+        if len(k) >= 4 and _contains_words(query, k) and len(k) >= len(query) / 3:
             return v
     close = get_close_matches(query, apps.keys(), n=1, cutoff=0.72)
     if close:
@@ -190,24 +235,50 @@ def find_app(name: str) -> tuple[bool, str]:
             return True, target
         return False, f"No application found matching '{name}' on this Linux system."
 
-    if query in COMMON_APP_ALIASES:
-        return True, COMMON_APP_ALIASES[query]
-    for alias, target in COMMON_APP_ALIASES.items():
-        if query in alias or alias in query:
-            return True, target
+    aliased = COMMON_APP_ALIASES.get(query) or next(
+        (t for a, t in COMMON_APP_ALIASES.items() if _names_match(query, a)), None)
+    resolved = _resolve_windows_target(aliased) if aliased else None
+    if resolved:
+        return True, resolved
 
+    # Installed apps, by the name asked for and every name its profile knows
+    # ("whatsapp" is a Store app, "chrome" is listed as "google chrome").
+    names = [query, *(_normalize(a) for a in _profile_aliases(query))]
+    if aliased:
+        names.append(_normalize(aliased))
+    names = list(dict.fromkeys(n for n in names if n))
     for apps in (_get_luna_apps(), _get_registry_apps(), _get_start_menu_apps(), _get_store_apps()):
-        target = _best_match(query, apps)
-        if target:
-            return True, target
+        for n in names:
+            target = _best_match(n, apps)
+            if target:
+                return True, target
 
-    return True, query
+    suggestions = suggest_apps(name)
+    hint = f" Did you mean {', '.join(suggestions)}?" if suggestions else ""
+    return False, f"Couldn't find an app called '{name}' on this computer.{hint}"
+
+
+def _profile_aliases(query: str) -> list[str]:
+    for profile in APP_PROFILES.values():
+        aliases = [_normalize(a) for a in profile["aliases"]]
+        if query in aliases or any(_names_match(query, a) for a in aliases):
+            return aliases
+    return []
+
+
+def suggest_apps(name: str, limit: int = 3) -> list[str]:
+    """Installed app names that look like `name`, for "did you mean"."""
+    query = _normalize(name)
+    known = list_known_apps()
+    picks = [k for k in known if query and (query in k or k in query) and len(k) > 2]
+    picks += get_close_matches(query, known, n=limit, cutoff=0.6)
+    return list(dict.fromkeys(picks))[:limit]
 
 
 def launch_app(name: str) -> tuple[bool, str]:
     found, target = find_app(name)
     if not found:
-        return False, f"Couldn't find an app matching '{name}' on this platform."
+        return False, target
 
     if target == STICKY_NOTES_TARGET:
         return launch_sticky_notes()
@@ -215,6 +286,17 @@ def launch_app(name: str) -> tuple[bool, str]:
     try:
         _launch_target(target)
         return True, f"Launched {name}"
+    except OSError as e:
+        if IS_WINDOWS and not _is_windows_uri(target):
+            # Last try: let Windows resolve the name itself (App Paths, file associations).
+            try:
+                os.startfile(target)
+                return True, f"Launched {name}"
+            except OSError:
+                pass
+        suggestions = suggest_apps(name)
+        hint = f" Did you mean {', '.join(suggestions)}?" if suggestions else ""
+        return False, f"Couldn't open {name}: {getattr(e, 'strerror', None) or e}.{hint}"
     except Exception as e:
         return False, f"Couldn't launch '{name}': {e}"
 
